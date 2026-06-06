@@ -9,6 +9,24 @@ struct EstructuraAnnotation: Identifiable {
     let estructura: EstructuraConParque
 }
 
+struct GeoPolygon: Identifiable {
+    let id = UUID()
+    let coordinates: [CLLocationCoordinate2D]
+}
+
+private func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
+    guard let url = Bundle.main.url(forResource: filename, withExtension: "geojson"),
+          let data = try? Data(contentsOf: url),
+          let features = try? MKGeoJSONDecoder().decode(data) else { return [] }
+
+    return features.compactMap { $0 as? MKGeoJSONFeature }.flatMap { feature in
+        feature.geometry.compactMap { $0 as? MKPolygon }.map { polygon in
+            let coords = (0..<polygon.pointCount).map { polygon.points()[$0].coordinate }
+            return GeoPolygon(coordinates: coords)
+        }
+    }
+}
+
 struct MapaView: View {
     @State private var vm = MapaViewModel()
     @State private var mapCameraPosition: MapCameraPosition = .region(
@@ -17,6 +35,8 @@ struct MapaView: View {
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
         )
     )
+    @State private var coloniasPolygons: [GeoPolygon] = []
+    @State private var municipioPolygons: [GeoPolygon] = []
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -35,6 +55,16 @@ struct MapaView: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 Map(position: $mapCameraPosition) {
+                    ForEach(coloniasPolygons) { poly in
+                        MapPolygon(coordinates: poly.coordinates)
+                            .foregroundStyle(Color("MunicipioCyan").opacity(0.08))
+                            .stroke(Color("MunicipioCyan").opacity(0.5), lineWidth: 1)
+                    }
+                    ForEach(municipioPolygons) { poly in
+                        MapPolygon(coordinates: poly.coordinates)
+                            .foregroundStyle(.clear)
+                            .stroke(Color("Navy"), lineWidth: 2.5)
+                    }
                     ForEach(anotaciones) { anotacion in
                         Annotation(anotacion.numero, coordinate: anotacion.coordinate) {
                             EstructuraMarker(estado: anotacion.estado)
@@ -60,7 +90,11 @@ struct MapaView: View {
             }
             .navigationTitle("Mapa")
             .navigationBarTitleDisplayMode(.inline)
-            .task { await vm.cargar() }
+            .task {
+                await vm.cargar()
+                coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
+                municipioPolygons = loadGeoPolygons(named: "san_nicolas")
+            }
             .sheet(isPresented: $vm.mostrarDetalle) {
                 if let estructura = vm.estructuraSeleccionada {
                     EstructuraDetalleSheet(
