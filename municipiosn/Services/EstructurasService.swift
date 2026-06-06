@@ -5,7 +5,7 @@ struct EstructuraConParque: Codable, Identifiable {
     let id: UUID
     let numero: String
     let numeroLocal: String?
-    let parqueId: UUID
+    let parqueId: UUID?
     let lat: Double?
     let lng: Double?
     let estado: EstadoEstructura
@@ -32,12 +32,12 @@ struct ParqueConColonia: Codable, Identifiable {
 
 final class EstructurasService {
     static let shared = EstructurasService()
-    private let db = SupabaseService.shared.client.database
+    private var client: SupabaseClient { SupabaseService.shared.client }
 
     private init() {}
 
     func fetchEstructuras() async throws -> [EstructuraConParque] {
-        try await db
+        try await client
             .from("estructuras")
             .select("*, parques(id, nombre, colonias(id, nombre, activo))")
             .execute()
@@ -46,7 +46,7 @@ final class EstructurasService {
 
     func fetchKPIs() async throws -> KPIData {
         async let estructuras: [EstructuraConParque] = fetchEstructuras()
-        async let campanas: [Campana] = db
+        async let campanas: [Campana] = client
             .from("campanas")
             .select()
             .eq("activa", value: true)
@@ -69,7 +69,7 @@ final class EstructurasService {
     }
 
     func fetchCaras(estructuraId: UUID) async throws -> [Cara] {
-        try await db
+        try await client
             .from("caras")
             .select()
             .eq("estructura_id", value: estructuraId.uuidString)
@@ -78,7 +78,7 @@ final class EstructurasService {
     }
 
     func fetchCampanaActivaDeCara(caraId: UUID) async throws -> Campana? {
-        let result: [CaraCampana] = try await db
+        let result: [CaraCampana] = try await client
             .from("caras_campanas")
             .select("*, campanas(*)")
             .eq("cara_id", value: caraId.uuidString)
@@ -97,7 +97,7 @@ final class EstructurasService {
         formatter.formatOptions = [.withInternetDateTime]
         let isoStart = formatter.string(from: startOfMonth)
 
-        return try await db
+        return try await client
             .from("rondines_estructuras")
             .select()
             .eq("accion", value: "cambio_rotoplas")

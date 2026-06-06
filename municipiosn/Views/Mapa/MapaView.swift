@@ -155,7 +155,7 @@ struct CampanaRow: View {
             if let campana {
                 Text(campana.nombre)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(Color("Cyan"))
+                    .foregroundStyle(Color("MunicipioCyan"))
                     .multilineTextAlignment(.trailing)
             } else {
                 Text("Sin campaña")

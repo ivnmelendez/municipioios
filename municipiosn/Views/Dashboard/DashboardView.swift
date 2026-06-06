@@ -16,7 +16,7 @@ struct DashboardView: View {
                         KPICardPrincipal(
                             titulo: "Total de estructuras",
                             valor: vm.kpi.totalEstructuras,
-                            icono: "billboard.fill"
+                            icono: "square.stack.fill"
                         )
                         .padding(.horizontal, 16)
 
@@ -55,7 +55,7 @@ struct DashboardView: View {
                                 titulo: "Campañas activas",
                                 valor: vm.kpi.campanasActivas,
                                 icono: "megaphone.fill",
-                                color: Color("Cyan")
+                                color: Color("MunicipioCyan")
                             )
                             KPICard(
                                 titulo: "Cambios de rotoplas",

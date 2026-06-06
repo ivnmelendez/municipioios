@@ -46,7 +46,7 @@ struct RondinConPerfil: Codable, Identifiable {
 
 final class IntervencionesService {
     static let shared = IntervencionesService()
-    private let db = SupabaseService.shared.client.database
+    private var client: SupabaseClient { SupabaseService.shared.client }
 
     private init() {}
 
@@ -56,7 +56,7 @@ final class IntervencionesService {
         let calendar = Calendar.current
         let now = Date()
 
-        let baseQuery = db
+        let baseQuery = client
             .from("rondines_estructuras")
             .select("""
                 *,

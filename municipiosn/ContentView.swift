@@ -19,7 +19,7 @@ struct ContentView: View {
             }
             .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
         }
-        .tint(Color("Cyan"))
+        .tint(Color("MunicipioCyan"))
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
             intervencionesVM.badgeCount += 1
         }

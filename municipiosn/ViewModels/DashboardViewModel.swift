@@ -17,6 +17,20 @@ final class DashboardViewModel {
             kpi = try await EstructurasService.shared.fetchKPIs()
         } catch {
             errorMessage = error.localizedDescription
+            print("❌ DashboardViewModel error: \(error)")
+            if let decoding = error as? DecodingError {
+                switch decoding {
+                case .keyNotFound(let key, let ctx):
+                    print("  keyNotFound: '\(key.stringValue)' at \(ctx.codingPath.map(\.stringValue))")
+                case .valueNotFound(let type, let ctx):
+                    print("  valueNotFound: \(type) at \(ctx.codingPath.map(\.stringValue))")
+                case .typeMismatch(let type, let ctx):
+                    print("  typeMismatch: \(type) at \(ctx.codingPath.map(\.stringValue))")
+                case .dataCorrupted(let ctx):
+                    print("  dataCorrupted: \(ctx.debugDescription)")
+                @unknown default: break
+                }
+            }
         }
     }
 }

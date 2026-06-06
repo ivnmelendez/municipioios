@@ -94,7 +94,7 @@ struct LoginView: View {
                             .padding(16)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(Color("Cyan"))
+                        .tint(Color("MunicipioCyan"))
                         .disabled(vm.isLoading || email.isEmpty || password.isEmpty)
                     }
                     .padding(.horizontal, 4)

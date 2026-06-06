@@ -104,7 +104,7 @@ struct IntervencionRow: View {
                     if let nombre = intervencion.rondines?.perfiles?.nombre {
                         Text(nombre)
                             .font(.caption2)
-                            .foregroundStyle(Color("Cyan"))
+                            .foregroundStyle(Color("MunicipioCyan"))
                     }
                 }
             }
@@ -118,7 +118,7 @@ struct IntervencionRow: View {
                         .foregroundStyle(Color("TextMuted"))
                 }
                 Image(systemName: "arrow.right")
-                    .foregroundStyle(Color("Cyan"))
+                    .foregroundStyle(Color("MunicipioCyan"))
                 VStack(spacing: 4) {
                     FotoAsyncImage(url: intervencion.fotoDespuesUrl, aspectRatio: 1, cornerRadius: 10)
                     Text("Después")
