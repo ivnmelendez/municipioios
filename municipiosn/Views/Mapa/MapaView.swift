@@ -1,0 +1,167 @@
+import SwiftUI
+import MapKit
+
+struct EstructuraAnnotation: Identifiable {
+    let id: UUID
+    let coordinate: CLLocationCoordinate2D
+    let estado: EstadoEstructura
+    let numero: String
+    let estructura: EstructuraConParque
+}
+
+struct MapaView: View {
+    @State private var vm = MapaViewModel()
+    @State private var mapCameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        )
+    )
+
+    private var anotaciones: [EstructuraAnnotation] {
+        vm.estructuras.compactMap { e in
+            guard let lat = e.lat, let lng = e.lng else { return nil }
+            return EstructuraAnnotation(
+                id: e.id,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                estado: e.estado,
+                numero: e.numero,
+                estructura: e
+            )
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                Map(position: $mapCameraPosition) {
+                    ForEach(anotaciones) { anotacion in
+                        Annotation(anotacion.numero, coordinate: anotacion.coordinate) {
+                            EstructuraMarker(estado: anotacion.estado)
+                                .onTapGesture {
+                                    Task { await vm.seleccionar(anotacion.estructura) }
+                                }
+                        }
+                    }
+                }
+                .mapStyle(.standard(elevation: .realistic))
+                .ignoresSafeArea(edges: .bottom)
+
+                if vm.isLoading {
+                    HStack {
+                        ProgressView()
+                        Text("Cargando estructuras…")
+                            .font(.caption)
+                    }
+                    .padding(12)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.bottom, 100)
+                }
+            }
+            .navigationTitle("Mapa")
+            .navigationBarTitleDisplayMode(.inline)
+            .task { await vm.cargar() }
+            .sheet(isPresented: $vm.mostrarDetalle) {
+                if let estructura = vm.estructuraSeleccionada {
+                    EstructuraDetalleSheet(
+                        estructura: estructura,
+                        caras: vm.carasSeleccionadas,
+                        campanaA: vm.campanaCaraA,
+                        campanaB: vm.campanaCaraB
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                }
+            }
+        }
+    }
+}
+
+struct EstructuraMarker: View {
+    let estado: EstadoEstructura
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(estado.color)
+                .frame(width: 28, height: 28)
+            Image(systemName: estado.icono)
+                .font(.caption2.bold())
+                .foregroundStyle(.white)
+        }
+        .shadow(color: estado.color.opacity(0.4), radius: 4, x: 0, y: 2)
+    }
+}
+
+struct EstructuraDetalleSheet: View {
+    let estructura: EstructuraConParque
+    let caras: [Cara]
+    let campanaA: Campana?
+    let campanaB: Campana?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    LabeledContent("Número", value: estructura.numero)
+                    if let local = estructura.numeroLocal {
+                        LabeledContent("Número local", value: local)
+                    }
+                    HStack {
+                        Text("Estado")
+                        Spacer()
+                        EstadoBadge(estado: estructura.estado)
+                    }
+                    if let parque = estructura.parques {
+                        LabeledContent("Parque", value: parque.nombre)
+                        if let colonia = parque.colonias {
+                            LabeledContent("Colonia", value: colonia.nombre)
+                        }
+                    }
+                } header: {
+                    Text("Información")
+                }
+
+                Section {
+                    CampanaRow(tipo: "A", campana: campanaA)
+                    CampanaRow(tipo: "B", campana: campanaB)
+                } header: {
+                    Text("Campañas activas")
+                }
+
+                if let notas = estructura.notas, !notas.isEmpty {
+                    Section("Notas") {
+                        Text(notas)
+                            .font(.body)
+                            .foregroundStyle(Color("TextMuted"))
+                    }
+                }
+            }
+            .navigationTitle(estructura.numero)
+            .navigationBarTitleDisplayMode(.large)
+        }
+    }
+}
+
+struct CampanaRow: View {
+    let tipo: String
+    let campana: Campana?
+
+    var body: some View {
+        HStack {
+            Label("Cara \(tipo)", systemImage: "rectangle.portrait.fill")
+                .foregroundStyle(Color("Navy"))
+            Spacer()
+            if let campana {
+                Text(campana.nombre)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color("Cyan"))
+                    .multilineTextAlignment(.trailing)
+            } else {
+                Text("Sin campaña")
+                    .font(.caption)
+                    .foregroundStyle(Color("TextMuted"))
+            }
+        }
+    }
+}

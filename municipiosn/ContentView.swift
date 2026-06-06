@@ -1,24 +1,27 @@
-//
-//  ContentView.swift
-//  municipiosn
-//
-//  Created by ivn on 05/06/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    let authVM: AuthViewModel
+    @State private var intervencionesVM = IntervencionesViewModel()
 
-#Preview {
-    ContentView()
+    var body: some View {
+        TabView {
+            Tab("Dashboard", systemImage: "chart.bar.fill") {
+                DashboardView()
+            }
+
+            Tab("Mapa", systemImage: "map.fill") {
+                MapaView()
+            }
+
+            Tab("Intervenciones", systemImage: "arrow.triangle.2.circlepath") {
+                IntervencionesView()
+            }
+            .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
+        }
+        .tint(Color("Cyan"))
+        .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
+            intervencionesVM.badgeCount += 1
+        }
+    }
 }
