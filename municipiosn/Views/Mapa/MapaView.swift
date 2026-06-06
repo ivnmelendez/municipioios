@@ -51,14 +51,19 @@ struct MapaView: View {
         }
     }
 
+    private static let municipioRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),
+        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    )
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 Map(position: $mapCameraPosition) {
                     ForEach(coloniasPolygons) { poly in
                         MapPolygon(coordinates: poly.coordinates)
-                            .foregroundStyle(Color("MunicipioCyan").opacity(0.08))
-                            .stroke(Color("MunicipioCyan").opacity(0.5), lineWidth: 1)
+                            .foregroundStyle(Color("Navy").opacity(0.06))
+                            .stroke(Color("Navy").opacity(0.4), lineWidth: 1)
                     }
                     ForEach(municipioPolygons) { poly in
                         MapPolygon(coordinates: poly.coordinates)
@@ -76,6 +81,22 @@ struct MapaView: View {
                 }
                 .mapStyle(.standard(elevation: .realistic))
                 .ignoresSafeArea(edges: .bottom)
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            mapCameraPosition = .region(Self.municipioRegion)
+                        }
+                    } label: {
+                        Image(systemName: "location.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color("Navy"))
+                            .frame(width: 44, height: 44)
+                            .background(.regularMaterial, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                    .padding(.trailing, 12)
+                }
 
                 if vm.isLoading {
                     HStack {
@@ -88,8 +109,6 @@ struct MapaView: View {
                     .padding(.bottom, 100)
                 }
             }
-            .navigationTitle("Mapa")
-            .navigationBarTitleDisplayMode(.inline)
             .task {
                 await vm.cargar()
                 coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")

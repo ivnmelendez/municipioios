@@ -26,8 +26,6 @@ struct IntervencionesView: View {
                 }
             }
             .background(Color("Background"))
-            .navigationTitle("Intervenciones")
-            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     FiltroMenu(filtroActual: vm.filtro) { nuevoFiltro in

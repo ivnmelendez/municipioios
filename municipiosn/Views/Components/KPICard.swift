@@ -8,35 +8,37 @@ struct KPICard: View {
     var subtitulo: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icono)
-                    .font(.title3)
-                    .foregroundStyle(color)
-                Spacer()
-            }
+        VStack(alignment: .leading, spacing: 14) {
+            Image(systemName: icono)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(color)
+                .frame(width: 40, height: 40)
+                .background(color.opacity(0.14), in: Circle())
+
+            Spacer(minLength: 0)
 
             Text("\(valor)")
-                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .font(.system(size: 38, weight: .bold, design: .rounded))
                 .foregroundStyle(Color("Navy"))
                 .contentTransition(.numericText())
 
-            Text(titulo)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color("TextPrimary"))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(titulo)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color("TextPrimary"))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            if let subtitulo {
-                Text(subtitulo)
-                    .font(.caption)
-                    .foregroundStyle(Color("TextMuted"))
+                if let subtitulo {
+                    Text(subtitulo)
+                        .font(.caption)
+                        .foregroundStyle(Color("TextMuted"))
+                }
             }
         }
+        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
         .padding(18)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(color.opacity(0.2), lineWidth: 1)
-        )
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -46,24 +48,28 @@ struct KPICardPrincipal: View {
     let icono: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: icono)
-                    .font(.title2)
-                    .foregroundStyle(.white)
-                Spacer()
+        HStack(alignment: .bottom, spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(titulo)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color("TextMuted"))
+
+                Text("\(valor)")
+                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("Navy"))
+                    .contentTransition(.numericText())
             }
 
-            Text("\(valor)")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .contentTransition(.numericText())
+            Spacer()
 
-            Text(titulo)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.9))
+            Image(systemName: icono)
+                .font(.system(size: 52, weight: .light))
+                .foregroundStyle(Color("Navy").opacity(0.12))
+                .padding(.bottom, 8)
         }
-        .padding(20)
-        .background(Color("Navy"), in: RoundedRectangle(cornerRadius: 18))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 28)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }

@@ -14,7 +14,7 @@ struct ContentView: View {
                 MapaView()
             }
 
-            Tab("Intervenciones", systemImage: "arrow.triangle.2.circlepath") {
+            Tab("Cambios", systemImage: "arrow.triangle.2.circlepath") {
                 IntervencionesView()
             }
             .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
