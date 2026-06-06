@@ -2,6 +2,8 @@ import SwiftUI
 
 struct DashboardView: View {
     @State private var vm = DashboardViewModel()
+    @State private var isScrolled = false
+    @State private var mostrarConfiguracion = false
 
     private static let monterrey = TimeZone(identifier: "America/Monterrey")!
 
@@ -28,15 +30,30 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(saludo), Jose Luis.")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(Color("Navy"))
-                    Text(fechaFormateada)
-                        .font(.subheadline)
-                        .foregroundStyle(Color("TextMuted"))
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(saludo), Jose Luis.")
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(Color("Navy"))
+                        Text(fechaFormateada)
+                            .font(.subheadline)
+                            .foregroundStyle(Color("TextMuted"))
+                    }
+
+                    Spacer()
+
+                    Button {
+                        mostrarConfiguracion = true
+                    } label: {
+                        Image(systemName: "gear")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color("Navy"))
+                            .frame(width: 36, height: 36)
+                            .background(.regularMaterial, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 6)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 8)
@@ -99,7 +116,25 @@ struct DashboardView: View {
             .padding(.bottom, 24)
         }
         .background(Color("Background"))
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .frame(height: 0)
+                .ignoresSafeArea(edges: .top)
+                .opacity(isScrolled ? 1 : 0)
+                .animation(.easeInOut(duration: 0.25), value: isScrolled)
+        }
+        .onScrollGeometryChange(for: Bool.self) { geo in
+            geo.contentOffset.y > 8
+        } action: { _, scrolled in
+            isScrolled = scrolled
+        }
         .refreshable { await vm.cargar() }
         .task { await vm.cargar() }
+        .sheet(isPresented: $mostrarConfiguracion) {
+            ConfiguracionView()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 }

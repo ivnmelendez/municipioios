@@ -14,10 +14,15 @@ struct ContentView: View {
                 MapaView()
             }
 
+            Tab("Estructuras", systemImage: "building.columns.fill") {
+                EstructurasListView()
+            }
+
             Tab("Cambios", systemImage: "arrow.triangle.2.circlepath") {
                 IntervencionesView()
             }
             .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
+
         }
         .tint(Color("MunicipioCyan"))
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in

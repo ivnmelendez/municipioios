@@ -38,7 +38,15 @@ final class RealtimeService {
         channel = nil
     }
 
+    private var notificacionesHabilitadas: Bool {
+        UserDefaults.standard.object(forKey: "notificacionesHabilitadas") as? Bool ?? true
+    }
+
     private func handleInsert(_ change: InsertAction) async {
+        NotificationCenter.default.post(name: .nuevoCambioRotoplas, object: nil)
+
+        guard notificacionesHabilitadas else { return }
+
         badgeCount += 1
 
         let estructuraNum = (change.record["estructuras"] as? [String: Any])?["numero"] as? String ?? "—"
@@ -46,8 +54,6 @@ final class RealtimeService {
         let quien = ((change.record["rondines"] as? [String: Any])?["perfiles"] as? [String: Any])?["nombre"] as? String ?? "—"
 
         await dispararNotificacion(estructuraNum: estructuraNum, parque: parqueNom, quien: quien)
-
-        NotificationCenter.default.post(name: .nuevoCambioRotoplas, object: nil)
     }
 
     private func dispararNotificacion(estructuraNum: String, parque: String, quien: String) async {
