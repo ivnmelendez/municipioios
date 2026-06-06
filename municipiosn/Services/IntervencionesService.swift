@@ -51,7 +51,12 @@ final class IntervencionesService {
     private init() {}
 
     func fetchCambiosRotoplas(filtro: FiltroFecha = .todo) async throws -> [IntervencionCompleta] {
-        var query = db
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let calendar = Calendar.current
+        let now = Date()
+
+        let baseQuery = db
             .from("rondines_estructuras")
             .select("""
                 *,
@@ -59,24 +64,24 @@ final class IntervencionesService {
                 rondines(id, perfiles(id, nombre, rol))
             """)
             .eq("accion", value: "cambio_rotoplas")
-            .order("created_at", ascending: false)
-
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        let calendar = Calendar.current
-        let now = Date()
 
         switch filtro {
         case .semana:
             let start = calendar.date(byAdding: .day, value: -7, to: now)!
-            query = query.gte("created_at", value: formatter.string(from: start))
+            return try await baseQuery
+                .gte("created_at", value: formatter.string(from: start))
+                .order("created_at", ascending: false)
+                .execute().value
         case .mes:
             let start = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-            query = query.gte("created_at", value: formatter.string(from: start))
+            return try await baseQuery
+                .gte("created_at", value: formatter.string(from: start))
+                .order("created_at", ascending: false)
+                .execute().value
         case .todo:
-            break
+            return try await baseQuery
+                .order("created_at", ascending: false)
+                .execute().value
         }
-
-        return try await query.execute().value
     }
 }
