@@ -1,0 +1,9 @@
+Secrets.swift
+.DS_Store
+build/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.pbxuser
+*.perspectivev3
