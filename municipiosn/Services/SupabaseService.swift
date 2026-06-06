@@ -10,7 +10,10 @@ final class SupabaseService {
     private init() {
         client = SupabaseClient(
             supabaseURL: Secrets.supabaseURL,
-            supabaseKey: Secrets.supabaseAnonKey
+            supabaseKey: Secrets.supabaseAnonKey,
+            options: .init(
+                auth: .init(emitLocalSessionAsInitialSession: true)
+            )
         )
     }
 }
