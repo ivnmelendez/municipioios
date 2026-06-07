@@ -23,6 +23,7 @@ struct municipiosnApp: App {
                         .background(Color("Background"))
                 case .authenticated:
                     ContentView(authVM: authVM)
+                        .environment(authVM)
                         .task { await RealtimeService.shared.subscribir() }
                 case .unauthenticated:
                     LoginView(vm: authVM)

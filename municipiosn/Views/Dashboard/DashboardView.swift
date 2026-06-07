@@ -1,9 +1,13 @@
 import SwiftUI
+import UIKit
 
 struct DashboardView: View {
     @State private var vm = DashboardViewModel()
     @State private var isScrolled = false
     @State private var mostrarConfiguracion = false
+    @State private var aparecer = false
+    @State private var ultimaActualizacion: Date? = nil
+    @State private var fotoPerfil: Image? = nil
 
     private static let monterrey = TimeZone(identifier: "America/Monterrey")!
 
@@ -22,22 +26,52 @@ struct DashboardView: View {
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "es_MX")
         fmt.timeZone = Self.monterrey
-        fmt.dateFormat = "EEEE, d 'de' MMMM 'de' yyyy"
+        fmt.dateFormat = "EEEE, d 'de' MMMM"
         let raw = fmt.string(from: Date())
         return raw.prefix(1).uppercased() + raw.dropFirst()
     }
 
+    private var horaActualizacion: String {
+        guard let fecha = ultimaActualizacion else { return "" }
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "es_MX")
+        fmt.timeZone = Self.monterrey
+        fmt.dateFormat = "h:mm a"
+        return "Actualizado \(fmt.string(from: fecha))"
+    }
+
+    private var porcentajeOperativas: Double {
+        guard vm.kpi.totalEstructuras > 0 else { return 0 }
+        return Double(vm.kpi.activas) / Double(vm.kpi.totalEstructuras)
+    }
+
+    private func cargarFotoPerfil() {
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("perfil.jpg")
+        guard let data = try? Data(contentsOf: url),
+              let uiImage = UIImage(data: data) else { return }
+        fotoPerfil = Image(uiImage: uiImage)
+    }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 0) {
+
+                // MARK: Header
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(saludo), Jose Luis.")
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(saludo)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        Text("Jose Luis")
                             .font(.largeTitle.bold())
                             .foregroundStyle(Color("Navy"))
-                        Text(fechaFormateada)
-                            .font(.subheadline)
-                            .foregroundStyle(Color("TextMuted"))
+                        if !horaActualizacion.isEmpty {
+                            Text(horaActualizacion)
+                                .font(.caption)
+                                .foregroundStyle(Color("TextMuted").opacity(0.7))
+                                .padding(.top, 1)
+                        }
                     }
 
                     Spacer()
@@ -45,34 +79,62 @@ struct DashboardView: View {
                     Button {
                         mostrarConfiguracion = true
                     } label: {
-                        Image(systemName: "gear")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color("Navy"))
-                            .frame(width: 36, height: 36)
-                            .background(.regularMaterial, in: Circle())
+                        Group {
+                            if let foto = fotoPerfil {
+                                foto
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(Circle())
+                            } else {
+                                Text("JL")
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color("Navy"))
+                                    .frame(width: 40, height: 40)
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 6)
+                    .buttonStyle(.glass(.regular))
+                    .buttonBorderShape(.circle)
+                    .controlSize(.regular)
+                    .padding(.top, 4)
+                    .onAppear { cargarFotoPerfil() }
+                    .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                        cargarFotoPerfil()
+                    }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
+                .padding(.top, 20)
+                .padding(.bottom, 24)
 
                 if vm.isLoading && !vm.kpi.isLoaded {
                     ProgressView()
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 60)
+                        .padding(.top, 80)
                 } else {
+
+                    // MARK: Inventario principal
                     KPICardPrincipal(
                         titulo: "Total de estructuras",
                         valor: vm.kpi.totalEstructuras,
-                        icono: "square.stack.fill"
+                        icono: "square.stack.fill",
+                        porcentajeOperativas: vm.kpi.isLoaded ? porcentajeOperativas : nil
                     )
                     .padding(.horizontal, 20)
+                    .opacity(aparecer ? 1 : 0)
+                    .offset(y: aparecer ? 0 : 14)
+                    .animation(.spring(duration: 0.5, bounce: 0.15).delay(0.05), value: aparecer)
+
+                    // MARK: Estado
+                    DashboardSectionHeader(titulo: "Estado del inventario")
+                        .padding(.top, 20)
+                        .opacity(aparecer ? 1 : 0)
+                        .offset(y: aparecer ? 0 : 10)
+                        .animation(.spring(duration: 0.45).delay(0.15), value: aparecer)
 
                     LazyVGrid(
                         columns: [GridItem(.flexible()), GridItem(.flexible())],
-                        spacing: 12
+                        spacing: 10
                     ) {
                         KPICard(
                             titulo: "Activas",
@@ -93,31 +155,45 @@ struct DashboardView: View {
                             color: Color("MunicipioCyan")
                         )
                         KPICard(
-                            titulo: "Cambios de rotoplas",
+                            titulo: "Cambios este mes",
                             valor: vm.kpi.cambiosRotoplasEsteMes,
                             icono: "arrow.triangle.2.circlepath",
-                            color: Color("Navy"),
-                            subtitulo: "Este mes"
+                            color: Color("Navy")
                         )
                     }
                     .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    .opacity(aparecer ? 1 : 0)
+                    .offset(y: aparecer ? 0 : 14)
+                    .animation(.spring(duration: 0.5, bounce: 0.12).delay(0.22), value: aparecer)
 
+                    // MARK: Estadísticas
                     if !vm.usoCampanas.isEmpty || vm.kpi.isLoaded {
-                        CampanasChartCard(datos: vm.usoCampanas)
-                            .padding(.horizontal, 20)
-                    }
+                        DashboardSectionHeader(titulo: "Estadísticas")
+                            .padding(.top, 24)
+                            .opacity(aparecer ? 1 : 0)
+                            .offset(y: aparecer ? 0 : 10)
+                            .animation(.spring(duration: 0.45).delay(0.32), value: aparecer)
 
-                    if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
-                        ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
-                            .padding(.horizontal, 20)
-                    }
+                        VStack(spacing: 10) {
+                            CampanasChartCard(datos: vm.usoCampanas)
 
-                    if vm.totalColoniasGeo > 0 {
-                        CoberturaColoniasCard(
-                            conEstructuras: vm.coloniasConEstructuras,
-                            sinEstructuras: vm.coloniasSinEstructuras
-                        )
+                            if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
+                                ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
+                            }
+
+                            if vm.totalColoniasGeo > 0 {
+                                CoberturaColoniasCard(
+                                    conEstructuras: vm.coloniasConEstructuras,
+                                    sinEstructuras: vm.coloniasSinEstructuras
+                                )
+                            }
+                        }
                         .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                        .opacity(aparecer ? 1 : 0)
+                        .offset(y: aparecer ? 0 : 18)
+                        .animation(.spring(duration: 0.55, bounce: 0.1).delay(0.38), value: aparecer)
                     }
                 }
 
@@ -129,9 +205,10 @@ struct DashboardView: View {
                     )
                     .padding(.top, 40)
                 }
+
+                Spacer(minLength: 32)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 24)
+            .padding(.top, 4)
         }
         .background(Color("Background"))
         .overlay(alignment: .top) {
@@ -147,8 +224,15 @@ struct DashboardView: View {
         } action: { _, scrolled in
             isScrolled = scrolled
         }
-        .refreshable { await vm.cargar() }
-        .task { await vm.cargar() }
+        .refreshable {
+            await vm.cargar()
+            ultimaActualizacion = Date()
+        }
+        .task {
+            await vm.cargar()
+            ultimaActualizacion = Date()
+            aparecer = true
+        }
         .sheet(isPresented: $mostrarConfiguracion) {
             ConfiguracionView()
                 .presentationDetents([.medium])

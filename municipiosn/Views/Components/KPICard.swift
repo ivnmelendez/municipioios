@@ -8,37 +8,39 @@ struct KPICard: View {
     var subtitulo: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: icono)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(color)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.14), in: Circle())
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Image(systemName: icono)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(color)
+                    .padding(9)
+                    .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Spacer()
+            }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 14)
 
             Text("\(valor)")
-                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .font(.system(size: 46, weight: .bold, design: .rounded))
                 .foregroundStyle(Color("Navy"))
                 .contentTransition(.numericText())
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(titulo)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color("TextPrimary"))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+            Text(titulo)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 3)
 
-                if let subtitulo {
-                    Text(subtitulo)
-                        .font(.caption)
-                        .foregroundStyle(Color("TextMuted"))
-                }
+            if let subtitulo {
+                Text(subtitulo)
+                    .font(.caption)
+                    .foregroundStyle(Color("TextMuted").opacity(0.7))
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
-        .padding(18)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .frame(maxWidth: .infinity, minHeight: 148, alignment: .leading)
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -58,9 +60,9 @@ struct CoberturaColoniasCard: View {
                 Image(systemName: "map.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color("Navy"))
-                Text("Cobertura por colonia")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color("TextMuted"))
+                Text("Cobertura territorial")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextPrimary"))
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -114,10 +116,11 @@ struct KPICardPrincipal: View {
     let titulo: String
     let valor: Int
     let icono: String
+    var porcentajeOperativas: Double? = nil
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(titulo)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color("TextMuted"))
@@ -126,6 +129,18 @@ struct KPICardPrincipal: View {
                     .font(.system(size: 72, weight: .bold, design: .rounded))
                     .foregroundStyle(Color("Navy"))
                     .contentTransition(.numericText())
+
+                if let pct = porcentajeOperativas {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(hex: "#16a34a"))
+                            .frame(width: 6, height: 6)
+                        Text("\(Int(pct * 100))% operativas")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Color(hex: "#16a34a"))
+                    }
+                    .padding(.top, 2)
+                }
             }
 
             Spacer()
@@ -139,5 +154,19 @@ struct KPICardPrincipal: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 28)
         .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+}
+
+struct DashboardSectionHeader: View {
+    let titulo: String
+
+    var body: some View {
+        Text(titulo.uppercased())
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color("TextMuted"))
+            .tracking(0.8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
     }
 }

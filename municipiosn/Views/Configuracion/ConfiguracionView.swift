@@ -1,46 +1,162 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 struct ConfiguracionView: View {
-    @AppStorage("notificacionesHabilitadas") private var notificacionesHabilitadas = true
+    @AppStorage("notificacionesHabilitadas") private var notificaciones = true
+    @State private var photoItem: PhotosPickerItem?
+    @State private var fotoPerfil: Image?
+    @State private var confirmarCerrarSesion = false
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var auth
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Configuración")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(Color("Navy"))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
+            VStack(spacing: 0) {
 
-                Toggle(isOn: $notificacionesHabilitadas) {
-                    HStack(spacing: 14) {
-                        Image(systemName: "bell.badge.fill")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(Color("MunicipioCyan"))
-                            .frame(width: 44, height: 44)
-                            .background(Color("MunicipioCyan").opacity(0.14), in: Circle())
+                // MARK: Header de perfil
+                VStack(spacing: 14) {
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        ZStack(alignment: .bottomTrailing) {
+                            Group {
+                                if let foto = fotoPerfil {
+                                    foto
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 90, height: 90)
+                                        .clipShape(Circle())
+                                } else {
+                                    Text("JL")
+                                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color("Navy"))
+                                        .frame(width: 90, height: 90)
+                                        .background(.regularMaterial, in: Circle())
+                                }
+                            }
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Notificaciones de cambios")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Color("Navy"))
-                            Text("Alertas en tiempo real de cambios de rotoplas")
-                                .font(.caption)
-                                .foregroundStyle(Color("TextMuted"))
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(Color("MunicipioCyan"), in: Circle())
+                                .offset(x: 2, y: 2)
                         }
                     }
+                    .buttonStyle(.plain)
+                    .onChange(of: photoItem) {
+                        Task {
+                            if let data = try? await photoItem?.loadTransferable(type: Data.self),
+                               let uiImage = UIImage(data: data) {
+                                fotoPerfil = Image(uiImage: uiImage)
+                                guardarFoto(data: data)
+                            }
+                        }
+                    }
+
+                    VStack(spacing: 3) {
+                        Text("Jose Luis")
+                            .font(.title2.bold())
+                            .foregroundStyle(Color("Navy"))
+                        Text("Administrador · San Nicolás de los Garza")
+                            .font(.caption)
+                            .foregroundStyle(Color("TextMuted"))
+                    }
                 }
-                .tint(Color("MunicipioCyan"))
-                .padding(18)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .frame(maxWidth: .infinity)
+                .padding(.top, 32)
+                .padding(.bottom, 28)
+
+                // MARK: Sección preferencias
+                VStack(spacing: 1) {
+                    configuracionRow {
+                        Toggle(isOn: $notificaciones) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Notificaciones")
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(.primary)
+                                    Text("Cambios de rotoplas en tiempo real")
+                                        .font(.caption)
+                                        .foregroundStyle(Color("TextMuted"))
+                                }
+                            } icon: {
+                                Image(systemName: "bell.badge.fill")
+                                    .foregroundStyle(Color("MunicipioCyan"))
+                            }
+                        }
+                        .tint(Color("MunicipioCyan"))
+                    }
+                }
                 .padding(.horizontal, 20)
+
+                // MARK: Cerrar sesión
+                Button {
+                    confirmarCerrarSesion = true
+                } label: {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.body.weight(.medium))
+                        Text("Cerrar sesión")
+                            .font(.body.weight(.medium))
+                    }
+                    .foregroundStyle(Color(red: 0.86, green: 0.2, blue: 0.2))
+                    .frame(maxWidth: .infinity)
+                    .padding(16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+
+                // MARK: Info de app
+                VStack(spacing: 4) {
+                    Text("Municipios SN")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color("TextMuted"))
+                    Text("Versión 1.0 · San Nicolás de los Garza, NL")
+                        .font(.caption2)
+                        .foregroundStyle(Color("TextMuted").opacity(0.6))
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 24)
             }
-            .padding(.bottom, 24)
         }
         .background(Color("Background"))
+        .onAppear { cargarFoto() }
+        .confirmationDialog("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion, titleVisibility: .visible) {
+            Button("Cerrar sesión", role: .destructive) {
+                Task { await auth.signOut() }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Se cerrará tu sesión en este dispositivo.")
+        }
+    }
+
+    // MARK: Row helper
+    @ViewBuilder
+    private func configuracionRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    // MARK: Persistencia de foto
+    private func guardarFoto(data: Data) {
+        let url = fotoURL()
+        try? data.write(to: url)
+    }
+
+    private func cargarFoto() {
+        let url = fotoURL()
+        guard let data = try? Data(contentsOf: url),
+              let uiImage = UIImage(data: data) else { return }
+        fotoPerfil = Image(uiImage: uiImage)
+    }
+
+    private func fotoURL() -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("perfil.jpg")
     }
 }
