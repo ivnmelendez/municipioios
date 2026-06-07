@@ -13,6 +13,7 @@ struct EstructuraAnnotation: Identifiable {
 struct GeoPolygon: Identifiable {
     let id = UUID()
     let coordinates: [CLLocationCoordinate2D]
+    let cvegeo: String
 }
 
 private func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
@@ -21,11 +22,49 @@ private func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
           let features = try? MKGeoJSONDecoder().decode(data) else { return [] }
 
     return features.compactMap { $0 as? MKGeoJSONFeature }.flatMap { feature in
-        feature.geometry.compactMap { $0 as? MKPolygon }.map { polygon in
+        let props = (try? JSONSerialization.jsonObject(with: feature.properties ?? Data())) as? [String: Any]
+        let cvegeo = props?["CVEGEO"] as? String ?? ""
+        return feature.geometry.compactMap { $0 as? MKPolygon }.map { polygon in
             let coords = (0..<polygon.pointCount).map { polygon.points()[$0].coordinate }
-            return GeoPolygon(coordinates: coords)
+            return GeoPolygon(coordinates: coords, cvegeo: cvegeo)
         }
     }
+}
+
+private func computarColoniasConEstructuras(
+    polygons: [GeoPolygon],
+    estructuras: [EstructuraConParque]
+) -> Set<String> {
+    let coords = estructuras.compactMap { e -> CLLocationCoordinate2D? in
+        guard let lat = e.lat, let lng = e.lng else { return nil }
+        return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+    }
+    var result = Set<String>()
+    for polygon in polygons where !polygon.cvegeo.isEmpty {
+        for coord in coords {
+            if pointInPolygon(coord, polygon.coordinates) {
+                result.insert(polygon.cvegeo)
+                break
+            }
+        }
+    }
+    return result
+}
+
+private func pointInPolygon(_ point: CLLocationCoordinate2D, _ polygon: [CLLocationCoordinate2D]) -> Bool {
+    var inside = false
+    let n = polygon.count
+    var j = n - 1
+    for i in 0..<n {
+        let xi = polygon[i].longitude, yi = polygon[i].latitude
+        let xj = polygon[j].longitude, yj = polygon[j].latitude
+        if ((yi > point.latitude) != (yj > point.latitude)) &&
+            (point.longitude < (xj - xi) * (point.latitude - yi) / (yj - yi) + xi) {
+            inside.toggle()
+        }
+        j = i
+    }
+    return inside
 }
 
 struct MapaView: View {
@@ -40,6 +79,7 @@ struct MapaView: View {
     @State private var municipioPolygons: [GeoPolygon] = []
     @State private var locationManager = CLLocationManager()
     @State private var busqueda = ""
+    @State private var coloniasConEstructuras: Set<String> = []
     @FocusState private var searchFocused: Bool
 
     private var anotaciones: [EstructuraAnnotation] {
@@ -75,9 +115,10 @@ struct MapaView: View {
         ZStack(alignment: .bottom) {
                 Map(position: $mapCameraPosition) {
                     ForEach(coloniasPolygons) { poly in
+                        let tieneEstructuras = coloniasConEstructuras.contains(poly.cvegeo)
                         MapPolygon(coordinates: poly.coordinates)
-                            .foregroundStyle(Color("Navy").opacity(0.06))
-                            .stroke(Color("Navy").opacity(0.4), lineWidth: 1)
+                            .foregroundStyle(Color("Navy").opacity(tieneEstructuras ? 0.18 : 0.04))
+                            .stroke(Color("Navy").opacity(tieneEstructuras ? 0.55 : 0.3), lineWidth: 1)
                     }
                     ForEach(municipioPolygons) { poly in
                         MapPolygon(coordinates: poly.coordinates)
@@ -100,27 +141,30 @@ struct MapaView: View {
                 .ignoresSafeArea(edges: .bottom)
                 .overlay(alignment: .top) {
                     VStack(spacing: 8) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(.secondary)
-                                .font(.system(size: 15, weight: .medium))
-                            TextField("Buscar por SN, colonia o parque", text: $busqueda)
-                                .textFieldStyle(.plain)
-                                .autocorrectionDisabled()
-                                .focused($searchFocused)
-                            if !busqueda.isEmpty {
-                                Button {
-                                    busqueda = ""
-                                    searchFocused = false
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.secondary)
+                        Button { searchFocused = true } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundStyle(.secondary)
+                                    .font(.system(size: 15, weight: .medium))
+                                TextField("Buscar por SN, colonia o parque", text: $busqueda)
+                                    .textFieldStyle(.plain)
+                                    .autocorrectionDisabled()
+                                    .focused($searchFocused)
+                                if !busqueda.isEmpty {
+                                    Button {
+                                        busqueda = ""
+                                        searchFocused = false
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 6)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 11)
-                        .glassEffect(.regular, in: Capsule())
+                        .buttonStyle(.glass(.regular))
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.large)
 
                         if !busqueda.trimmingCharacters(in: .whitespaces).isEmpty {
                             BusquedaResultados(
@@ -190,6 +234,10 @@ struct MapaView: View {
                 await vm.cargar()
                 coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
                 municipioPolygons = loadGeoPolygons(named: "san_nicolas")
+                coloniasConEstructuras = computarColoniasConEstructuras(
+                    polygons: coloniasPolygons,
+                    estructuras: vm.estructuras
+                )
             }
         .sheet(isPresented: $vm.mostrarDetalle) {
             if let estructura = vm.estructuraSeleccionada {
@@ -216,31 +264,32 @@ private struct BusquedaResultRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 EstructuraMarker(estado: anotacion.estado)
-                    .scaleEffect(0.7)
-                    .frame(width: 22, height: 22)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(anotacion.numero)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    if !subtitulo.isEmpty {
-                        Text(subtitulo)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+                    .scaleEffect(0.65)
+                    .frame(width: 20, height: 20)
+                Text(anotacion.numero)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                if !subtitulo.isEmpty {
+                    Text(subtitulo)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 Spacer()
                 Image(systemName: "arrow.up.left")
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 16))
+        .controlSize(.regular)
+        .tint(.primary)
     }
 }
 
@@ -252,29 +301,30 @@ private struct BusquedaResultados: View {
 
     var body: some View {
         if resultados.isEmpty {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                Text("Sin resultados")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
+            Button {} label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    Text("Sin resultados")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
+            .buttonStyle(.glass(.regular))
+            .buttonBorderShape(.roundedRectangle(radius: 16))
+            .disabled(true)
         } else {
-            VStack(spacing: 0) {
-                ForEach(Array(visibles.enumerated()), id: \.element.id) { index, anotacion in
+            VStack(spacing: 6) {
+                ForEach(visibles) { anotacion in
                     BusquedaResultRow(anotacion: anotacion) {
                         onSeleccionar(anotacion)
                     }
-                    if index < visibles.count - 1 {
-                        Divider().padding(.leading, 50)
-                    }
                 }
             }
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
         }
     }
 }
