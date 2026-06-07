@@ -23,96 +23,95 @@ struct LoginView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 32) {
-                        Spacer(minLength: 60)
+                Spacer()
 
-                        Image("logo_dark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 160, height: 160)
-                            .opacity(appeared ? 1 : 0)
-                            .offset(y: appeared ? 0 : 20)
-                            .animation(.spring(duration: 0.6, bounce: 0.2).delay(0.05), value: appeared)
+                Image("logo_dark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 160, height: 160)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 20)
+                    .animation(.spring(duration: 0.6, bounce: 0.2).delay(0.05), value: appeared)
 
-                        VStack(spacing: 0) {
-                            TextField("Correo electrónico", text: $email)
-                                .keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .focused($focusedField, equals: .email)
-                                .submitLabel(.next)
-                                .onSubmit { focusedField = .password }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                Spacer().frame(height: 40)
 
-                            Divider()
-                                .padding(.leading, 16)
+                VStack(spacing: 16) {
+                    VStack(spacing: 0) {
+                        TextField("Correo electrónico", text: $email)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: .email)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .password }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
 
-                            SecureField("Contraseña", text: $password)
-                                .focused($focusedField, equals: .password)
-                                .submitLabel(.go)
-                                .onSubmit { Task { await vm.signIn(email: email, password: password) } }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                        }
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 16)
-                        .animation(.spring(duration: 0.55, bounce: 0.15).delay(0.15), value: appeared)
+                        Divider()
+                            .padding(.leading, 16)
 
-                        VStack(spacing: 12) {
-                            if let error = vm.errorMessage {
-                                Label(error, systemImage: "exclamationmark.circle.fill")
-                                    .font(.footnote)
-                                    .foregroundStyle(.red)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
+                        SecureField("Contraseña", text: $password)
+                            .focused($focusedField, equals: .password)
+                            .submitLabel(.go)
+                            .onSubmit { Task { await vm.signIn(email: email, password: password) } }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                    }
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 16)
+                    .animation(.spring(duration: 0.55, bounce: 0.15).delay(0.15), value: appeared)
 
-                            Button {
-                                Task { await vm.signIn(email: email, password: password) }
-                            } label: {
-                                Group {
-                                    if vm.isLoading {
-                                        ProgressView()
-                                    } else {
-                                        Text("Iniciar sesión")
-                                            .font(.body.weight(.semibold))
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                            }
-                            .buttonStyle(.glass)
-                            .disabled(vm.isLoading)
+                    if let error = vm.errorMessage {
+                        Label(error, systemImage: "exclamationmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
 
-                            Button {
-                                Task { await vm.signInWithGoogle() }
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image("google_logo")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 20, height: 20)
-                                    Text("Continuar con Google")
+                    VStack(spacing: 12) {
+                        Button {
+                            Task { await vm.signIn(email: email, password: password) }
+                        } label: {
+                            Group {
+                                if vm.isLoading {
+                                    ProgressView()
+                                } else {
+                                    Text("Iniciar sesión")
                                         .font(.body.weight(.semibold))
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
                             }
-                            .buttonStyle(.glass)
-                            .disabled(vm.isLoading)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
                         }
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 12)
-                        .animation(.spring(duration: 0.5).delay(0.25), value: appeared)
+                        .buttonStyle(.glass)
+                        .disabled(vm.isLoading)
 
-                        Spacer(minLength: 32)
+                        Button {
+                            Task { await vm.signInWithGoogle() }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image("google_logo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 20, height: 20)
+                                Text("Continuar con Google")
+                                    .font(.body.weight(.semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(vm.isLoading)
                     }
-                    .padding(.horizontal, 24)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 12)
+                    .animation(.spring(duration: 0.5).delay(0.25), value: appeared)
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .padding(.horizontal, 24)
+
+                Spacer()
 
                 Text("Versión \(appVersion)")
                     .font(.caption2)

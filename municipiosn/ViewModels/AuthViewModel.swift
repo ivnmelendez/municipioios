@@ -37,7 +37,7 @@ final class AuthViewModel {
             try await auth.signIn(email: email, password: password)
             authState = .authenticated
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = localizedAuthError(error)
         }
     }
 
@@ -57,12 +57,26 @@ final class AuthViewModel {
         } catch is CancellationError {
             // user cancelled, no error shown
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = localizedAuthError(error)
         }
     }
 
     func signOut() async {
         try? await auth.signOut()
         authState = .unauthenticated
+    }
+
+    private func localizedAuthError(_ error: Error) -> String {
+        let raw = error.localizedDescription.lowercased()
+        if raw.contains("invalid login credentials") || raw.contains("invalid email or password") {
+            return "Correo o contraseña incorrectos. Verifica tus datos e intenta de nuevo."
+        } else if raw.contains("email not confirmed") {
+            return "Tu cuenta aún no ha sido verificada. Revisa tu correo."
+        } else if raw.contains("network") || raw.contains("internet") || raw.contains("offline") {
+            return "Sin conexión a internet. Verifica tu red e intenta de nuevo."
+        } else if raw.contains("too many requests") || raw.contains("rate limit") {
+            return "Demasiados intentos. Espera unos minutos antes de intentar de nuevo."
+        }
+        return "Ocurrió un error inesperado. Intenta de nuevo."
     }
 }
