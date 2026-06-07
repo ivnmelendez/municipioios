@@ -14,7 +14,7 @@ struct ContentView: View {
                 MapaView()
             }
 
-            Tab("Estructuras", systemImage: "building.columns.fill") {
+            Tab("Estructuras", systemImage: "square.stack.fill") {
                 EstructurasListView()
             }
 
