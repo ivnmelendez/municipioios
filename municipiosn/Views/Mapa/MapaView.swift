@@ -270,6 +270,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         mapView.showsCompass = false
         mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .realistic)
         mapView.setRegion(municipioRegion, animated: false)
+
         return mapView
     }
 
