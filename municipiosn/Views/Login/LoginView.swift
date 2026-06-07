@@ -5,6 +5,7 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @FocusState private var focusedField: Field?
+    @State private var appeared = false
 
     enum Field { case email, password }
 
@@ -30,43 +31,43 @@ struct LoginView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 160, height: 160)
+                            .opacity(appeared ? 1 : 0)
+                            .offset(y: appeared ? 0 : 20)
+                            .animation(.spring(duration: 0.6, bounce: 0.2).delay(0.05), value: appeared)
 
-                        // Form
                         VStack(spacing: 0) {
-                            Group {
-                                TextField("Correo electrónico", text: $email)
-                                    .keyboardType(.emailAddress)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .focused($focusedField, equals: .email)
-                                    .submitLabel(.next)
-                                    .onSubmit { focusedField = .password }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 14)
+                            TextField("Correo electrónico", text: $email)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .focused($focusedField, equals: .email)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .password }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
 
-                                Divider()
-                                    .padding(.leading, 16)
+                            Divider()
+                                .padding(.leading, 16)
 
-                                SecureField("Contraseña", text: $password)
-                                    .focused($focusedField, equals: .password)
-                                    .submitLabel(.go)
-                                    .onSubmit { Task { await vm.signIn(email: email, password: password) } }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 14)
-                            }
+                            SecureField("Contraseña", text: $password)
+                                .focused($focusedField, equals: .password)
+                                .submitLabel(.go)
+                                .onSubmit { Task { await vm.signIn(email: email, password: password) } }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
                         }
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 16)
+                        .animation(.spring(duration: 0.55, bounce: 0.15).delay(0.15), value: appeared)
 
                         VStack(spacing: 12) {
                             if let error = vm.errorMessage {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                    Text(error)
-                                        .font(.footnote)
-                                }
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 4)
+                                Label(error, systemImage: "exclamationmark.circle.fill")
+                                    .font(.footnote)
+                                    .foregroundStyle(.red)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
                             }
 
                             Button {
@@ -103,11 +104,15 @@ struct LoginView: View {
                             .buttonStyle(.glass)
                             .disabled(vm.isLoading)
                         }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 12)
+                        .animation(.spring(duration: 0.5).delay(0.25), value: appeared)
 
                         Spacer(minLength: 32)
                     }
                     .padding(.horizontal, 24)
                 }
+                .scrollDismissesKeyboard(.interactively)
 
                 Text("Versión \(appVersion)")
                     .font(.caption2)
@@ -116,5 +121,7 @@ struct LoginView: View {
                     .padding(.top, 8)
             }
         }
+        .onAppear { appeared = true }
+        .animation(.default, value: vm.errorMessage)
     }
 }
