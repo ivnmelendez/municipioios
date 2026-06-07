@@ -120,6 +120,18 @@ struct LoginView: View {
                     .padding(.top, 8)
             }
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button {
+                    focusedField = nil
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                }
+                .buttonStyle(.glass)
+            }
+        }
         .onAppear { appeared = true }
         .animation(.default, value: vm.errorMessage)
     }
