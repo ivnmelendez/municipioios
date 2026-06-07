@@ -80,6 +80,7 @@ struct MapaView: View {
     @State private var locationManager = CLLocationManager()
     @State private var busqueda = ""
     @State private var coloniasConEstructuras: Set<String> = []
+    @State private var polygonOpacity: Double = 0
     @FocusState private var searchFocused: Bool
 
     private var anotaciones: [EstructuraAnnotation] {
@@ -117,13 +118,13 @@ struct MapaView: View {
                     ForEach(coloniasPolygons) { poly in
                         let tieneEstructuras = coloniasConEstructuras.contains(poly.cvegeo)
                         MapPolygon(coordinates: poly.coordinates)
-                            .foregroundStyle(Color("Navy").opacity(tieneEstructuras ? 0.18 : 0.04))
-                            .stroke(Color("Navy").opacity(tieneEstructuras ? 0.55 : 0.3), lineWidth: 1)
+                            .foregroundStyle(Color("Navy").opacity((tieneEstructuras ? 0.18 : 0.04) * polygonOpacity))
+                            .stroke(Color("Navy").opacity((tieneEstructuras ? 0.55 : 0.3) * polygonOpacity), lineWidth: 1)
                     }
                     ForEach(municipioPolygons) { poly in
                         MapPolygon(coordinates: poly.coordinates)
                             .foregroundStyle(.clear)
-                            .stroke(Color("Navy"), lineWidth: 2.5)
+                            .stroke(Color("Navy").opacity(polygonOpacity), lineWidth: 2.5)
                     }
                     UserAnnotation()
                     ForEach(anotacionesFiltradas) { anotacion in
@@ -231,6 +232,7 @@ struct MapaView: View {
                 searchFocused = false
             }
             .task {
+                guard coloniasPolygons.isEmpty else { return }
                 await vm.cargar()
                 coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
                 municipioPolygons = loadGeoPolygons(named: "san_nicolas")
@@ -238,6 +240,9 @@ struct MapaView: View {
                     polygons: coloniasPolygons,
                     estructuras: vm.estructuras
                 )
+                withAnimation(.easeIn(duration: 0.6)) {
+                    polygonOpacity = 1.0
+                }
             }
         .sheet(isPresented: $vm.mostrarDetalle) {
             if let estructura = vm.estructuraSeleccionada {
