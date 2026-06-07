@@ -96,6 +96,42 @@ struct LoginView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(Color("MunicipioCyan"))
                         .disabled(vm.isLoading || email.isEmpty || password.isEmpty)
+
+                        HStack {
+                            Rectangle()
+                                .fill(Color("TextMuted").opacity(0.25))
+                                .frame(height: 1)
+                            Text("o")
+                                .font(.caption)
+                                .foregroundStyle(Color("TextMuted"))
+                                .padding(.horizontal, 8)
+                            Rectangle()
+                                .fill(Color("TextMuted").opacity(0.25))
+                                .frame(height: 1)
+                        }
+
+                        Button {
+                            Task { await vm.signInWithGoogle() }
+                        } label: {
+                            HStack(spacing: 10) {
+                                ZStack {
+                                    Circle()
+                                        .fill(.white)
+                                        .frame(width: 22, height: 22)
+                                    Text("G")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(Color(red: 0.259, green: 0.522, blue: 0.957))
+                                }
+                                Text("Continuar con Google")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Color("Navy"))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(vm.isLoading)
                     }
                     .padding(.horizontal, 4)
 

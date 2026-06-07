@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import AuthenticationServices
 
 enum AuthState {
     case checking, authenticated, unauthenticated
@@ -35,6 +36,26 @@ final class AuthViewModel {
         do {
             try await auth.signIn(email: email, password: password)
             authState = .authenticated
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func signInWithGoogle() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await auth.signInWithOAuth(
+                provider: .google,
+                redirectTo: URL(string: "com.ivanmelendez.municipiosn://login-callback")
+            ) { session in
+                session.prefersEphemeralWebBrowserSession = true
+            }
+            authState = .authenticated
+        } catch is CancellationError {
+            // user cancelled, no error shown
         } catch {
             errorMessage = error.localizedDescription
         }
