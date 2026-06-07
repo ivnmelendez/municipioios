@@ -39,6 +39,8 @@ struct MapaView: View {
     @State private var coloniasPolygons: [GeoPolygon] = []
     @State private var municipioPolygons: [GeoPolygon] = []
     @State private var locationManager = CLLocationManager()
+    @State private var busqueda = ""
+    @FocusState private var searchFocused: Bool
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -53,14 +55,24 @@ struct MapaView: View {
         }
     }
 
+    private var anotacionesFiltradas: [EstructuraAnnotation] {
+        let q = busqueda.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return anotaciones }
+        let ql = q.lowercased()
+        return anotaciones.filter { a in
+            a.numero.lowercased().contains(ql) ||
+            a.estructura.parques?.nombre.lowercased().contains(ql) == true ||
+            a.estructura.parques?.colonias?.nombre.lowercased().contains(ql) == true
+        }
+    }
+
     private static let municipioRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
 
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .bottom) {
+        ZStack(alignment: .bottom) {
                 Map(position: $mapCameraPosition) {
                     ForEach(coloniasPolygons) { poly in
                         MapPolygon(coordinates: poly.coordinates)
@@ -73,10 +85,12 @@ struct MapaView: View {
                             .stroke(Color("Navy"), lineWidth: 2.5)
                     }
                     UserAnnotation()
-                    ForEach(anotaciones) { anotacion in
+                    ForEach(anotacionesFiltradas) { anotacion in
                         Annotation("", coordinate: anotacion.coordinate) {
                             EstructuraMarker(estado: anotacion.estado)
                                 .onTapGesture {
+                                    searchFocused = false
+                                    busqueda = ""
                                     Task { await vm.seleccionar(anotacion.estructura) }
                                 }
                         }
@@ -84,6 +98,49 @@ struct MapaView: View {
                 }
                 .mapStyle(.standard(elevation: .realistic))
                 .ignoresSafeArea(edges: .bottom)
+                .overlay(alignment: .top) {
+                    VStack(spacing: 8) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(.secondary)
+                                .font(.system(size: 15, weight: .medium))
+                            TextField("Buscar por SN, colonia o parque", text: $busqueda)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                                .focused($searchFocused)
+                            if !busqueda.isEmpty {
+                                Button {
+                                    busqueda = ""
+                                    searchFocused = false
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 11)
+                        .glassEffect(.regular, in: Capsule())
+
+                        if !busqueda.trimmingCharacters(in: .whitespaces).isEmpty {
+                            BusquedaResultados(
+                                resultados: anotacionesFiltradas,
+                                onSeleccionar: { anotacion in
+                                    withAnimation(.easeInOut(duration: 0.4)) {
+                                        mapCameraPosition = .region(MKCoordinateRegion(
+                                            center: anotacion.coordinate,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
+                                        ))
+                                    }
+                                    Task { await vm.seleccionar(anotacion.estructura) }
+                                    busqueda = ""
+                                    searchFocused = false
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
                 .overlay(alignment: .bottomTrailing) {
                     VStack(spacing: 8) {
                         Button {
@@ -126,20 +183,98 @@ struct MapaView: View {
                     .padding(.bottom, 100)
                 }
             }
+            .onTapGesture {
+                searchFocused = false
+            }
             .task {
                 await vm.cargar()
                 coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
                 municipioPolygons = loadGeoPolygons(named: "san_nicolas")
             }
-            .sheet(isPresented: $vm.mostrarDetalle) {
-                if let estructura = vm.estructuraSeleccionada {
-                    EstructuraDetalleSheet(
-                        estructura: estructura,
-                        caras: vm.carasDetalle
-                    )
-                    .presentationDetents([.medium, .large])
+        .sheet(isPresented: $vm.mostrarDetalle) {
+            if let estructura = vm.estructuraSeleccionada {
+                EstructuraDetalleSheet(
+                    estructura: estructura,
+                    caras: vm.carasDetalle
+                )
+                .presentationDetents([.medium, .large])
+            }
+        }
+    }
+}
+
+private struct BusquedaResultRow: View {
+    let anotacion: EstructuraAnnotation
+    let onTap: () -> Void
+
+    private var subtitulo: String {
+        guard let parque = anotacion.estructura.parques else { return "" }
+        return [parque.colonias?.nombre, parque.nombre]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                EstructuraMarker(estado: anotacion.estado)
+                    .scaleEffect(0.7)
+                    .frame(width: 22, height: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(anotacion.numero)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if !subtitulo.isEmpty {
+                        Text(subtitulo)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                Image(systemName: "arrow.up.left")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct BusquedaResultados: View {
+    let resultados: [EstructuraAnnotation]
+    let onSeleccionar: (EstructuraAnnotation) -> Void
+
+    private var visibles: [EstructuraAnnotation] { Array(resultados.prefix(8)) }
+
+    var body: some View {
+        if resultados.isEmpty {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                Text("Sin resultados")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
+        } else {
+            VStack(spacing: 0) {
+                ForEach(Array(visibles.enumerated()), id: \.element.id) { index, anotacion in
+                    BusquedaResultRow(anotacion: anotacion) {
+                        onSeleccionar(anotacion)
+                    }
+                    if index < visibles.count - 1 {
+                        Divider().padding(.leading, 50)
+                    }
                 }
             }
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
         }
     }
 }
