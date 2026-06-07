@@ -84,20 +84,7 @@ struct LoginView: View {
                                 .padding(.vertical, 14)
                             }
                             .buttonStyle(.glass)
-                            .disabled(vm.isLoading || email.isEmpty || password.isEmpty)
-
-                            HStack {
-                                Rectangle()
-                                    .fill(Color("TextMuted").opacity(0.25))
-                                    .frame(height: 1)
-                                Text("o")
-                                    .font(.caption)
-                                    .foregroundStyle(Color("TextMuted"))
-                                    .padding(.horizontal, 10)
-                                Rectangle()
-                                    .fill(Color("TextMuted").opacity(0.25))
-                                    .frame(height: 1)
-                            }
+                            .disabled(vm.isLoading)
 
                             Button {
                                 Task { await vm.signInWithGoogle() }
@@ -109,13 +96,11 @@ struct LoginView: View {
                                         .frame(width: 20, height: 20)
                                     Text("Continuar con Google")
                                         .font(.body.weight(.semibold))
-                                        .foregroundStyle(.primary)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.glass)
                             .disabled(vm.isLoading)
                         }
 
