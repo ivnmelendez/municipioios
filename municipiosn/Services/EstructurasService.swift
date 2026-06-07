@@ -176,6 +176,15 @@ final class EstructurasService {
         return result.first?.campana
     }
 
+    func fetchTotalColonias() async throws -> Int {
+        let response = try await client
+            .from("colonias")
+            .select("*", head: true, count: .exact)
+            .eq("activo", value: true)
+            .execute()
+        return response.count ?? 0
+    }
+
     func fetchUsoColonias() async throws -> [UsoColonia] {
         let estructuras = try await fetchEstructuras()
         var counts: [UUID: (nombre: String, count: Int)] = [:]

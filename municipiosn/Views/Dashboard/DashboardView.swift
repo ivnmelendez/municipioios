@@ -111,6 +111,14 @@ struct DashboardView: View {
                         ColoniasChartCard(datos: vm.usoColonias)
                             .padding(.horizontal, 20)
                     }
+
+                    if vm.totalColoniasGeo > 0 {
+                        CoberturaColoniasCard(
+                            conEstructuras: vm.coloniasConEstructuras,
+                            sinEstructuras: vm.coloniasSinEstructuras
+                        )
+                        .padding(.horizontal, 20)
+                    }
                 }
 
                 if let error = vm.errorMessage {

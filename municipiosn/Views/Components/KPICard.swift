@@ -42,6 +42,74 @@ struct KPICard: View {
     }
 }
 
+struct CoberturaColoniasCard: View {
+    let conEstructuras: Int
+    let sinEstructuras: Int
+
+    private var total: Int { conEstructuras + sinEstructuras }
+    private var porcentaje: Double {
+        guard total > 0 else { return 0 }
+        return Double(conEstructuras) / Double(total)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "map.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("Navy"))
+                Text("Cobertura por colonia")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color("TextMuted"))
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(Int(porcentaje * 100))%")
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("Navy"))
+                    .contentTransition(.numericText())
+                Text("de colonias cubiertas")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color("TextMuted"))
+                    .padding(.bottom, 4)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color(red: 0.918, green: 0.353, blue: 0.047).opacity(0.15))
+                            .frame(width: geo.size.width, height: 6)
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color("Navy"), Color("MunicipioCyan")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geo.size.width * porcentaje, height: 6)
+                    }
+                }
+                .frame(height: 6)
+
+                HStack {
+                    Label("\(conEstructuras) con estructuras", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(Color("Navy"))
+                    Spacer()
+                    Label("\(sinEstructuras) sin cobertura", systemImage: "xmark.circle.fill")
+                        .foregroundStyle(Color(red: 0.918, green: 0.353, blue: 0.047))
+                }
+                .font(.caption)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 20)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+}
+
 struct KPICardPrincipal: View {
     let titulo: String
     let valor: Int
