@@ -129,9 +129,9 @@ struct LoginView: View {
                     Image(systemName: "checkmark")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.primary)
-                        .padding(.bottom, 6)
                 }
                 .buttonStyle(.plain)
+                .offset(y: -6)
             }
         }
         .onAppear { appeared = true }
