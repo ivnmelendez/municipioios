@@ -26,7 +26,7 @@ struct ConfiguracionView: View {
                                         .frame(width: 90, height: 90)
                                         .clipShape(Circle())
                                 } else {
-                                    Text("JL")
+                                    Text(auth.initiales.isEmpty ? "?" : auth.initiales)
                                         .font(.system(size: 30, weight: .bold, design: .rounded))
                                         .foregroundStyle(Color("Navy"))
                                         .frame(width: 90, height: 90)
@@ -54,10 +54,10 @@ struct ConfiguracionView: View {
                     }
 
                     VStack(spacing: 3) {
-                        Text("Jose Luis")
+                        Text(auth.displayName.isEmpty ? "Usuario" : auth.displayName)
                             .font(.title2.bold())
                             .foregroundStyle(Color("Navy"))
-                        Text("Administrador · San Nicolás de los Garza")
+                        Text("San Nicolás de los Garza, NL")
                             .font(.caption)
                             .foregroundStyle(Color("TextMuted"))
                     }

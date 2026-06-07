@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct DashboardView: View {
+    @Environment(AuthViewModel.self) private var auth
     @State private var vm = DashboardViewModel()
     @State private var isScrolled = false
     @State private var mostrarConfiguracion = false
@@ -63,7 +64,7 @@ struct DashboardView: View {
                         Text(saludo)
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(Color("TextMuted"))
-                        Text("Jose Luis")
+                        Text(auth.displayName.isEmpty ? "Bienvenido" : auth.displayName.components(separatedBy: " ").first ?? auth.displayName)
                             .font(.largeTitle.bold())
                             .foregroundStyle(Color("Navy"))
                         if !horaActualizacion.isEmpty {
@@ -87,7 +88,7 @@ struct DashboardView: View {
                                     .frame(width: 40, height: 40)
                                     .clipShape(Circle())
                             } else {
-                                Text("JL")
+                                Text(auth.initiales.isEmpty ? "?" : auth.initiales)
                                     .font(.system(size: 15, weight: .bold, design: .rounded))
                                     .foregroundStyle(Color("Navy"))
                                     .frame(width: 40, height: 40)

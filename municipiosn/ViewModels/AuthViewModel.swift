@@ -12,6 +12,8 @@ final class AuthViewModel {
     var authState: AuthState = .checking
     var errorMessage: String?
     var isLoading = false
+    var displayName: String = ""
+    var initiales: String = ""
 
     private let auth = SupabaseService.shared.client.auth
 
@@ -22,9 +24,25 @@ final class AuthViewModel {
     func checkSession() async {
         do {
             _ = try await auth.session
+            await loadUserProfile()
             authState = .authenticated
         } catch {
             authState = .unauthenticated
+        }
+    }
+
+    private func loadUserProfile() async {
+        guard let user = try? await auth.user() else { return }
+        let meta = user.userMetadata
+        let name = (meta["full_name"]?.stringValue
+            ?? meta["name"]?.stringValue
+            ?? user.email
+            ?? "")
+        displayName = name
+        let parts = name.split(separator: " ").prefix(2)
+        initiales = parts.map { String($0.prefix(1)) }.joined().uppercased()
+        if initiales.isEmpty, let first = name.first {
+            initiales = String(first).uppercased()
         }
     }
 
@@ -35,6 +53,7 @@ final class AuthViewModel {
 
         do {
             try await auth.signIn(email: email, password: password)
+            await loadUserProfile()
             authState = .authenticated
         } catch {
             errorMessage = localizedAuthError(error)
@@ -53,6 +72,7 @@ final class AuthViewModel {
             ) { session in
                 session.prefersEphemeralWebBrowserSession = true
             }
+            await loadUserProfile()
             authState = .authenticated
         } catch is CancellationError {
             // user cancelled, no error shown
