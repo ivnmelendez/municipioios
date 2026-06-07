@@ -4,6 +4,17 @@
       "filename" : "logo_dark.png",
       "idiom" : "universal",
       "scale" : "1x"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "logo_white.png",
+      "idiom" : "universal",
+      "scale" : "1x"
     }
   ],
   "info" : {
