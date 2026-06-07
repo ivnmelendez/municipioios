@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 struct EstructuraAnnotation: Identifiable {
     let id: UUID
@@ -37,6 +38,7 @@ struct MapaView: View {
     )
     @State private var coloniasPolygons: [GeoPolygon] = []
     @State private var municipioPolygons: [GeoPolygon] = []
+    @State private var locationManager = CLLocationManager()
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -70,8 +72,9 @@ struct MapaView: View {
                             .foregroundStyle(.clear)
                             .stroke(Color("Navy"), lineWidth: 2.5)
                     }
+                    UserAnnotation()
                     ForEach(anotaciones) { anotacion in
-                        Annotation(anotacion.numero, coordinate: anotacion.coordinate) {
+                        Annotation("", coordinate: anotacion.coordinate) {
                             EstructuraMarker(estado: anotacion.estado)
                                 .onTapGesture {
                                     Task { await vm.seleccionar(anotacion.estructura) }
@@ -81,21 +84,35 @@ struct MapaView: View {
                 }
                 .mapStyle(.standard(elevation: .realistic))
                 .ignoresSafeArea(edges: .bottom)
-                .overlay(alignment: .topTrailing) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            mapCameraPosition = .region(Self.municipioRegion)
+                .overlay(alignment: .bottomTrailing) {
+                    VStack(spacing: 8) {
+                        Button {
+                            locationManager.requestWhenInUseAuthorization()
+                            withAnimation(.easeInOut(duration: 0.5)) {
+                                mapCameraPosition = .userLocation(fallback: .region(Self.municipioRegion))
+                            }
+                        } label: {
+                            Image(systemName: "location.fill")
+                                .foregroundStyle(Color("MunicipioCyan"))
                         }
-                    } label: {
-                        Image(systemName: "location.fill")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color("Navy"))
-                            .frame(width: 44, height: 44)
-                            .background(.regularMaterial, in: Circle())
+                        .buttonStyle(.glass(.regular))
+                        .controlSize(.large)
+                        .buttonBorderShape(.circle)
+
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.5)) {
+                                mapCameraPosition = .region(Self.municipioRegion)
+                            }
+                        } label: {
+                            Image(systemName: "mappin.and.ellipse")
+                                .foregroundStyle(Color("Navy"))
+                        }
+                        .buttonStyle(.glass(.regular))
+                        .controlSize(.large)
+                        .buttonBorderShape(.circle)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 8)
-                    .padding(.trailing, 12)
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 20)
                 }
 
                 if vm.isLoading {
@@ -134,15 +151,13 @@ struct EstructuraMarker: View {
     let estado: EstadoEstructura
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(estado.color)
-                .frame(width: 28, height: 28)
-            Image(systemName: estado.icono)
-                .font(.caption2.bold())
-                .foregroundStyle(.white)
-        }
-        .shadow(color: estado.color.opacity(0.4), radius: 4, x: 0, y: 2)
+        Circle()
+            .fill(Color("Navy"))
+            .frame(width: 20, height: 20)
+            .overlay {
+                Circle().strokeBorder(.white, lineWidth: 2.5)
+            }
+            .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
     }
 }
 

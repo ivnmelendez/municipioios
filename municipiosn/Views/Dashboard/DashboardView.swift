@@ -101,6 +101,16 @@ struct DashboardView: View {
                         )
                     }
                     .padding(.horizontal, 20)
+
+                    if !vm.usoCampanas.isEmpty || vm.kpi.isLoaded {
+                        CampanasChartCard(datos: vm.usoCampanas)
+                            .padding(.horizontal, 20)
+                    }
+
+                    if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
+                        ColoniasChartCard(datos: vm.usoColonias)
+                            .padding(.horizontal, 20)
+                    }
                 }
 
                 if let error = vm.errorMessage {

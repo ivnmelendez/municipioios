@@ -1,5 +1,11 @@
 import Foundation
 
+struct UsoColonia: Identifiable {
+    let id: UUID
+    let nombre: String
+    let totalEstructuras: Int
+}
+
 enum EstadoEstructura: String, Codable, CaseIterable {
     case activa
     case dañada

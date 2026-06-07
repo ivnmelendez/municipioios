@@ -1,5 +1,11 @@
 import Foundation
 
+struct UsoCampana: Identifiable {
+    let id: UUID
+    let nombre: String
+    let totalCaras: Int
+}
+
 struct Campana: Codable, Identifiable {
     let id: UUID
     let nombre: String

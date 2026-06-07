@@ -4,6 +4,8 @@ import Foundation
 @Observable
 final class DashboardViewModel {
     var kpi = KPIData()
+    var usoCampanas: [UsoCampana] = []
+    var usoColonias: [UsoColonia] = []
     var errorMessage: String?
     var isLoading = false
 
@@ -14,7 +16,12 @@ final class DashboardViewModel {
         defer { isLoading = false }
 
         do {
-            kpi = try await EstructurasService.shared.fetchKPIs()
+            async let kpiTask = EstructurasService.shared.fetchKPIs()
+            async let campanasTask = EstructurasService.shared.fetchUsoCampanas()
+            async let coloniasTask = EstructurasService.shared.fetchUsoColonias()
+            kpi = try await kpiTask
+            usoCampanas = (try? await campanasTask) ?? []
+            usoColonias = (try? await coloniasTask) ?? []
         } catch {
             errorMessage = error.localizedDescription
             print("❌ DashboardViewModel error: \(error)")

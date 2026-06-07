@@ -30,6 +30,21 @@ struct ParqueConColonia: Codable, Identifiable {
     let colonias: Colonia?
 }
 
+private struct CaraCampanaItem: Codable {
+    let campanaId: UUID
+    let campanas: CampanaResumen
+
+    struct CampanaResumen: Codable {
+        let id: UUID
+        let nombre: String
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case campanaId = "campana_id"
+        case campanas
+    }
+}
+
 final class EstructurasService {
     static let shared = EstructurasService()
     private var client: SupabaseClient { SupabaseService.shared.client }
@@ -87,6 +102,37 @@ final class EstructurasService {
             .execute()
             .value
         return result.first?.campana
+    }
+
+    func fetchUsoColonias() async throws -> [UsoColonia] {
+        let estructuras = try await fetchEstructuras()
+        var counts: [UUID: (nombre: String, count: Int)] = [:]
+        for e in estructuras {
+            guard let colonia = e.parques?.colonias else { continue }
+            counts[colonia.id] = (colonia.nombre, (counts[colonia.id]?.count ?? 0) + 1)
+        }
+        return counts.map { id, val in
+            UsoColonia(id: id, nombre: val.nombre, totalEstructuras: val.count)
+        }.sorted { $0.totalEstructuras > $1.totalEstructuras }
+    }
+
+    func fetchUsoCampanas() async throws -> [UsoCampana] {
+        let items: [CaraCampanaItem] = try await client
+            .from("caras_campanas")
+            .select("campana_id, campanas(id, nombre)")
+            .eq("activa", value: true)
+            .execute()
+            .value
+
+        var counts: [UUID: (nombre: String, count: Int)] = [:]
+        for item in items {
+            let id = item.campanas.id
+            counts[id] = (item.campanas.nombre, (counts[id]?.count ?? 0) + 1)
+        }
+
+        return counts.map { id, val in
+            UsoCampana(id: id, nombre: val.nombre, totalCaras: val.count)
+        }.sorted { $0.totalCaras > $1.totalCaras }
     }
 
     private func fetchCambiosRotoplasEsteMes() async throws -> [Intervencion] {
