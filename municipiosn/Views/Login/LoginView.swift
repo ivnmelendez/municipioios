@@ -114,14 +114,10 @@ struct LoginView: View {
                             Task { await vm.signInWithGoogle() }
                         } label: {
                             HStack(spacing: 10) {
-                                ZStack {
-                                    Circle()
-                                        .fill(.white)
-                                        .frame(width: 22, height: 22)
-                                    Text("G")
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(Color(red: 0.259, green: 0.522, blue: 0.957))
-                                }
+                                Image("google_logo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 20, height: 20)
                                 Text("Continuar con Google")
                                     .font(.body.weight(.semibold))
                                     .foregroundStyle(Color("Navy"))
