@@ -129,6 +129,7 @@ struct LoginView: View {
                     Image(systemName: "checkmark")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.primary)
+                        .padding(.bottom, 10)
                 }
                 .buttonStyle(.plain)
             }
