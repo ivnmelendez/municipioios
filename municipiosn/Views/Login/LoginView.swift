@@ -82,9 +82,8 @@ struct LoginView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.glass)
                             .disabled(vm.isLoading || email.isEmpty || password.isEmpty)
 
                             HStack {
