@@ -128,8 +128,10 @@ struct LoginView: View {
                 } label: {
                     Image(systemName: "checkmark")
                         .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.bottom, 6)
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.plain)
             }
         }
         .onAppear { appeared = true }
