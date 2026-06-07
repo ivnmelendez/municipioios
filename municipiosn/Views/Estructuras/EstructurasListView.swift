@@ -111,6 +111,7 @@ struct EstructurasListView: View {
                     caras: vm.carasDetalle
                 )
                 .presentationDetents([.medium, .large])
+                .presentationContentInteraction(.resizes)
             }
         }
     }

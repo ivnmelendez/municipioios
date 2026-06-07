@@ -171,30 +171,16 @@ struct EstructuraDetalleSheet: View {
     @State private var fotoFullscreen: IdentifiableURL?
 
     var body: some View {
-        ScrollView {
+        ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
                 // Compact header — visible at small detent
-                HStack(spacing: 14) {
-                    Circle()
-                        .fill(Color("Navy"))
-                        .frame(width: 46, height: 46)
-                        .overlay {
-                            Image(systemName: "rectangle.portrait.fill")
-                                .foregroundStyle(.white)
-                                .font(.system(size: 18, weight: .semibold))
-                        }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(estructura.numero)
-                            .font(.headline)
-                        if let parque = estructura.parques {
-                            Text([parque.colonias?.nombre, parque.nombre]
-                                .compactMap { $0 }.joined(separator: " · "))
-                                .font(.caption)
-                                .foregroundStyle(Color("TextMuted"))
-                        }
-                    }
-                    Spacer()
+                HStack(spacing: 12) {
+                    Text(estructura.numero)
+                        .font(.headline)
+                        .layoutPriority(1)
+                    Spacer(minLength: 8)
                     EstadoBadge(estado: estructura.estado)
+                        .fixedSize()
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -239,6 +225,26 @@ struct EstructuraDetalleSheet: View {
                     Divider()
                 }
 
+                // Ubicación completa
+                if let parque = estructura.parques {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Ubicación")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        if let colonia = parque.colonias {
+                            Label(colonia.nombre, systemImage: "map")
+                                .font(.subheadline)
+                        }
+                        Label(parque.nombre, systemImage: "tree")
+                            .font(.subheadline)
+                            .foregroundStyle(Color("TextMuted"))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+
+                    Divider()
+                }
+
                 // Campañas
                 if !caras.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
@@ -251,7 +257,7 @@ struct EstructuraDetalleSheet: View {
 
                         ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
                             CampanaRow(cara: cara, onTapFoto: { url in
-                                fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña cara \(cara.tipo)")
+                                fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña Cara \(cara.tipo)")
                             })
                             .padding(.horizontal, 20)
                             .padding(.bottom, 16)
@@ -273,7 +279,10 @@ struct EstructuraDetalleSheet: View {
                     .padding(20)
                 }
             }
+            .frame(maxWidth: .infinity)
         }
+        .scrollBounceBehavior(.basedOnSize)
+        .presentationContentInteraction(.resizes)
         .presentationDragIndicator(.visible)
         .fullScreenCover(item: $fotoFullscreen) { item in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
@@ -297,7 +306,7 @@ struct FotoFullscreenView: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .ignoresSafeArea(edges: .bottom)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .onAppear { loadedImage = image }
                     case .failure:
                         VStack(spacing: 12) {
@@ -350,7 +359,8 @@ struct CampanaRow: View {
         if let campana = cara.campana {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Cara \(cara.tipo)", systemImage: "rectangle.portrait.fill")
+                    Text("Campaña Cara \(cara.tipo)")
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color("Navy"))
                     Spacer()
                     Text(campana.nombre)
@@ -397,7 +407,8 @@ struct CampanaRow: View {
             .padding(.vertical, 4)
         } else {
             HStack {
-                Label("Cara \(cara.tipo)", systemImage: "rectangle.portrait.fill")
+                Text("Campaña Cara \(cara.tipo)")
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color("Navy"))
                 Spacer()
                 Text("Sin campaña")
