@@ -29,7 +29,7 @@ struct LoginView: View {
                         Image("logo_dark")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 120, height: 120)
+                            .frame(width: 160, height: 160)
 
                         // Form
                         VStack(spacing: 0) {
@@ -74,7 +74,7 @@ struct LoginView: View {
                             } label: {
                                 Group {
                                     if vm.isLoading {
-                                        ProgressView().tint(.white)
+                                        ProgressView()
                                     } else {
                                         Text("Iniciar sesión")
                                             .font(.body.weight(.semibold))
@@ -82,9 +82,9 @@ struct LoginView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color("MunicipioCyan"))
+                            .buttonStyle(.plain)
                             .disabled(vm.isLoading || email.isEmpty || password.isEmpty)
 
                             HStack {
@@ -125,7 +125,7 @@ struct LoginView: View {
                     .padding(.horizontal, 24)
                 }
 
-                Text("Versión \(appVersion) · Municipio de San Nicolás de los Garza")
+                Text("Versión \(appVersion)")
                     .font(.caption2)
                     .foregroundStyle(Color("TextMuted").opacity(0.6))
                     .padding(.bottom, 16)
