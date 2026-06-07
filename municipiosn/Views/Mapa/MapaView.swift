@@ -2,6 +2,8 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
+// MARK: - Models
+
 struct EstructuraAnnotation: Identifiable {
     let id: UUID
     let coordinate: CLLocationCoordinate2D
@@ -15,6 +17,13 @@ struct GeoPolygon: Identifiable {
     let coordinates: [CLLocationCoordinate2D]
     let cvegeo: String
 }
+
+// MARK: - Helpers
+
+private let municipioRegion = MKCoordinateRegion(
+    center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),
+    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+)
 
 private func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
     guard let url = Bundle.main.url(forResource: filename, withExtension: "geojson"),
@@ -67,20 +76,38 @@ private func pointInPolygon(_ point: CLLocationCoordinate2D, _ polygon: [CLLocat
     return inside
 }
 
+// MARK: - Map command bridge
+
+private enum MapCommand {
+    case centerOnUser
+    case resetRegion
+    case centerOn(CLLocationCoordinate2D)
+}
+
+// MARK: - MKAnnotation wrapper
+
+private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
+    let coordinate: CLLocationCoordinate2D
+    let estructura: EstructuraConParque
+    let estado: EstadoEstructura
+
+    init(from a: EstructuraAnnotation) {
+        self.coordinate = a.coordinate
+        self.estructura = a.estructura
+        self.estado = a.estado
+    }
+}
+
+// MARK: - MapaView
+
 struct MapaView: View {
     @State private var vm = MapaViewModel()
-    @State private var mapCameraPosition: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),
-            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-        )
-    )
     @State private var coloniasPolygons: [GeoPolygon] = []
     @State private var municipioPolygons: [GeoPolygon] = []
+    @State private var coloniasConEstructuras: Set<String> = []
     @State private var locationManager = CLLocationManager()
     @State private var busqueda = ""
-    @State private var coloniasConEstructuras: Set<String> = []
-    @State private var polygonOpacity: Double = 0
+    @State private var pendingCommand: MapCommand? = nil
     @FocusState private var searchFocused: Bool
 
     private var anotaciones: [EstructuraAnnotation] {
@@ -107,143 +134,111 @@ struct MapaView: View {
         }
     }
 
-    private static let municipioRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),
-        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-    )
-
     var body: some View {
         ZStack(alignment: .bottom) {
-                Map(position: $mapCameraPosition) {
-                    ForEach(coloniasPolygons) { poly in
-                        let tieneEstructuras = coloniasConEstructuras.contains(poly.cvegeo)
-                        MapPolygon(coordinates: poly.coordinates)
-                            .foregroundStyle(Color("Navy").opacity((tieneEstructuras ? 0.18 : 0.04) * polygonOpacity))
-                            .stroke(Color("Navy").opacity((tieneEstructuras ? 0.55 : 0.3) * polygonOpacity), lineWidth: 1)
-                    }
-                    ForEach(municipioPolygons) { poly in
-                        MapPolygon(coordinates: poly.coordinates)
-                            .foregroundStyle(.clear)
-                            .stroke(Color("Navy").opacity(polygonOpacity), lineWidth: 2.5)
-                    }
-                    UserAnnotation()
-                    ForEach(anotacionesFiltradas) { anotacion in
-                        Annotation("", coordinate: anotacion.coordinate) {
-                            EstructuraMarker(estado: anotacion.estado)
-                                .onTapGesture {
-                                    searchFocused = false
-                                    busqueda = ""
-                                    Task { await vm.seleccionar(anotacion.estructura) }
-                                }
-                        }
-                    }
+            MKMapViewWrapper(
+                coloniasPolygons: coloniasPolygons,
+                municipioPolygons: municipioPolygons,
+                coloniasConEstructuras: coloniasConEstructuras,
+                anotaciones: anotacionesFiltradas,
+                pendingCommand: $pendingCommand,
+                onSelect: { estructura in
+                    Task { await vm.seleccionar(estructura) }
                 }
-                .mapStyle(.standard(elevation: .realistic))
-                .ignoresSafeArea(edges: .bottom)
-                .overlay(alignment: .top) {
-                    VStack(spacing: 8) {
-                        Button { searchFocused = true } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "magnifyingglass")
-                                    .foregroundStyle(.secondary)
-                                    .font(.system(size: 15, weight: .medium))
-                                TextField("Buscar por SN, colonia o parque", text: $busqueda)
-                                    .textFieldStyle(.plain)
-                                    .autocorrectionDisabled()
-                                    .focused($searchFocused)
-                                if !busqueda.isEmpty {
-                                    Button {
-                                        busqueda = ""
-                                        searchFocused = false
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 6)
-                        }
-                        .buttonStyle(.glass(.regular))
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.large)
-
-                        if !busqueda.trimmingCharacters(in: .whitespaces).isEmpty {
-                            BusquedaResultados(
-                                resultados: anotacionesFiltradas,
-                                onSeleccionar: { anotacion in
-                                    withAnimation(.easeInOut(duration: 0.4)) {
-                                        mapCameraPosition = .region(MKCoordinateRegion(
-                                            center: anotacion.coordinate,
-                                            span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
-                                        ))
-                                    }
-                                    Task { await vm.seleccionar(anotacion.estructura) }
+            )
+            .ignoresSafeArea()
+            .overlay(alignment: .top) {
+                VStack(spacing: 8) {
+                    Button { searchFocused = true } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(.secondary)
+                                .font(.system(size: 15, weight: .medium))
+                            TextField("Buscar por SN, colonia o parque", text: $busqueda)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                                .focused($searchFocused)
+                            if !busqueda.isEmpty {
+                                Button {
                                     busqueda = ""
                                     searchFocused = false
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
                                 }
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-                .overlay(alignment: .bottomTrailing) {
-                    VStack(spacing: 8) {
-                        Button {
-                            locationManager.requestWhenInUseAuthorization()
-                            withAnimation(.easeInOut(duration: 0.5)) {
-                                mapCameraPosition = .userLocation(fallback: .region(Self.municipioRegion))
                             }
-                        } label: {
-                            Image(systemName: "location.fill")
-                                .foregroundStyle(Color("MunicipioCyan"))
                         }
-                        .buttonStyle(.glass(.regular))
-                        .controlSize(.large)
-                        .buttonBorderShape(.circle)
+                        .padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.glass(.regular))
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
 
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.5)) {
-                                mapCameraPosition = .region(Self.municipioRegion)
+                    if !busqueda.trimmingCharacters(in: .whitespaces).isEmpty {
+                        BusquedaResultados(
+                            resultados: anotacionesFiltradas,
+                            onSeleccionar: { anotacion in
+                                pendingCommand = .centerOn(anotacion.coordinate)
+                                Task { await vm.seleccionar(anotacion.estructura) }
+                                busqueda = ""
+                                searchFocused = false
                             }
-                        } label: {
-                            Image(systemName: "mappin.and.ellipse")
-                                .foregroundStyle(Color("Navy"))
-                        }
-                        .buttonStyle(.glass(.regular))
-                        .controlSize(.large)
-                        .buttonBorderShape(.circle)
+                        )
                     }
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 20)
                 }
+                .padding(.horizontal, 16)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                VStack(spacing: 8) {
+                    Button {
+                        locationManager.requestWhenInUseAuthorization()
+                        pendingCommand = .centerOnUser
+                    } label: {
+                        Image(systemName: "location.fill")
+                            .foregroundStyle(Color("MunicipioCyan"))
+                    }
+                    .buttonStyle(.glass(.regular))
+                    .controlSize(.large)
+                    .buttonBorderShape(.circle)
 
-                if vm.isLoading {
-                    HStack {
-                        ProgressView()
-                        Text("Cargando estructuras…")
-                            .font(.caption)
+                    Button {
+                        pendingCommand = .resetRegion
+                    } label: {
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundStyle(Color("Navy"))
                     }
-                    .padding(12)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.bottom, 100)
+                    .buttonStyle(.glass(.regular))
+                    .controlSize(.large)
+                    .buttonBorderShape(.circle)
                 }
+                .padding(.trailing, 16)
+                .padding(.bottom, 20)
             }
-            .onTapGesture {
-                searchFocused = false
-            }
-            .task {
-                guard coloniasPolygons.isEmpty else { return }
-                await vm.cargar()
-                coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
-                municipioPolygons = loadGeoPolygons(named: "san_nicolas")
-                coloniasConEstructuras = computarColoniasConEstructuras(
-                    polygons: coloniasPolygons,
-                    estructuras: vm.estructuras
-                )
-                withAnimation(.easeIn(duration: 0.6)) {
-                    polygonOpacity = 1.0
+
+            if vm.isLoading {
+                HStack {
+                    ProgressView()
+                    Text("Cargando estructuras…")
+                        .font(.caption)
                 }
+                .padding(12)
+                .background(.regularMaterial, in: Capsule())
+                .padding(.bottom, 100)
             }
+        }
+        .onTapGesture {
+            searchFocused = false
+        }
+        .task {
+            guard coloniasPolygons.isEmpty else { return }
+            await vm.cargar()
+            coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
+            municipioPolygons = loadGeoPolygons(named: "san_nicolas")
+            coloniasConEstructuras = computarColoniasConEstructuras(
+                polygons: coloniasPolygons,
+                estructuras: vm.estructuras
+            )
+        }
         .sheet(isPresented: $vm.mostrarDetalle) {
             if let estructura = vm.estructuraSeleccionada {
                 EstructuraDetalleSheet(
@@ -255,6 +250,159 @@ struct MapaView: View {
         }
     }
 }
+
+// MARK: - UIViewRepresentable
+
+private struct MKMapViewWrapper: UIViewRepresentable {
+    let coloniasPolygons: [GeoPolygon]
+    let municipioPolygons: [GeoPolygon]
+    let coloniasConEstructuras: Set<String>
+    let anotaciones: [EstructuraAnnotation]
+    @Binding var pendingCommand: MapCommand?
+    let onSelect: (EstructuraConParque) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect) }
+
+    func makeUIView(context: Context) -> MKMapView {
+        let mapView = MKMapView()
+        mapView.delegate = context.coordinator
+        mapView.showsUserLocation = true
+        mapView.showsCompass = false
+        mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .realistic)
+        mapView.setRegion(municipioRegion, animated: false)
+        return mapView
+    }
+
+    func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Handle imperative commands
+        if let cmd = pendingCommand {
+            switch cmd {
+            case .centerOnUser:
+                mapView.setUserTrackingMode(.follow, animated: true)
+            case .resetRegion:
+                mapView.setRegion(municipioRegion, animated: true)
+            case .centerOn(let coord):
+                mapView.setRegion(
+                    MKCoordinateRegion(
+                        center: coord,
+                        span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
+                    ),
+                    animated: true
+                )
+            }
+            DispatchQueue.main.async { pendingCommand = nil }
+        }
+
+        // Keep coordinator in sync for renderers
+        context.coordinator.coloniasConEstructuras = coloniasConEstructuras
+
+        // Reload overlays when polygon data or highlight data changes
+        let needsOverlayReload = context.coordinator.loadedPolygonCount != coloniasPolygons.count
+            || context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
+
+        if needsOverlayReload {
+            context.coordinator.loadedPolygonCount = coloniasPolygons.count
+            context.coordinator.loadedHighlightCount = coloniasConEstructuras.count
+            mapView.removeOverlays(mapView.overlays)
+
+            for poly in coloniasPolygons {
+                let mkPoly = MKPolygon(coordinates: poly.coordinates, count: poly.coordinates.count)
+                mkPoly.title = poly.cvegeo
+                mapView.addOverlay(mkPoly, level: .aboveRoads)
+            }
+            for poly in municipioPolygons {
+                let mkPoly = MKPolygon(coordinates: poly.coordinates, count: poly.coordinates.count)
+                mkPoly.title = "__municipio__"
+                mapView.addOverlay(mkPoly, level: .aboveRoads)
+            }
+
+            // Fade in on first load
+            if context.coordinator.isFirstLoad && !coloniasPolygons.isEmpty {
+                context.coordinator.isFirstLoad = false
+                mapView.alpha = 0
+                UIView.animate(withDuration: 0.5, delay: 0.1, options: .curveEaseIn) {
+                    mapView.alpha = 1
+                }
+            }
+        }
+
+        // Sync annotations (handles search filtering too)
+        let currentIds = Set(mapView.annotations.compactMap { ($0 as? EstructuraMKAnnotation)?.estructura.id })
+        let newIds = Set(anotaciones.map { $0.id })
+        if currentIds != newIds {
+            mapView.removeAnnotations(mapView.annotations.filter { $0 is EstructuraMKAnnotation })
+            mapView.addAnnotations(anotaciones.map { EstructuraMKAnnotation(from: $0) })
+        }
+    }
+
+    // MARK: Coordinator
+
+    final class Coordinator: NSObject, MKMapViewDelegate {
+        let onSelect: (EstructuraConParque) -> Void
+        var coloniasConEstructuras: Set<String> = []
+        var loadedPolygonCount = 0
+        var loadedHighlightCount = 0
+        var isFirstLoad = true
+
+        private static let markerImage: UIImage = {
+            let size: CGFloat = 20
+            let canvas = CGSize(width: size + 3, height: size + 3)
+            return UIGraphicsImageRenderer(size: canvas).image { ctx in
+                let rect = CGRect(x: 1.5, y: 1.5, width: size, height: size)
+                ctx.cgContext.setShadow(
+                    offset: CGSize(width: 0, height: 2), blur: 3,
+                    color: UIColor.black.withAlphaComponent(0.3).cgColor
+                )
+                UIColor(named: "Navy")?.setFill()
+                ctx.cgContext.fillEllipse(in: rect)
+                ctx.cgContext.setShadow(offset: .zero, blur: 0, color: nil)
+                UIColor.white.setStroke()
+                ctx.cgContext.setLineWidth(2.5)
+                ctx.cgContext.strokeEllipse(in: rect.insetBy(dx: 1.25, dy: 1.25))
+            }
+        }()
+
+        init(onSelect: @escaping (EstructuraConParque) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            guard let polygon = overlay as? MKPolygon else {
+                return MKOverlayRenderer(overlay: overlay)
+            }
+            let renderer = MKPolygonRenderer(polygon: polygon)
+            if polygon.title == "__municipio__" {
+                renderer.strokeColor = UIColor(named: "Navy")
+                renderer.lineWidth = 2.5
+                renderer.fillColor = .clear
+            } else {
+                let tieneEstructuras = coloniasConEstructuras.contains(polygon.title ?? "")
+                renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.18 : 0.04)
+                renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.55 : 0.3)
+                renderer.lineWidth = 1
+            }
+            return renderer
+        }
+
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            guard annotation is EstructuraMKAnnotation else { return nil }
+            let id = "estructura"
+            let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                ?? MKAnnotationView(annotation: annotation, reuseIdentifier: id)
+            view.annotation = annotation
+            view.image = Self.markerImage
+            return view
+        }
+
+        func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
+            mapView.deselectAnnotation(annotation, animated: false)
+            guard let ann = annotation as? EstructuraMKAnnotation else { return }
+            onSelect(ann.estructura)
+        }
+    }
+}
+
+// MARK: - Search UI
 
 private struct BusquedaResultRow: View {
     let anotacion: EstructuraAnnotation
@@ -334,6 +482,8 @@ private struct BusquedaResultados: View {
     }
 }
 
+// MARK: - Map marker
+
 struct EstructuraMarker: View {
     let estado: EstadoEstructura
 
@@ -347,6 +497,8 @@ struct EstructuraMarker: View {
             .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
     }
 }
+
+// MARK: - Detail sheet
 
 private struct IdentifiableURL: Identifiable {
     let id = UUID()
@@ -516,9 +668,7 @@ struct FotoFullscreenView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
+                    Button { dismiss() } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.white.opacity(0.8))
                             .font(.title3)
