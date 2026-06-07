@@ -21,7 +21,7 @@ struct GeoPolygon: Identifiable {
 // MARK: - Helpers
 
 private let municipioRegion = MKCoordinateRegion(
-    center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),
+    center: CLLocationCoordinate2D(latitude: 25.7367, longitude: -100.2726),
     span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
 )
 
@@ -158,6 +158,7 @@ struct MapaView: View {
                                 .textFieldStyle(.plain)
                                 .autocorrectionDisabled()
                                 .focused($searchFocused)
+                                .onSubmit { searchFocused = false }
                             if !busqueda.isEmpty {
                                 Button {
                                     busqueda = ""
@@ -174,7 +175,7 @@ struct MapaView: View {
                     .buttonBorderShape(.capsule)
                     .controlSize(.large)
 
-                    if !busqueda.trimmingCharacters(in: .whitespaces).isEmpty {
+                    if searchFocused && !busqueda.trimmingCharacters(in: .whitespaces).isEmpty {
                         BusquedaResultados(
                             resultados: anotacionesFiltradas,
                             onSeleccionar: { anotacion in
@@ -269,12 +270,18 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         mapView.showsUserLocation = true
         mapView.showsCompass = false
         mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .realistic)
-        mapView.setRegion(municipioRegion, animated: false)
-
         return mapView
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Defer initial region to next run loop so SwiftUI layout finishes first
+        if !context.coordinator.initialRegionSet {
+            context.coordinator.initialRegionSet = true
+            DispatchQueue.main.async {
+                mapView.setRegion(municipioRegion, animated: false)
+            }
+        }
+
         // Handle imperative commands
         if let cmd = pendingCommand {
             switch cmd {
@@ -344,6 +351,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var loadedPolygonCount = 0
         var loadedHighlightCount = 0
         var isFirstLoad = true
+        var initialRegionSet = false
 
         private static let markerImage: UIImage = {
             let size: CGFloat = 20
@@ -418,10 +426,7 @@ private struct BusquedaResultRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 10) {
-                EstructuraMarker(estado: anotacion.estado)
-                    .scaleEffect(0.65)
-                    .frame(width: 20, height: 20)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(anotacion.numero)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
@@ -429,12 +434,8 @@ private struct BusquedaResultRow: View {
                     Text(subtitulo)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
-                Spacer()
-                Image(systemName: "arrow.up.left")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
