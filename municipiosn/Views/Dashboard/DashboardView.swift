@@ -108,7 +108,7 @@ struct DashboardView: View {
                     }
 
                     if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
-                        ColoniasChartCard(datos: vm.usoColonias)
+                        ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
                             .padding(.horizontal, 20)
                     }
 

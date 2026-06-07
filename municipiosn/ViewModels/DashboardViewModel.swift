@@ -10,6 +10,7 @@ final class DashboardViewModel {
     var coloniasConEstructuras: Int = 0
     var coloniasSinEstructuras: Int = 0
     var totalColoniasGeo: Int = 0
+    var coloniasDetalle: [ColoniaConCampanas] = []
     var errorMessage: String?
     var isLoading = false
 
@@ -24,11 +25,13 @@ final class DashboardViewModel {
             async let campanasTask = EstructurasService.shared.fetchUsoCampanas()
             async let coloniasTask = EstructurasService.shared.fetchUsoColonias()
             async let estructurasTask = EstructurasService.shared.fetchEstructuras()
+            async let coloniasDetalleTask = EstructurasService.shared.fetchColoniasConCampanas()
 
             kpi = try await kpiTask
             usoCampanas = (try? await campanasTask) ?? []
             usoColonias = (try? await coloniasTask) ?? []
             let estructuras = (try? await estructurasTask) ?? []
+            coloniasDetalle = (try? await coloniasDetalleTask) ?? []
 
             computarCobertura(estructuras: estructuras)
         } catch {

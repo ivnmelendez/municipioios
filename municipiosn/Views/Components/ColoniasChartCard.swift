@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ColoniasChartCard: View {
     let datos: [UsoColonia]
+    let detalle: [ColoniaConCampanas]
     @State private var mostrarTodo = false
     @State private var animado = false
 
@@ -19,15 +20,13 @@ struct ColoniasChartCard: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color("TextPrimary"))
                     Spacer()
-                    if datos.count > 5 {
-                        HStack(spacing: 3) {
-                            Text("Ver todo")
-                                .font(.caption)
-                                .foregroundStyle(Color("Navy"))
-                            Image(systemName: "chevron.right")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color("Navy"))
-                        }
+                    HStack(spacing: 3) {
+                        Text("Ver todo")
+                            .font(.caption)
+                            .foregroundStyle(Color("Navy"))
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color("Navy"))
                     }
                 }
 
@@ -62,7 +61,7 @@ struct ColoniasChartCard: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $mostrarTodo) {
-            ColoniasListaCompleta(datos: datos)
+            ColoniasListaCompleta(datos: datos, detalle: detalle)
         }
     }
 }
@@ -116,43 +115,67 @@ private struct ColoniaRankRow: View {
     }
 }
 
+// MARK: - Lista completa
+
 private struct ColoniasListaCompleta: View {
     let datos: [UsoColonia]
+    let detalle: [ColoniaConCampanas]
     @Environment(\.dismiss) private var dismiss
     private var maximo: Int { datos.first?.totalEstructuras ?? 1 }
+
+    private func detalleParaColonia(_ nombre: String) -> ColoniaConCampanas? {
+        detalle.first { $0.nombre == nombre }
+    }
 
     var body: some View {
         NavigationStack {
             List {
                 ForEach(Array(datos.enumerated()), id: \.element.id) { index, item in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("\(index + 1)")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Color("TextMuted"))
-                                .frame(width: 24, alignment: .trailing)
-                            Text(item.nombre)
-                                .font(.subheadline)
-                            Spacer()
-                            Text("\(item.totalEstructuras)")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color("Navy"))
-                                .monospacedDigit()
-                        }
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color("Navy").opacity(0.08))
-                                    .frame(width: geo.size.width, height: 3)
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color("Navy"))
-                                    .frame(width: geo.size.width * Double(item.totalEstructuras) / Double(max(maximo, 1)), height: 3)
+                    let detColonia = detalleParaColonia(item.nombre)
+                    NavigationLink {
+                        ColoniaDetalleView(colonia: detColonia ?? ColoniaConCampanas(
+                            id: item.id,
+                            nombre: item.nombre,
+                            totalEstructuras: item.totalEstructuras,
+                            campanas: []
+                        ))
+                    } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("\(index + 1)")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(Color("TextMuted"))
+                                    .frame(width: 24, alignment: .trailing)
+                                Text(item.nombre)
+                                    .font(.subheadline)
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text("\(item.totalEstructuras)")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color("Navy"))
+                                        .monospacedDigit()
+                                    if let d = detColonia, !d.campanas.isEmpty {
+                                        Text("\(d.campanas.count) campaña\(d.campanas.count == 1 ? "" : "s")")
+                                            .font(.caption2)
+                                            .foregroundStyle(Color("MunicipioCyan"))
+                                    }
+                                }
                             }
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color("Navy").opacity(0.08))
+                                        .frame(width: geo.size.width, height: 3)
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color("Navy"))
+                                        .frame(width: geo.size.width * Double(item.totalEstructuras) / Double(max(maximo, 1)), height: 3)
+                                }
+                            }
+                            .frame(height: 3)
+                            .padding(.leading, 28)
                         }
-                        .frame(height: 3)
-                        .padding(.leading, 28)
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                 }
             }
             .navigationTitle("Estructuras por colonia")
@@ -162,6 +185,80 @@ private struct ColoniasListaCompleta: View {
                     Button("Listo") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Detalle de colonia
+
+private struct CampanaFotoItem: Identifiable {
+    let id = UUID()
+    let url: URL
+    let titulo: String
+}
+
+private struct ColoniaDetalleView: View {
+    let colonia: ColoniaConCampanas
+    @State private var fotoItem: CampanaFotoItem?
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Text("Estructuras")
+                        .foregroundStyle(Color("TextMuted"))
+                    Spacer()
+                    Text("\(colonia.totalEstructuras)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color("Navy"))
+                }
+            }
+
+            if colonia.campanas.isEmpty {
+                Section("Campañas activas") {
+                    Text("Sin campañas activas")
+                        .foregroundStyle(Color("TextMuted"))
+                        .font(.subheadline)
+                }
+            } else {
+                Section("Campañas activas") {
+                    ForEach(colonia.campanas) { campana in
+                        Button {
+                            if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
+                                fotoItem = CampanaFotoItem(url: url, titulo: campana.nombre)
+                            }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(campana.nombre)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.primary)
+                                    Text("\(campana.totalCaras) cara\(campana.totalCaras == 1 ? "" : "s")")
+                                        .font(.caption)
+                                        .foregroundStyle(Color("TextMuted"))
+                                }
+                                Spacer()
+                                if campana.fotoUrl != nil {
+                                    Image(systemName: "photo")
+                                        .font(.caption)
+                                        .foregroundStyle(Color("MunicipioCyan"))
+                                } else {
+                                    Image(systemName: "megaphone.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(Color("MunicipioCyan"))
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        .disabled(campana.fotoUrl == nil)
+                    }
+                }
+            }
+        }
+        .navigationTitle(colonia.nombre)
+        .navigationBarTitleDisplayMode(.large)
+        .fullScreenCover(item: $fotoItem) { item in
+            FotoFullscreenView(url: item.url, titulo: item.titulo)
         }
     }
 }

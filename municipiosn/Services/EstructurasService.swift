@@ -80,6 +80,39 @@ private struct CaraRaw: Codable {
     }
 }
 
+private struct CaraCampanaColoniaRaw: Codable {
+    let campanas: CampanaInfo
+    let caras: CaraInfo
+
+    struct CampanaInfo: Codable {
+        let id: UUID
+        let nombre: String
+        let fotoUrl: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id, nombre
+            case fotoUrl = "foto_url"
+        }
+    }
+
+    struct CaraInfo: Codable {
+        let estructuras: EstructuraInfo?
+
+        struct EstructuraInfo: Codable {
+            let parques: ParqueInfo?
+
+            struct ParqueInfo: Codable {
+                let colonias: ColoniaInfo?
+
+                struct ColoniaInfo: Codable {
+                    let id: UUID
+                    let nombre: String
+                }
+            }
+        }
+    }
+}
+
 private struct CaraCampanaItem: Codable {
     let campanaId: UUID
     let campanas: CampanaResumen
@@ -183,6 +216,54 @@ final class EstructurasService {
             .eq("activo", value: true)
             .execute()
         return response.count ?? 0
+    }
+
+    func fetchColoniasConCampanas() async throws -> [ColoniaConCampanas] {
+        let raw: [CaraCampanaColoniaRaw] = try await client
+            .from("caras_campanas")
+            .select("campanas(id, nombre, foto_url), caras(estructuras(parques(colonias(id, nombre))))")
+            .eq("activa", value: true)
+            .execute()
+            .value
+
+        // Aggregate: colonia → campana → cara count
+        var coloniaInfo: [UUID: (nombre: String, estructuras: Set<UUID>)] = [:]
+        var campanasPorColonia: [UUID: [UUID: (nombre: String, caras: Int, fotoUrl: String?)]] = [:]
+
+        for item in raw {
+            guard let colonia = item.caras.estructuras?.parques?.colonias else { continue }
+            let cid = colonia.id
+            let pid = item.campanas.id
+
+            if coloniaInfo[cid] == nil {
+                coloniaInfo[cid] = (colonia.nombre, [])
+            }
+            campanasPorColonia[cid, default: [:]][pid] = (
+                item.campanas.nombre,
+                (campanasPorColonia[cid]?[pid]?.caras ?? 0) + 1,
+                item.campanas.fotoUrl
+            )
+        }
+
+        // Fetch estructura counts per colonia
+        let estructuras = try await fetchEstructuras()
+        var estructurasPorColonia: [UUID: Int] = [:]
+        for e in estructuras {
+            guard let cid = e.parques?.colonias?.id else { continue }
+            estructurasPorColonia[cid, default: 0] += 1
+        }
+
+        return coloniaInfo.map { cid, info in
+            let campanas = (campanasPorColonia[cid] ?? [:]).map { pid, val in
+                CampanaEnColonia(id: pid, nombre: val.nombre, totalCaras: val.caras, fotoUrl: val.fotoUrl)
+            }.sorted { $0.totalCaras > $1.totalCaras }
+            return ColoniaConCampanas(
+                id: cid,
+                nombre: info.nombre,
+                totalEstructuras: estructurasPorColonia[cid] ?? 0,
+                campanas: campanas
+            )
+        }.sorted { $0.totalEstructuras > $1.totalEstructuras }
     }
 
     func fetchUsoColonias() async throws -> [UsoColonia] {

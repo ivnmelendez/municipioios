@@ -78,7 +78,7 @@ struct CoberturaColoniasCard: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color(red: 0.918, green: 0.353, blue: 0.047).opacity(0.15))
+                            .fill(Color("Navy").opacity(0.08))
                             .frame(width: geo.size.width, height: 6)
                         RoundedRectangle(cornerRadius: 3)
                             .fill(
@@ -97,8 +97,8 @@ struct CoberturaColoniasCard: View {
                     Label("\(conEstructuras) con estructuras", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(Color("Navy"))
                     Spacer()
-                    Label("\(sinEstructuras) sin cobertura", systemImage: "xmark.circle.fill")
-                        .foregroundStyle(Color(red: 0.918, green: 0.353, blue: 0.047))
+                    Label("\(sinEstructuras) sin estructuras", systemImage: "circle.dotted")
+                        .foregroundStyle(Color("TextMuted"))
                 }
                 .font(.caption)
             }

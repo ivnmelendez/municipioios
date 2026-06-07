@@ -6,6 +6,20 @@ struct UsoColonia: Identifiable {
     let totalEstructuras: Int
 }
 
+struct ColoniaConCampanas: Identifiable {
+    let id: UUID
+    let nombre: String
+    let totalEstructuras: Int
+    let campanas: [CampanaEnColonia]
+}
+
+struct CampanaEnColonia: Identifiable {
+    let id: UUID
+    let nombre: String
+    let totalCaras: Int
+    let fotoUrl: String?
+}
+
 enum EstadoEstructura: String, Codable, CaseIterable {
     case activa
     case dañada
