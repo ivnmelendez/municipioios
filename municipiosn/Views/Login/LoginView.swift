@@ -22,21 +22,10 @@ struct LoginView: View {
                     Spacer(minLength: 60)
 
                     // Logo
-                    VStack(spacing: 12) {
-                        Image("logo_dark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 100, height: 100)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                        Text("Municipio SN")
-                            .font(.title.bold())
-                            .foregroundStyle(Color("Navy"))
-
-                        Text("Estructuras Publicitarias")
-                            .font(.subheadline)
-                            .foregroundStyle(Color("TextMuted"))
-                    }
+                    Image("logo_dark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
 
                     // Form
                     VStack(spacing: 16) {
