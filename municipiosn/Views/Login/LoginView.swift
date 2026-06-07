@@ -120,19 +120,23 @@ struct LoginView: View {
                     .padding(.top, 8)
             }
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button {
-                    focusedField = nil
-                } label: {
-                    Image(systemName: "checkmark")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if focusedField != nil {
+                HStack {
+                    Spacer()
+                    Button {
+                        focusedField = nil
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 12)
                 }
-                .buttonStyle(.plain)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .padding(.top, 4)
+                .frame(maxWidth: .infinity)
+                .background(.clear)
             }
         }
         .onAppear { appeared = true }
