@@ -131,7 +131,7 @@ struct LoginView: View {
                         .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
-                .offset(y: -6)
+                .offset(y: -12)
             }
         }
         .onAppear { appeared = true }
