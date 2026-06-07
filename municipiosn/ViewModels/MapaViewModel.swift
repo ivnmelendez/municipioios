@@ -6,9 +6,7 @@ import MapKit
 final class MapaViewModel {
     var estructuras: [EstructuraConParque] = []
     var estructuraSeleccionada: EstructuraConParque?
-    var carasSeleccionadas: [Cara] = []
-    var campanaCaraA: Campana?
-    var campanaCaraB: Campana?
+    var carasDetalle: [CaraDetalle] = []
     var mostrarDetalle = false
     var errorMessage: String?
     var isLoading = false
@@ -33,24 +31,13 @@ final class MapaViewModel {
 
     func seleccionar(_ estructura: EstructuraConParque) async {
         estructuraSeleccionada = estructura
-        carasSeleccionadas = []
-        campanaCaraA = nil
-        campanaCaraB = nil
+        carasDetalle = []
 
         do {
-            let caras = try await EstructurasService.shared.fetchCaras(estructuraId: estructura.id)
-            carasSeleccionadas = caras
-
-            for cara in caras {
-                let campana = try await EstructurasService.shared.fetchCampanaActivaDeCara(caraId: cara.id)
-                if cara.tipo == "A" {
-                    campanaCaraA = campana
-                } else if cara.tipo == "B" {
-                    campanaCaraB = campana
-                }
-            }
+            carasDetalle = try await EstructurasService.shared.fetchCarasDetalle(estructuraId: estructura.id)
         } catch {
             errorMessage = error.localizedDescription
+            print("❌ seleccionar error: \(error)")
         }
 
         mostrarDetalle = true

@@ -57,5 +57,6 @@ struct CaraCampana: Codable, Identifiable {
         case campanaId = "campana_id"
         case fechaInicio = "fecha_inicio"
         case fechaFin = "fecha_fin"
+        case campana = "campanas"
     }
 }

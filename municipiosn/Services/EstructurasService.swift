@@ -30,6 +30,56 @@ struct ParqueConColonia: Codable, Identifiable {
     let colonias: Colonia?
 }
 
+struct CaraDetalle: Identifiable {
+    let id: UUID
+    let tipo: String
+    let fotoUrl: String?
+    let campana: CampanaDetalle?
+    let fotoCampana: String?
+
+    struct CampanaDetalle: Identifiable {
+        let id: UUID
+        let nombre: String
+        let fotoUrl: String?
+    }
+}
+
+private struct CaraRaw: Codable {
+    let id: UUID
+    let tipo: String
+    let fotoUrl: String?
+    let carasCampanas: [CaraCampanaRaw]
+
+    struct CaraCampanaRaw: Codable {
+        let activa: Bool
+        let fotoUrl: String?
+        let campanas: CampanaRaw?
+
+        struct CampanaRaw: Codable {
+            let id: UUID
+            let nombre: String
+            let fotoUrl: String?
+
+            enum CodingKeys: String, CodingKey {
+                case id, nombre
+                case fotoUrl = "foto_url"
+            }
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case activa
+            case fotoUrl = "foto_url"
+            case campanas
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, tipo
+        case fotoUrl = "foto_url"
+        case carasCampanas = "caras_campanas"
+    }
+}
+
 private struct CaraCampanaItem: Codable {
     let campanaId: UUID
     let campanas: CampanaResumen
@@ -92,15 +142,37 @@ final class EstructurasService {
             .value
     }
 
+    func fetchCarasDetalle(estructuraId: UUID) async throws -> [CaraDetalle] {
+        let raw: [CaraRaw] = try await client
+            .from("caras")
+            .select("id, tipo, foto_url, caras_campanas(activa, foto_url, campanas(id, nombre, foto_url))")
+            .eq("estructura_id", value: estructuraId.uuidString)
+            .execute()
+            .value
+
+        return raw.map { cara in
+            let activa = cara.carasCampanas.first(where: { $0.activa })
+            return CaraDetalle(
+                id: cara.id,
+                tipo: cara.tipo,
+                fotoUrl: cara.fotoUrl,
+                campana: activa?.campanas.map { c in
+                    CaraDetalle.CampanaDetalle(id: c.id, nombre: c.nombre, fotoUrl: c.fotoUrl)
+                },
+                fotoCampana: activa?.fotoUrl
+            )
+        }
+    }
+
     func fetchCampanaActivaDeCara(caraId: UUID) async throws -> Campana? {
         let result: [CaraCampana] = try await client
             .from("caras_campanas")
             .select("*, campanas(*)")
             .eq("cara_id", value: caraId.uuidString)
-            .eq("activa", value: true)
             .limit(1)
             .execute()
             .value
+        print("🔍 caraId=\(caraId) → \(result.count) registros, campana=\(String(describing: result.first?.campana?.nombre))")
         return result.first?.campana
     }
 

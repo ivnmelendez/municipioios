@@ -135,12 +135,9 @@ struct MapaView: View {
                 if let estructura = vm.estructuraSeleccionada {
                     EstructuraDetalleSheet(
                         estructura: estructura,
-                        caras: vm.carasSeleccionadas,
-                        campanaA: vm.campanaCaraA,
-                        campanaB: vm.campanaCaraB
+                        caras: vm.carasDetalle
                     )
                     .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
                 }
             }
         }
@@ -161,71 +158,248 @@ struct EstructuraMarker: View {
     }
 }
 
+private struct IdentifiableURL: Identifiable {
+    let id = UUID()
+    let url: URL
+    let titulo: String
+}
+
 struct EstructuraDetalleSheet: View {
     let estructura: EstructuraConParque
-    let caras: [Cara]
-    let campanaA: Campana?
-    let campanaB: Campana?
+    let caras: [CaraDetalle]
+
+    @State private var fotoFullscreen: IdentifiableURL?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // Compact header — visible at small detent
+                HStack(spacing: 14) {
+                    Circle()
+                        .fill(Color("Navy"))
+                        .frame(width: 46, height: 46)
+                        .overlay {
+                            Image(systemName: "rectangle.portrait.fill")
+                                .foregroundStyle(.white)
+                                .font(.system(size: 18, weight: .semibold))
+                        }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(estructura.numero)
+                            .font(.headline)
+                        if let parque = estructura.parques {
+                            Text([parque.colonias?.nombre, parque.nombre]
+                                .compactMap { $0 }.joined(separator: " · "))
+                                .font(.caption)
+                                .foregroundStyle(Color("TextMuted"))
+                        }
+                    }
+                    Spacer()
+                    EstadoBadge(estado: estructura.estado)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
+
+                Divider()
+
+                // Foto estructura
+                if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            Button {
+                                fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
+                            } label: {
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 240)
+                                    .clipped()
+                                    .overlay(alignment: .bottomTrailing) {
+                                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .padding(6)
+                                            .background(.black.opacity(0.4), in: Circle())
+                                            .padding(10)
+                                    }
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        case .failure:
+                            EmptyView()
+                        default:
+                            Color.secondary.opacity(0.1)
+                                .frame(height: 240)
+                                .overlay { ProgressView() }
+                        }
+                    }
+
+                    Divider()
+                }
+
+                // Campañas
+                if !caras.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Campañas activas")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
+                            .padding(.bottom, 12)
+
+                        ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
+                            CampanaRow(cara: cara, onTapFoto: { url in
+                                fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña cara \(cara.tipo)")
+                            })
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 16)
+                        }
+                    }
+
+                    Divider()
+                }
+
+                // Notas
+                if let notas = estructura.notas, !notas.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Notas")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        Text(notas)
+                            .font(.body)
+                    }
+                    .padding(20)
+                }
+            }
+        }
+        .presentationDragIndicator(.visible)
+        .fullScreenCover(item: $fotoFullscreen) { item in
+            FotoFullscreenView(url: item.url, titulo: item.titulo)
+        }
+    }
+}
+
+struct FotoFullscreenView: View {
+    let url: URL
+    let titulo: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var loadedImage: Image?
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    LabeledContent("Número", value: estructura.numero)
-                    if let local = estructura.numeroLocal {
-                        LabeledContent("Número local", value: local)
-                    }
-                    HStack {
-                        Text("Estado")
-                        Spacer()
-                        EstadoBadge(estado: estructura.estado)
-                    }
-                    if let parque = estructura.parques {
-                        LabeledContent("Parque", value: parque.nombre)
-                        if let colonia = parque.colonias {
-                            LabeledContent("Colonia", value: colonia.nombre)
+            ZStack {
+                Color.black.ignoresSafeArea()
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .ignoresSafeArea(edges: .bottom)
+                            .onAppear { loadedImage = image }
+                    case .failure:
+                        VStack(spacing: 12) {
+                            Image(systemName: "photo.slash")
+                                .font(.largeTitle)
+                            Text("No se pudo cargar la imagen")
+                                .font(.caption)
                         }
-                    }
-                } header: {
-                    Text("Información")
-                }
-
-                Section {
-                    CampanaRow(tipo: "A", campana: campanaA)
-                    CampanaRow(tipo: "B", campana: campanaB)
-                } header: {
-                    Text("Campañas activas")
-                }
-
-                if let notas = estructura.notas, !notas.isEmpty {
-                    Section("Notas") {
-                        Text(notas)
-                            .font(.body)
-                            .foregroundStyle(Color("TextMuted"))
+                        .foregroundStyle(.white.opacity(0.5))
+                    default:
+                        ProgressView().tint(.white)
                     }
                 }
             }
-            .navigationTitle(estructura.numero)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle(titulo)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.white.opacity(0.8))
+                            .font(.title3)
+                    }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(item: url) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.white.opacity(0.8))
+                            .font(.title3)
+                    }
+                }
+            }
         }
     }
 }
 
 struct CampanaRow: View {
-    let tipo: String
-    let campana: Campana?
+    let cara: CaraDetalle
+    var onTapFoto: ((URL) -> Void)? = nil
+
+    var fotoURL: URL? {
+        if let s = cara.fotoCampana ?? cara.campana?.fotoUrl { return URL(string: s) }
+        return nil
+    }
 
     var body: some View {
-        HStack {
-            Label("Cara \(tipo)", systemImage: "rectangle.portrait.fill")
-                .foregroundStyle(Color("Navy"))
-            Spacer()
-            if let campana {
-                Text(campana.nombre)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color("MunicipioCyan"))
-                    .multilineTextAlignment(.trailing)
-            } else {
+        if let campana = cara.campana {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Cara \(cara.tipo)", systemImage: "rectangle.portrait.fill")
+                        .foregroundStyle(Color("Navy"))
+                    Spacer()
+                    Text(campana.nombre)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color("MunicipioCyan"))
+                        .multilineTextAlignment(.trailing)
+                }
+
+                if let url = fotoURL {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            Button {
+                                onTapFoto?(url)
+                            } label: {
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(height: 160)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay(alignment: .bottomTrailing) {
+                                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .padding(6)
+                                            .background(.black.opacity(0.4), in: Circle())
+                                            .padding(8)
+                                    }
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        case .failure:
+                            EmptyView()
+                        default:
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.secondary.opacity(0.1))
+                                .frame(height: 160)
+                                .overlay { ProgressView() }
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        } else {
+            HStack {
+                Label("Cara \(cara.tipo)", systemImage: "rectangle.portrait.fill")
+                    .foregroundStyle(Color("Navy"))
+                Spacer()
                 Text("Sin campaña")
                     .font(.caption)
                     .foregroundStyle(Color("TextMuted"))

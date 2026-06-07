@@ -9,9 +9,7 @@ final class EstructurasListViewModel {
     var isLoading = false
     var errorMessage: String?
     var estructuraSeleccionada: EstructuraConParque?
-    var carasSeleccionadas: [Cara] = []
-    var campanaCaraA: Campana?
-    var campanaCaraB: Campana?
+    var carasDetalle: [CaraDetalle] = []
     var mostrarDetalle = false
 
     func cargar() async {
@@ -37,17 +35,9 @@ final class EstructurasListViewModel {
 
     func seleccionar(_ estructura: EstructuraConParque) async {
         estructuraSeleccionada = estructura
-        carasSeleccionadas = []
-        campanaCaraA = nil
-        campanaCaraB = nil
+        carasDetalle = []
         do {
-            let caras = try await EstructurasService.shared.fetchCaras(estructuraId: estructura.id)
-            carasSeleccionadas = caras
-            for cara in caras {
-                let campana = try await EstructurasService.shared.fetchCampanaActivaDeCara(caraId: cara.id)
-                if cara.tipo == "A" { campanaCaraA = campana }
-                else if cara.tipo == "B" { campanaCaraB = campana }
-            }
+            carasDetalle = try await EstructurasService.shared.fetchCarasDetalle(estructuraId: estructura.id)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -118,12 +108,9 @@ struct EstructurasListView: View {
             if let estructura = vm.estructuraSeleccionada {
                 EstructuraDetalleSheet(
                     estructura: estructura,
-                    caras: vm.carasSeleccionadas,
-                    campanaA: vm.campanaCaraA,
-                    campanaB: vm.campanaCaraB
+                    caras: vm.carasDetalle
                 )
                 .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
             }
         }
     }
