@@ -18,6 +18,13 @@ struct CampoRootView: View {
             }
         }
         .tint(Color("MunicipioCyan"))
+        .sheet(item: $estructuraSeleccionada) { estructura in
+            RegistrarCoroplastView(
+                estructura: estructura,
+                campanas: vm.campanas,
+                userId: authVM.perfilId
+            )
+        }
     }
 
     private var listaTab: some View {
@@ -42,13 +49,6 @@ struct CampoRootView: View {
             }
             .searchable(text: $vm.busqueda, placement: .navigationBarDrawer(displayMode: .always), prompt: "Número, parque o colonia")
             .task { await vm.cargar() }
-            .sheet(item: $estructuraSeleccionada) { estructura in
-                RegistrarCoroplastView(
-                    estructura: estructura,
-                    campanas: vm.campanas,
-                    userId: authVM.perfilId
-                )
-            }
         }
     }
 

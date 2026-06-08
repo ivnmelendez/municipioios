@@ -274,13 +274,15 @@ struct MapaView: View {
                     estructura: estructura,
                     caras: vm.carasDetalle,
                     mostrarCampanas: mostrarCampanas,
-                    onRegistrarCambio: onRegistrarCambio.map { callback in { callback(estructura) } },
+                    onRegistrarCambio: onRegistrarCambio.map { callback in {
+                        vm.mostrarDetalle = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { callback(estructura) }
+                    } },
                     onLlegar: { lat, lng in
                         vm.mostrarDetalle = false
                         Task { await calcularRuta(a: CLLocationCoordinate2D(latitude: lat, longitude: lng), numero: estructura.numero) }
                     }
                 )
-                .presentationDetents([.medium, .large])
             }
         }
         .navigationTitle("")
@@ -580,6 +582,7 @@ struct EstructuraDetalleSheet: View {
     var onLlegar: ((Double, Double) -> Void)? = nil
 
     @State private var fotoFullscreen: IdentifiableURL?
+    @State private var contentHeight: CGFloat = 420
 
     private func abrirGoogleMaps(lat: Double, lng: Double) {
         let gm = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")!
@@ -619,7 +622,7 @@ struct EstructuraDetalleSheet: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 240)
+                                    .frame(height: 380)
                                     .clipped()
                                     .overlay(alignment: .bottomTrailing) {
                                         Image(systemName: "arrow.up.left.and.arrow.down.right")
@@ -636,7 +639,7 @@ struct EstructuraDetalleSheet: View {
                             EmptyView()
                         default:
                             Color.secondary.opacity(0.1)
-                                .frame(height: 240)
+                                .frame(height: 380)
                                 .overlay { ProgressView() }
                         }
                     }
@@ -699,22 +702,22 @@ struct EstructuraDetalleSheet: View {
                                 registrar()
                             } label: {
                                 Label("Registrar coroplast", systemImage: "square.and.pencil")
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.headline.weight(.bold))
                                     .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 4)
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.borderedProminent)
                             .tint(Color("MunicipioCyan"))
-                            .controlSize(.regular)
+                            .controlSize(.large)
                         }
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
 
-                Divider()
-
                 // Campañas
                 if mostrarCampanas && !caras.isEmpty {
+                    Divider()
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Campañas activas")
                             .font(.footnote.weight(.semibold))
@@ -732,11 +735,11 @@ struct EstructuraDetalleSheet: View {
                         }
                     }
 
-                    Divider()
                 }
 
                 // Notas
                 if let notas = estructura.notas, !notas.isEmpty {
+                    Divider()
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Notas")
                             .font(.footnote.weight(.semibold))
@@ -748,10 +751,16 @@ struct EstructuraDetalleSheet: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            .background(GeometryReader { geo in
+                Color.clear
+                    .onAppear { contentHeight = min(geo.size.height + 60, 700) }
+                    .onChange(of: geo.size.height) { _, h in contentHeight = min(h + 60, 700) }
+            })
         }
         .scrollBounceBehavior(.basedOnSize)
-        .presentationContentInteraction(.resizes)
-        .presentationDragIndicator(.visible)
+        .presentationDetents([.height(contentHeight)])
+        .presentationDragIndicator(.hidden)
+        .presentationContentInteraction(.scrolls)
         .fullScreenCover(item: $fotoFullscreen) { item in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
         }
