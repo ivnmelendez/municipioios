@@ -43,6 +43,8 @@ struct IntervencionesView: View {
                 Task { await vm.cargar() }
             }
             .badge(vm.badgeCount > 0 ? vm.badgeCount : 0)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
 
             if let error = vm.errorMessage {
                 Text(error)

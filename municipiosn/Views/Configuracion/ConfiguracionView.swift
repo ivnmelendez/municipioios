@@ -11,7 +11,8 @@ struct ConfiguracionView: View {
     @Environment(AuthViewModel.self) private var auth
 
     var body: some View {
-        ScrollView {
+        let initiales = auth.initiales
+        return ScrollView {
             VStack(spacing: 0) {
 
                 // MARK: Header de perfil
@@ -26,7 +27,7 @@ struct ConfiguracionView: View {
                                         .frame(width: 90, height: 90)
                                         .clipShape(Circle())
                                 } else {
-                                    Text(auth.initiales.isEmpty ? "?" : auth.initiales)
+                                    Text(initiales.isEmpty ? "?" : initiales)
                                         .font(.system(size: 30, weight: .bold, design: .rounded))
                                         .foregroundStyle(Color("Navy"))
                                         .frame(width: 90, height: 90)

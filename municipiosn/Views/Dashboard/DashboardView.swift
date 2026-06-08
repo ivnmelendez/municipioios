@@ -4,7 +4,6 @@ import UIKit
 struct DashboardView: View {
     @Environment(AuthViewModel.self) private var auth
     @State private var vm = DashboardViewModel()
-    @State private var isScrolled = false
     @State private var mostrarConfiguracion = false
     @State private var aparecer = false
     @State private var ultimaActualizacion: Date? = nil
@@ -55,6 +54,7 @@ struct DashboardView: View {
     }
 
     var body: some View {
+        NavigationStack {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
 
@@ -212,19 +212,6 @@ struct DashboardView: View {
             .padding(.top, 4)
         }
         .background(Color("Background"))
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .frame(height: 0)
-                .ignoresSafeArea(edges: .top)
-                .opacity(isScrolled ? 1 : 0)
-                .animation(.easeInOut(duration: 0.25), value: isScrolled)
-        }
-        .onScrollGeometryChange(for: Bool.self) { geo in
-            geo.contentOffset.y > 8
-        } action: { _, scrolled in
-            isScrolled = scrolled
-        }
         .refreshable {
             await vm.cargar()
             ultimaActualizacion = Date()
@@ -238,6 +225,9 @@ struct DashboardView: View {
             ConfiguracionView()
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

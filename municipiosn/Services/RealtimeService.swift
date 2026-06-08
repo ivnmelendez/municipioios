@@ -11,30 +11,32 @@ final class RealtimeService {
     var badgeCount: Int = 0
 
     private var channel: RealtimeChannelV2?
+    private var subscription: RealtimeSubscription?
     private let client = SupabaseService.shared.client
 
     private init() {}
 
     func subscribir() async {
-        let channel = await client.realtimeV2.channel("rondines_estructuras_rotoplas")
+        let channel = client.realtimeV2.channel("rondines_estructuras_rotoplas")
 
-        let changes = await channel.postgresChange(
+        subscription = channel.onPostgresChange(
             InsertAction.self,
             schema: "public",
             table: "rondines_estructuras",
             filter: "accion=eq.cambio_rotoplas"
-        )
-
-        await channel.subscribe()
-        self.channel = channel
-
-        for await change in changes {
-            await handleInsert(change)
+        ) { [weak self] change in
+            Task { @MainActor [weak self] in
+                await self?.handleInsert(change)
+            }
         }
+
+        try? await channel.subscribeWithError()
+        self.channel = channel
     }
 
     func desuscribir() async {
         await channel?.unsubscribe()
+        subscription = nil
         channel = nil
     }
 
@@ -49,9 +51,9 @@ final class RealtimeService {
 
         badgeCount += 1
 
-        let estructuraNum = (change.record["estructuras"] as? [String: Any])?["numero"] as? String ?? "—"
-        let parqueNom = ((change.record["estructuras"] as? [String: Any])?["parques"] as? [String: Any])?["nombre"] as? String ?? "—"
-        let quien = ((change.record["rondines"] as? [String: Any])?["perfiles"] as? [String: Any])?["nombre"] as? String ?? "—"
+        let estructuraNum = change.record["estructuras"]?.objectValue?["numero"]?.stringValue ?? "—"
+        let parqueNom = change.record["estructuras"]?.objectValue?["parques"]?.objectValue?["nombre"]?.stringValue ?? "—"
+        let quien = change.record["rondines"]?.objectValue?["perfiles"]?.objectValue?["nombre"]?.stringValue ?? "—"
 
         await dispararNotificacion(estructuraNum: estructuraNum, parque: parqueNom, quien: quien)
     }

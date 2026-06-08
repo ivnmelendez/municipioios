@@ -98,6 +98,7 @@ struct MapaView: View {
     }
 
     var body: some View {
+        NavigationStack {
         ZStack(alignment: .bottom) {
             MKMapViewWrapper(
                 coloniasPolygons: coloniasPolygons,
@@ -211,6 +212,10 @@ struct MapaView: View {
                 )
                 .presentationDetents([.medium, .large])
             }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
 }
