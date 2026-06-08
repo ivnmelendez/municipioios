@@ -439,7 +439,6 @@
 				DEVELOPMENT_TEAM = V3A25SS88L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = municipiosn/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Para tomar fotos del coroplast en el campo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Para mostrar tu posición en el mapa del municipio.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Para guardar fotos del coroplast.";
@@ -480,7 +479,6 @@
 				DEVELOPMENT_TEAM = V3A25SS88L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = municipiosn/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Para tomar fotos del coroplast en el campo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Para mostrar tu posición en el mapa del municipio.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Para guardar fotos del coroplast.";

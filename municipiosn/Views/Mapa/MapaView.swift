@@ -486,13 +486,9 @@ struct EstructuraDetalleSheet: View {
     @State private var fotoFullscreen: IdentifiableURL?
 
     private func abrirNavegacion(lat: Double, lng: Double, nombre: String) {
-        let googleMaps = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")!
-        let appleMaps  = URL(string: "maps://?daddr=\(lat),\(lng)")!
-        if UIApplication.shared.canOpenURL(googleMaps) {
-            UIApplication.shared.open(googleMaps)
-        } else {
-            UIApplication.shared.open(appleMaps)
-        }
+        // Universal URL — abre Google Maps app si está instalada, Safari si no
+        let url = URL(string: "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lng)&travelmode=driving")!
+        UIApplication.shared.open(url)
     }
 
     var body: some View {
