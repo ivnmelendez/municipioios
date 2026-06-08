@@ -60,6 +60,11 @@ private struct CaraCampanaInsert: Encodable {
     let activa: Bool
 }
 
+private struct CerrarCampanaUpdate: Encodable {
+    let activa: Bool
+    let fecha_fin: String
+}
+
 final class CoroplastService {
     static let shared = CoroplastService()
     private var client: SupabaseClient { SupabaseService.shared.client }
@@ -133,7 +138,7 @@ final class CoroplastService {
         // Close active campaigns on these faces
         try await client
             .from("caras_campanas")
-            .update(["activa": false, "fecha_fin": hoy])
+            .update(CerrarCampanaUpdate(activa: false, fecha_fin: hoy))
             .eq("activa", value: true)
             .in("cara_id", values: caraIds)
             .execute()
@@ -171,7 +176,7 @@ final class CoroplastService {
         let fileOptions = FileOptions(contentType: "image/jpeg")
         try await client.storage
             .from("rondines")
-            .upload(path: path, file: data, options: fileOptions)
+            .upload(path, data: data, options: fileOptions)
         return try client.storage
             .from("rondines")
             .getPublicURL(path: path)
