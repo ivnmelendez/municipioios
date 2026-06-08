@@ -6,6 +6,18 @@ struct CampoRootView: View {
     @State private var estructuraSeleccionada: EstructuraConParque?
 
     var body: some View {
+        TabView {
+            Tab("Mapa", systemImage: "map.fill") {
+                MapaView()
+            }
+            Tab("Estructuras", systemImage: "square.stack.fill") {
+                listaTab
+            }
+        }
+        .tint(Color("MunicipioCyan"))
+    }
+
+    private var listaTab: some View {
         NavigationStack {
             Group {
                 if vm.isLoading && vm.estructuras.isEmpty {
@@ -15,7 +27,7 @@ struct CampoRootView: View {
                     listaEstructuras
                 }
             }
-            .navigationTitle("Coroplast")
+            .navigationTitle("Estructuras")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -35,7 +47,6 @@ struct CampoRootView: View {
                 )
             }
         }
-        .tint(Color("MunicipioCyan"))
     }
 
     private var listaEstructuras: some View {
