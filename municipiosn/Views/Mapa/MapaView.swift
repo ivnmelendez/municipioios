@@ -45,6 +45,13 @@ private enum MapCommand {
     case centerOnUser
     case resetRegion
     case centerOn(CLLocationCoordinate2D)
+    case fitRoute(MKMapRect)
+}
+
+private struct RutaInfo {
+    let estructuraNumero: String
+    let distancia: String
+    let tiempo: String
 }
 
 // MARK: - MKAnnotation wrapper
@@ -72,6 +79,9 @@ struct MapaView: View {
     @State private var locationManager = CLLocationManager()
     @State private var busqueda = ""
     @State private var pendingCommand: MapCommand? = nil
+    @State private var rutaPolyline: MKPolyline?
+    @State private var rutaInfo: RutaInfo?
+    @State private var calculandoRuta = false
     @FocusState private var searchFocused: Bool
 
     private var anotaciones: [EstructuraAnnotation] {
@@ -98,6 +108,21 @@ struct MapaView: View {
         }
     }
 
+    private func calcularRuta(a destino: CLLocationCoordinate2D, numero: String) async {
+        calculandoRuta = true
+        defer { calculandoRuta = false }
+        let request = MKDirections.Request()
+        request.source = MKMapItem.forCurrentLocation()
+        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destino))
+        request.transportType = .automobile
+        guard let ruta = try? await MKDirections(request: request).calculate().routes.first else { return }
+        rutaPolyline = ruta.polyline
+        let km = String(format: "%.1f km", ruta.distance / 1000)
+        let min = Int(ruta.expectedTravelTime / 60)
+        rutaInfo = RutaInfo(estructuraNumero: numero, distancia: km, tiempo: "\(min) min")
+        pendingCommand = .fitRoute(ruta.polyline.boundingMapRect)
+    }
+
     var body: some View {
         NavigationStack {
         ZStack(alignment: .bottom) {
@@ -106,6 +131,7 @@ struct MapaView: View {
                 municipioPolygons: municipioPolygons,
                 coloniasConEstructuras: coloniasConEstructuras,
                 anotaciones: anotacionesFiltradas,
+                rutaPolyline: rutaPolyline,
                 pendingCommand: $pendingCommand,
                 onSelect: { estructura in
                     Task { await vm.seleccionar(estructura) }
@@ -181,6 +207,42 @@ struct MapaView: View {
                 .padding(.bottom, 20)
             }
 
+            if calculandoRuta {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Calculando ruta…")
+                        .font(.caption)
+                }
+                .padding(12)
+                .background(.regularMaterial, in: Capsule())
+                .padding(.bottom, 100)
+            } else if let info = rutaInfo {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(info.estructuraNumero)
+                            .font(.subheadline.bold())
+                        Text("\(info.distancia) · \(info.tiempo)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        rutaPolyline = nil
+                        rutaInfo = nil
+                    } label: {
+                        Text("Cancelar")
+                            .font(.subheadline)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
             if vm.isLoading {
                 HStack {
                     ProgressView()
@@ -210,7 +272,11 @@ struct MapaView: View {
                 EstructuraDetalleSheet(
                     estructura: estructura,
                     caras: vm.carasDetalle,
-                    mostrarCampanas: mostrarCampanas
+                    mostrarCampanas: mostrarCampanas,
+                    onLlegar: { lat, lng in
+                        vm.mostrarDetalle = false
+                        Task { await calcularRuta(a: CLLocationCoordinate2D(latitude: lat, longitude: lng), numero: estructura.numero) }
+                    }
                 )
                 .presentationDetents([.medium, .large])
             }
@@ -229,6 +295,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let municipioPolygons: [GeoPolygon]
     let coloniasConEstructuras: Set<String>
     let anotaciones: [EstructuraAnnotation]
+    let rutaPolyline: MKPolyline?
     @Binding var pendingCommand: MapCommand?
     let onSelect: (EstructuraConParque) -> Void
 
@@ -267,8 +334,25 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     ),
                     animated: true
                 )
+            case .fitRoute(let rect):
+                mapView.setVisibleMapRect(
+                    rect,
+                    edgePadding: UIEdgeInsets(top: 80, left: 40, bottom: 200, right: 40),
+                    animated: true
+                )
             }
             DispatchQueue.main.async { pendingCommand = nil }
+        }
+
+        // Sync route polyline
+        let existingPolylines = mapView.overlays.compactMap { $0 as? MKPolyline }
+        if let ruta = rutaPolyline {
+            if existingPolylines.first !== ruta {
+                existingPolylines.forEach { mapView.removeOverlay($0) }
+                mapView.addOverlay(ruta, level: .aboveRoads)
+            }
+        } else if !existingPolylines.isEmpty {
+            existingPolylines.forEach { mapView.removeOverlay($0) }
         }
 
         // Keep coordinator in sync for renderers
@@ -346,6 +430,14 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let polyline = overlay as? MKPolyline {
+                let renderer = MKPolylineRenderer(polyline: polyline)
+                renderer.strokeColor = UIColor.systemBlue
+                renderer.lineWidth = 5
+                renderer.lineCap = .round
+                renderer.lineJoin = .round
+                return renderer
+            }
             guard let polygon = overlay as? MKPolygon else {
                 return MKOverlayRenderer(overlay: overlay)
             }
@@ -482,14 +574,9 @@ struct EstructuraDetalleSheet: View {
     let estructura: EstructuraConParque
     let caras: [CaraDetalle]
     var mostrarCampanas: Bool = true
+    var onLlegar: ((Double, Double) -> Void)? = nil
 
     @State private var fotoFullscreen: IdentifiableURL?
-
-    private func abrirNavegacion(lat: Double, lng: Double, nombre: String) {
-        // Universal URL — abre Google Maps app si está instalada, Safari si no
-        let url = URL(string: "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lng)&travelmode=driving")!
-        UIApplication.shared.open(url)
-    }
 
     var body: some View {
         ScrollView(.vertical) {
@@ -562,7 +649,7 @@ struct EstructuraDetalleSheet: View {
 
                         if let lat = estructura.lat, let lng = estructura.lng {
                             Button {
-                                abrirNavegacion(lat: lat, lng: lng, nombre: estructura.numero)
+                                onLlegar?(lat, lng)
                             } label: {
                                 Label("Llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
                                     .font(.subheadline.weight(.semibold))
