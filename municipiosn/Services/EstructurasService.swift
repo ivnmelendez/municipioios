@@ -308,7 +308,7 @@ final class EstructurasService {
         return try await client
             .from("rondines_estructuras")
             .select()
-            .eq("accion", value: "cambio_rotoplas")
+            .eq("accion", value: "cambio_coroplast")
             .gte("created_at", value: isoStart)
             .execute()
             .value

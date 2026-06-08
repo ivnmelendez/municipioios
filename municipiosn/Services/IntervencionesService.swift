@@ -63,7 +63,7 @@ final class IntervencionesService {
                 estructuras(id, numero, parques(id, nombre)),
                 rondines(id, perfiles(id, nombre, rol))
             """)
-            .eq("accion", value: "cambio_rotoplas")
+            .eq("accion", value: "cambio_coroplast")
 
         switch filtro {
         case .semana:

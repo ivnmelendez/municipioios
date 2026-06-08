@@ -5,7 +5,6 @@ enum AccionIntervencion: String, Codable {
     case cambio_campana
     case reparacion
     case instalacion
-    case cambio_rotoplas
     case cambio_coroplast
     case reparacion_coroplast
 }
