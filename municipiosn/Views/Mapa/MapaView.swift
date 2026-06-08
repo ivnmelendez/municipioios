@@ -72,6 +72,7 @@ private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
 
 struct MapaView: View {
     var mostrarCampanas: Bool = true
+    var onRegistrarCambio: ((EstructuraConParque) -> Void)? = nil
     @State private var vm = MapaViewModel()
     @State private var coloniasPolygons: [GeoPolygon] = []
     @State private var municipioPolygons: [GeoPolygon] = []
@@ -273,6 +274,7 @@ struct MapaView: View {
                     estructura: estructura,
                     caras: vm.carasDetalle,
                     mostrarCampanas: mostrarCampanas,
+                    onRegistrarCambio: onRegistrarCambio.map { callback in { callback(estructura) } },
                     onLlegar: { lat, lng in
                         vm.mostrarDetalle = false
                         Task { await calcularRuta(a: CLLocationCoordinate2D(latitude: lat, longitude: lng), numero: estructura.numero) }
@@ -574,6 +576,7 @@ struct EstructuraDetalleSheet: View {
     let estructura: EstructuraConParque
     let caras: [CaraDetalle]
     var mostrarCampanas: Bool = true
+    var onRegistrarCambio: (() -> Void)? = nil
     var onLlegar: ((Double, Double) -> Void)? = nil
 
     @State private var fotoFullscreen: IdentifiableURL?
@@ -688,6 +691,19 @@ struct EstructuraDetalleSheet: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(Color(red: 0.26, green: 0.52, blue: 0.96))
+                            .controlSize(.regular)
+                        }
+
+                        if let registrar = onRegistrarCambio {
+                            Button {
+                                registrar()
+                            } label: {
+                                Label("Registrar coroplast", systemImage: "square.and.pencil")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(Color("MunicipioCyan"))
                             .controlSize(.regular)
                         }
                     }

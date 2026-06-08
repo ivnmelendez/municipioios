@@ -8,7 +8,10 @@ struct CampoRootView: View {
     var body: some View {
         TabView {
             Tab("Mapa", systemImage: "map.fill") {
-                MapaView(mostrarCampanas: false)
+                MapaView(mostrarCampanas: false, onRegistrarCambio: { estructura in
+                    estructuraSeleccionada = estructura
+                })
+                .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }
             Tab("Estructuras", systemImage: "square.stack.fill") {
                 listaTab
