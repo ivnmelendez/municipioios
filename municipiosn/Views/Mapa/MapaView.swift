@@ -578,6 +578,14 @@ struct EstructuraDetalleSheet: View {
 
     @State private var fotoFullscreen: IdentifiableURL?
 
+    private func abrirGoogleMaps(lat: Double, lng: Double) {
+        let gm = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")!
+        let web = URL(string: "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lng)&travelmode=driving")!
+        UIApplication.shared.open(gm) { success in
+            if !success { UIApplication.shared.open(web) }
+        }
+    }
+
     var body: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
@@ -656,16 +664,32 @@ struct EstructuraDetalleSheet: View {
                             .foregroundStyle(Color("TextMuted"))
                     }
                     if let lat = estructura.lat, let lng = estructura.lng {
-                        Button {
-                            onLlegar?(lat, lng)
-                        } label: {
-                            Label("Llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
-                                .font(.subheadline.weight(.semibold))
+                        HStack(spacing: 10) {
+                            Button {
+                                onLlegar?(lat, lng)
+                            } label: {
+                                Label("Mapa", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color("MunicipioCyan"))
+                            .controlSize(.regular)
+
+                            Button {
+                                abrirGoogleMaps(lat: lat, lng: lng)
+                            } label: {
+                                HStack(spacing: 6) {
+                                    GoogleMapsIcon()
+                                    Text("Google Maps")
+                                        .font(.subheadline.weight(.semibold))
+                                }
                                 .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color(red: 0.26, green: 0.52, blue: 0.96))
+                            .controlSize(.regular)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color("MunicipioCyan"))
-                        .controlSize(.regular)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -841,6 +865,24 @@ struct CampanaRow: View {
                     .font(.caption)
                     .foregroundStyle(Color("TextMuted"))
             }
+        }
+    }
+}
+
+// MARK: - Google Maps icon
+
+private struct GoogleMapsIcon: View {
+    var body: some View {
+        ZStack {
+            // Pin shape
+            Circle()
+                .fill(Color(red: 0.26, green: 0.52, blue: 0.96))
+                .frame(width: 14, height: 14)
+                .overlay {
+                    Text("G")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                }
         }
     }
 }
