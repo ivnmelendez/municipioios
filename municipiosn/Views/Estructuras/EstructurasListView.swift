@@ -9,13 +9,6 @@ final class EstructurasListViewModel {
     var filtroEstado: EstadoEstructura? = nil
     var isLoading = false
     var errorMessage: String?
-    var estructuraSeleccionada: EstructuraConParque?
-    var carasDetalle: [CaraDetalle] = []
-    var mostrarDetalle = false
-
-    func conteo(_ estado: EstadoEstructura) -> Int {
-        estructuras.filter { $0.estado == estado }.count
-    }
 
     func cargar() async {
         guard !isLoading else { return }
@@ -37,183 +30,165 @@ final class EstructurasListViewModel {
         guard !busqueda.isEmpty else { filtradas = base; return }
         filtradas = base.filter {
             $0.numero.localizedCaseInsensitiveContains(busqueda) ||
+            ($0.numeroLocal?.localizedCaseInsensitiveContains(busqueda) ?? false) ||
             ($0.parques?.nombre.localizedCaseInsensitiveContains(busqueda) ?? false) ||
             ($0.parques?.colonias?.nombre.localizedCaseInsensitiveContains(busqueda) ?? false)
         }
-    }
-
-    func seleccionar(_ estructura: EstructuraConParque) async {
-        estructuraSeleccionada = estructura
-        carasDetalle = []
-        do {
-            carasDetalle = try await EstructurasService.shared.fetchCarasDetalle(estructuraId: estructura.id)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        mostrarDetalle = true
     }
 }
 
 // MARK: - Main View
 
+private let estadosFiltro: [EstadoEstructura] = [.activa, .dañada, .inactiva]
+
 struct EstructurasListView: View {
     @State private var vm = EstructurasListViewModel()
+    @State private var path: [EstructuraConParque] = []
+    @FocusState private var searchFocused: Bool
+    @State private var showFloatingSearch = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    if !vm.estructuras.isEmpty {
-                        StatsStrip(vm: vm)
+        NavigationStack(path: $path) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 20) {
+                        BuscadorGlass(
+                            busqueda: $vm.busqueda,
+                            searchFocused: $searchFocused,
+                            onClear: { vm.busqueda = ""; vm.filtrar() }
+                        )
+                        .id("searchBar")
+                        .onChange(of: vm.busqueda) { vm.filtrar() }
+
+                        FiltroChips(
+                            filtroActivo: vm.filtroEstado,
+                            onSelect: { estado in
+                                vm.filtroEstado = vm.filtroEstado == estado ? nil : estado
+                                vm.filtrar()
+                            }
+                        )
+
+                        if !vm.estructuras.isEmpty {
+                            HStack {
+                                let isFiltered = vm.filtroEstado != nil || !vm.busqueda.isEmpty
+                                Text(isFiltered
+                                     ? "\(vm.filtradas.count) resultado\(vm.filtradas.count == 1 ? "" : "s")"
+                                     : "\(vm.estructuras.count) estructuras")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color("TextMuted"))
+                                    .contentTransition(.numericText())
+                                    .id(isFiltered ? "filtrado" : "total")
+                                    .transition(.blurReplace)
+                                    .animation(.spring(duration: 0.35), value: isFiltered)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
+                        }
+
+                        ListaEstructuras(filtradas: vm.filtradas, isLoading: vm.isLoading,
+                                         busqueda: vm.busqueda, filtroEstado: vm.filtroEstado)
                     }
-
-                    FiltroChips(vm: vm)
-
-                    ListaEstructuras(vm: vm)
+                    .padding(.top, 12)
+                    .padding(.bottom, 32)
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 32)
+                .background(Color("Background"))
+                .onScrollGeometryChange(for: Bool.self) { geo in
+                    geo.contentOffset.y > 80
+                } action: { _, scrolled in
+                    withAnimation(.spring(duration: 0.3)) { showFloatingSearch = scrolled }
+                }
+                .overlay(alignment: .top) {
+                    if showFloatingSearch {
+                        BuscadorGlass(
+                            busqueda: $vm.busqueda,
+                            searchFocused: $searchFocused,
+                            onClear: { vm.busqueda = ""; vm.filtrar() }
+                        )
+                        .onChange(of: vm.busqueda) { vm.filtrar() }
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
             }
-            .background(Color("Background"))
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $vm.busqueda, prompt: "Número, parque o colonia")
-            .onChange(of: vm.busqueda) { vm.filtrar() }
             .task { await vm.cargar() }
             .refreshable { await vm.cargar() }
-            .sheet(isPresented: $vm.mostrarDetalle) {
-                if let estructura = vm.estructuraSeleccionada {
-                    EstructuraDetalleSheet(estructura: estructura, caras: vm.carasDetalle)
-                        .presentationDetents([.medium, .large])
-                        .presentationContentInteraction(.resizes)
-                }
+            .navigationDestination(for: EstructuraConParque.self) { estructura in
+                EstructuraDetalleView(estructura: estructura)
             }
         }
     }
 }
 
-// MARK: - Stats Strip
+// MARK: - Buscador
 
-private struct StatsStrip: View {
-    let vm: EstructurasListViewModel
+private struct BuscadorGlass: View {
+    @Binding var busqueda: String
+    var searchFocused: FocusState<Bool>.Binding
+    let onClear: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(EstadoEstructura.allCases, id: \.self) { estado in
-                StatChip(
-                    estado: estado,
-                    count: vm.conteo(estado),
-                    isActive: vm.filtroEstado == estado
-                )
-                .onTapGesture {
-                    withAnimation(.spring(duration: 0.3)) {
-                        if vm.filtroEstado == estado {
-                            vm.filtroEstado = nil
-                        } else {
-                            vm.filtroEstado = estado
-                        }
-                        vm.filtrar()
+        Button { searchFocused.wrappedValue = true } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.system(size: 15, weight: .medium))
+                TextField("Número, parque o colonia", text: $busqueda)
+                    .textFieldStyle(.plain)
+                    .autocorrectionDisabled()
+                    .focused(searchFocused)
+                    .onSubmit { searchFocused.wrappedValue = false }
+                if !busqueda.isEmpty {
+                    Button(action: onClear) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
+            .padding(.horizontal, 6)
         }
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.capsule)
+        .controlSize(.large)
         .padding(.horizontal, 20)
-    }
-}
-
-private struct StatChip: View {
-    let estado: EstadoEstructura
-    let count: Int
-    let isActive: Bool
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: estado.icono)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isActive ? .white : estado.color)
-
-            Text("\(count)")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(isActive ? .white : Color("Navy"))
-                .contentTransition(.numericText())
-
-            Text(estado.etiqueta)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(isActive ? .white.opacity(0.8) : Color("TextMuted"))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background {
-            if isActive {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(estado.color)
-            }
-        }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
 // MARK: - Filtro Chips
 
 private struct FiltroChips: View {
-    let vm: EstructurasListViewModel
+    let filtroActivo: EstadoEstructura?
+    let onSelect: (EstadoEstructura?) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                FiltroChip(
-                    label: "Todas",
-                    icon: "square.stack.fill",
-                    color: Color("MunicipioCyan"),
-                    isActive: vm.filtroEstado == nil
-                ) {
-                    withAnimation(.spring(duration: 0.3)) {
-                        vm.filtroEstado = nil
-                        vm.filtrar()
-                    }
-                }
+                chipButton("Todas", isActive: filtroActivo == nil) { onSelect(nil) }
 
-                ForEach(EstadoEstructura.allCases, id: \.self) { estado in
-                    FiltroChip(
-                        label: estado.etiqueta,
-                        icon: estado.icono,
-                        color: estado.color,
-                        isActive: vm.filtroEstado == estado
-                    ) {
-                        withAnimation(.spring(duration: 0.3)) {
-                            vm.filtroEstado = vm.filtroEstado == estado ? nil : estado
-                            vm.filtrar()
-                        }
+                ForEach(estadosFiltro, id: \.self) { estado in
+                    chipButton(estado.etiqueta, isActive: filtroActivo == estado) {
+                        onSelect(estado)
                     }
                 }
             }
             .padding(.horizontal, 20)
+            .padding(.vertical, 6)
         }
+        .scrollClipDisabled()
     }
-}
 
-private struct FiltroChip: View {
-    let label: String
-    let icon: String
-    let color: Color
-    let isActive: Bool
-    let action: () -> Void
-
-    var body: some View {
+    @ViewBuilder
+    private func chipButton(_ label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(label, systemImage: icon)
+            Text(label)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(isActive ? .white : color)
+                .foregroundStyle(isActive ? Color("Background") : Color("Navy"))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background {
-                    if isActive {
-                        Capsule().fill(color)
-                    }
-                }
-                .glassEffect(in: Capsule())
+                .background(isActive ? Color("Navy") : Color("Navy").opacity(0.08), in: Capsule())
+                .scaleEffect(isActive ? 1.04 : 1.0)
+                .animation(.spring(duration: 0.3, bounce: 0.4), value: isActive)
         }
         .buttonStyle(.plain)
     }
@@ -222,40 +197,69 @@ private struct FiltroChip: View {
 // MARK: - Lista
 
 private struct ListaEstructuras: View {
-    let vm: EstructurasListViewModel
+    let filtradas: [EstructuraConParque]
+    let isLoading: Bool
+    let busqueda: String
+    let filtroEstado: EstadoEstructura?
+
+    @State private var appeared = false
+    @State private var listKey = UUID()
 
     var body: some View {
-        if vm.isLoading && vm.estructuras.isEmpty {
-            ProgressView()
-                .frame(maxWidth: .infinity)
-                .padding(.top, 60)
-        } else if vm.filtradas.isEmpty && !vm.busqueda.isEmpty {
-            ContentUnavailableView.search(text: vm.busqueda)
+        if isLoading && filtradas.isEmpty {
+            LazyVStack(spacing: 0) {
+                ForEach(0..<8, id: \.self) { _ in
+                    EstructuraRowSkeleton()
+                    Divider().padding(.leading, 20)
+                }
+            }
+            .padding(.horizontal, 20)
+        } else if filtradas.isEmpty && !busqueda.isEmpty {
+            ContentUnavailableView.search(text: busqueda)
                 .padding(.top, 40)
-        } else if vm.filtradas.isEmpty && vm.filtroEstado != nil {
+        } else if filtradas.isEmpty && filtroEstado != nil {
             ContentUnavailableView(
                 "Sin estructuras",
-                systemImage: vm.filtroEstado?.icono ?? "square.stack",
-                description: Text("No hay estructuras con estado \"\(vm.filtroEstado?.etiqueta ?? "")\"")
+                systemImage: filtroEstado?.icono ?? "square.stack",
+                description: Text("No hay estructuras con estado \"\(filtroEstado?.etiqueta ?? "")\"")
             )
             .padding(.top, 40)
         } else {
             LazyVStack(spacing: 0) {
-                ForEach(Array(vm.filtradas.enumerated()), id: \.element.id) { index, estructura in
-                    EstructuraRow(estructura: estructura)
-                        .onTapGesture {
-                            Task { await vm.seleccionar(estructura) }
-                        }
-
-                    if index < vm.filtradas.count - 1 {
-                        Divider()
-                            .padding(.leading, 72)
+                ForEach(Array(filtradas.enumerated()), id: \.element.id) { index, estructura in
+                    NavigationLink(value: estructura) {
+                        EstructuraRow(estructura: estructura)
                     }
+                    .buttonStyle(RowButtonStyle())
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 12)
+                    .animation(
+                        .spring(duration: 0.4, bounce: 0.08)
+                        .delay(Double(min(index, 14)) * 0.035),
+                        value: appeared
+                    )
+                    Divider()
+                        .padding(.leading, 20)
                 }
             }
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .padding(.horizontal, 20)
+            .id(listKey)
+            .onAppear { appeared = true }
+            .onChange(of: filtroEstado) { _, _ in triggerAnimation() }
         }
+    }
+
+    private func triggerAnimation() {
+        appeared = false
+        listKey = UUID()
+        Task { @MainActor in appeared = true }
+    }
+}
+
+private struct RowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Color.secondary.opacity(0.08) : Color.clear)
     }
 }
 
@@ -265,44 +269,207 @@ struct EstructuraRow: View {
     let estructura: EstructuraConParque
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(estructura.estado.color.opacity(0.15))
-                    .frame(width: 44, height: 44)
-                Image(systemName: estructura.estado.icono)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(estructura.estado.color)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(estructura.numero)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color("Navy"))
-
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 7) {
+                    Text(estructura.numero)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if let local = estructura.numeroLocal, !local.isEmpty {
+                        Text(local)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.secondary.opacity(0.1), in: Capsule())
+                    }
+                }
                 if let parque = estructura.parques {
+                    Text(parque.nombre)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     if let colonia = parque.colonias {
-                        Text("\(parque.nombre) · \(colonia.nombre)")
+                        Text(colonia.nombre)
                             .font(.caption)
-                            .foregroundStyle(Color("TextMuted"))
-                            .lineLimit(1)
-                    } else {
-                        Text(parque.nombre)
-                            .font(.caption)
-                            .foregroundStyle(Color("TextMuted"))
-                            .lineLimit(1)
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
-
             Spacer()
-
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color("TextMuted").opacity(0.5))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Skeleton Row
+
+private struct EstructuraRowSkeleton: View {
+    @State private var phase: Double = 0
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.secondary.opacity(0.15))
+                    .frame(width: 80, height: 13)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.secondary.opacity(0.1))
+                    .frame(width: 150, height: 11)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.secondary.opacity(0.08))
+                    .frame(width: 110, height: 10)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .opacity(0.4 + 0.6 * abs(sin(phase)))
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: false)) {
+                phase = .pi
+            }
+        }
+    }
+}
+
+// MARK: - Detalle
+
+struct EstructuraDetalleView: View {
+    let estructura: EstructuraConParque
+    @State private var caras: [CaraDetalle] = []
+    @State private var isLoading = true
+    @State private var fotoFullscreen: IdentifiableURL?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+
+                // Estado badge
+                HStack {
+                    EstadoBadge(estado: estructura.estado)
+                    Spacer()
+                    if let fecha = estructura.fechaInstalacion {
+                        Text("Instalada \(fecha.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.caption)
+                            .foregroundStyle(Color("TextMuted"))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
+
+                Divider()
+
+                // Foto estructura
+                if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            Button {
+                                fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
+                            } label: {
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 360)
+                                    .clipped()
+                                    .overlay(alignment: .bottomTrailing) {
+                                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .padding(6)
+                                            .background(.black.opacity(0.4), in: Circle())
+                                            .padding(10)
+                                    }
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        case .failure:
+                            EmptyView()
+                        default:
+                            Color.secondary.opacity(0.1)
+                                .frame(height: 360)
+                                .overlay { ProgressView() }
+                        }
+                    }
+                    Divider()
+                }
+
+                // Ubicación
+                if let parque = estructura.parques {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Ubicación")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        if let colonia = parque.colonias {
+                            Label(colonia.nombre, systemImage: "map")
+                                .font(.subheadline)
+                        }
+                        Label(parque.nombre, systemImage: "tree")
+                            .font(.subheadline)
+                            .foregroundStyle(Color("TextMuted"))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    Divider()
+                }
+
+                // Campañas
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
+                } else if !caras.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Campañas activas")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
+                            .padding(.bottom, 12)
+
+                        ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
+                            CampanaRow(cara: cara, onTapFoto: { url in
+                                fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña Cara \(cara.tipo)")
+                            })
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 16)
+                        }
+                    }
+                    Divider()
+                }
+
+                // Notas
+                if let notas = estructura.notas, !notas.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Notas")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        Text(notas)
+                            .font(.body)
+                    }
+                    .padding(20)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .background(Color("Background"))
+        .navigationTitle(estructura.numero)
+        .navigationBarTitleDisplayMode(.large)
+        .task {
+            do {
+                caras = try await EstructurasService.shared.fetchCarasDetalle(estructuraId: estructura.id)
+            } catch {}
+            isLoading = false
+        }
+        .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
+            FotoFullscreenView(url: item.url, titulo: item.titulo)
+        }
     }
 }

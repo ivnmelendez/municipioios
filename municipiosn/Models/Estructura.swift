@@ -66,7 +66,7 @@ struct Parque: Codable, Identifiable {
     }
 }
 
-struct Colonia: Codable, Identifiable {
+struct Colonia: Codable, Identifiable, Hashable {
     let id: UUID
     let nombre: String
     let activo: Bool

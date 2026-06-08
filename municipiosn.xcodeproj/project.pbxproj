@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9E644B862FD62E4D0090521E /* municipioads.icon in Resources */ = {isa = PBXBuildFile; fileRef = 9E644B852FD62E4D0090521E /* municipioads.icon */; };
+		9E644B882FD630F00090521E /* logo_dark.png in Resources */ = {isa = PBXBuildFile; fileRef = 9E644B872FD630F00090521E /* logo_dark.png */; };
+		9E644B8A2FD630F70090521E /* logo_white.png in Resources */ = {isa = PBXBuildFile; fileRef = 9E644B892FD630F70090521E /* logo_white.png */; };
 		9E9151442FD3C746001F4543 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 9E9151432FD3C746001F4543 /* Auth */; };
 		9E9151462FD3C746001F4543 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 9E9151452FD3C746001F4543 /* Functions */; };
 		9E9151482FD3C746001F4543 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 9E9151472FD3C746001F4543 /* PostgREST */; };
@@ -33,6 +36,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9E644B852FD62E4D0090521E /* municipioads.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = municipioads.icon; sourceTree = "<group>"; };
+		9E644B872FD630F00090521E /* logo_dark.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = logo_dark.png; sourceTree = "<group>"; };
+		9E644B892FD630F70090521E /* logo_white.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = logo_white.png; sourceTree = "<group>"; };
 		9E9150E72FD3C4A8001F4543 /* municipiosn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = municipiosn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E9150F42FD3C4A9001F4543 /* municipiosnTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = municipiosnTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E9150FE2FD3C4A9001F4543 /* municipiosnUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = municipiosnUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,6 +100,9 @@
 				9E9150F72FD3C4A9001F4543 /* municipiosnTests */,
 				9E9151012FD3C4A9001F4543 /* municipiosnUITests */,
 				9E9150E82FD3C4A8001F4543 /* Products */,
+				9E644B852FD62E4D0090521E /* municipioads.icon */,
+				9E644B872FD630F00090521E /* logo_dark.png */,
+				9E644B892FD630F70090521E /* logo_white.png */,
 			);
 			sourceTree = "<group>";
 		};
@@ -236,6 +245,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9E644B882FD630F00090521E /* logo_dark.png in Resources */,
+				9E644B862FD62E4D0090521E /* municipioads.icon in Resources */,
+				9E644B8A2FD630F70090521E /* logo_white.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -417,8 +429,9 @@
 		9E9151092FD3C4A9001F4543 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = municipioads;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = V3A25SS88L;
@@ -428,8 +441,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -439,6 +451,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ivanmelendez.municipiosn;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -451,8 +467,9 @@
 		9E91510A2FD3C4A9001F4543 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = municipioads;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = V3A25SS88L;
@@ -462,8 +479,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -473,6 +489,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ivanmelendez.municipiosn;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;

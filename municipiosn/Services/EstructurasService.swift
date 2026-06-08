@@ -1,7 +1,7 @@
 import Foundation
 import Supabase
 
-struct EstructuraConParque: Codable, Identifiable {
+struct EstructuraConParque: Codable, Identifiable, Hashable {
     let id: UUID
     let numero: String
     let numeroLocal: String?
@@ -24,7 +24,7 @@ struct EstructuraConParque: Codable, Identifiable {
     }
 }
 
-struct ParqueConColonia: Codable, Identifiable {
+struct ParqueConColonia: Codable, Identifiable, Hashable {
     let id: UUID
     let nombre: String
     let colonias: Colonia?

@@ -470,7 +470,7 @@ struct EstructuraMarker: View {
 
 // MARK: - Detail sheet
 
-private struct IdentifiableURL: Identifiable {
+struct IdentifiableURL: Identifiable {
     let id = UUID()
     let url: URL
     let titulo: String
