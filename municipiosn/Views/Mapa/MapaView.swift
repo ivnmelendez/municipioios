@@ -635,7 +635,7 @@ struct EstructuraDetalleSheet: View {
 
                 // Ubicación completa
                 if let parque = estructura.parques {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Ubicación")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color("TextMuted"))
@@ -646,23 +646,28 @@ struct EstructuraDetalleSheet: View {
                         Label(parque.nombre, systemImage: "tree")
                             .font(.subheadline)
                             .foregroundStyle(Color("TextMuted"))
-
-                        if let lat = estructura.lat, let lng = estructura.lng {
-                            Button {
-                                onLlegar?(lat, lng)
-                            } label: {
-                                Label("Llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
-                                    .font(.subheadline.weight(.semibold))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color("MunicipioCyan"))
-                            .controlSize(.regular)
-                        }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 10)
+                }
 
+                if let lat = estructura.lat, let lng = estructura.lng, onLlegar != nil {
+                    Button {
+                        onLlegar?(lat, lng)
+                    } label: {
+                        Label("Llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color("MunicipioCyan"))
+                    .controlSize(.regular)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                }
+
+                if estructura.parques != nil || (estructura.lat != nil && onLlegar != nil) {
                     Divider()
                 }
 
