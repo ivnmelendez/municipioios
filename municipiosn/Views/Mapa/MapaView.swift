@@ -64,6 +64,7 @@ private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
 // MARK: - MapaView
 
 struct MapaView: View {
+    var mostrarCampanas: Bool = true
     @State private var vm = MapaViewModel()
     @State private var coloniasPolygons: [GeoPolygon] = []
     @State private var municipioPolygons: [GeoPolygon] = []
@@ -208,7 +209,8 @@ struct MapaView: View {
             if let estructura = vm.estructuraSeleccionada {
                 EstructuraDetalleSheet(
                     estructura: estructura,
-                    caras: vm.carasDetalle
+                    caras: vm.carasDetalle,
+                    mostrarCampanas: mostrarCampanas
                 )
                 .presentationDetents([.medium, .large])
             }
@@ -479,6 +481,7 @@ struct IdentifiableURL: Identifiable {
 struct EstructuraDetalleSheet: View {
     let estructura: EstructuraConParque
     let caras: [CaraDetalle]
+    var mostrarCampanas: Bool = true
 
     @State private var fotoFullscreen: IdentifiableURL?
 
@@ -558,7 +561,7 @@ struct EstructuraDetalleSheet: View {
                 }
 
                 // Campañas
-                if !caras.isEmpty {
+                if mostrarCampanas && !caras.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Campañas activas")
                             .font(.footnote.weight(.semibold))

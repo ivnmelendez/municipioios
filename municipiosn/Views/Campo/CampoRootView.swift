@@ -8,7 +8,7 @@ struct CampoRootView: View {
     var body: some View {
         TabView {
             Tab("Mapa", systemImage: "map.fill") {
-                MapaView()
+                MapaView(mostrarCampanas: false)
             }
             Tab("Estructuras", systemImage: "square.stack.fill") {
                 listaTab
