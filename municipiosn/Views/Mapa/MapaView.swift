@@ -113,7 +113,7 @@ struct MapaView: View {
         defer { calculandoRuta = false }
         let request = MKDirections.Request()
         request.source = MKMapItem.forCurrentLocation()
-        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destino))
+        request.destination = MKMapItem(location: CLLocation(latitude: destino.latitude, longitude: destino.longitude))
         request.transportType = .automobile
         guard let ruta = try? await MKDirections(request: request).calculate().routes.first else { return }
         rutaPolyline = ruta.polyline
