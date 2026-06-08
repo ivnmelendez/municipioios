@@ -309,7 +309,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -365,6 +364,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -374,7 +374,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -423,6 +422,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -439,6 +439,7 @@
 				DEVELOPMENT_TEAM = V3A25SS88L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = municipiosn/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Para tomar fotos del coroplast en el campo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Para mostrar tu posición en el mapa del municipio.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Para guardar fotos del coroplast.";
@@ -479,6 +480,7 @@
 				DEVELOPMENT_TEAM = V3A25SS88L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = municipiosn/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Para tomar fotos del coroplast en el campo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Para mostrar tu posición en el mapa del municipio.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Para guardar fotos del coroplast.";

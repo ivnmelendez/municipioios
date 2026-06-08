@@ -485,6 +485,16 @@ struct EstructuraDetalleSheet: View {
 
     @State private var fotoFullscreen: IdentifiableURL?
 
+    private func abrirNavegacion(lat: Double, lng: Double, nombre: String) {
+        let googleMaps = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")!
+        let appleMaps  = URL(string: "maps://?daddr=\(lat),\(lng)")!
+        if UIApplication.shared.canOpenURL(googleMaps) {
+            UIApplication.shared.open(googleMaps)
+        } else {
+            UIApplication.shared.open(appleMaps)
+        }
+    }
+
     var body: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
@@ -542,7 +552,7 @@ struct EstructuraDetalleSheet: View {
 
                 // Ubicación completa
                 if let parque = estructura.parques {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text("Ubicación")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color("TextMuted"))
@@ -553,6 +563,19 @@ struct EstructuraDetalleSheet: View {
                         Label(parque.nombre, systemImage: "tree")
                             .font(.subheadline)
                             .foregroundStyle(Color("TextMuted"))
+
+                        if let lat = estructura.lat, let lng = estructura.lng {
+                            Button {
+                                abrirNavegacion(lat: lat, lng: lng, nombre: estructura.numero)
+                            } label: {
+                                Label("Llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color("MunicipioCyan"))
+                            .controlSize(.regular)
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
