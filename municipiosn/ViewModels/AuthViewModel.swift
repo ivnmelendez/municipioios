@@ -14,6 +14,8 @@ final class AuthViewModel {
     var isLoading = false
     var displayName: String = ""
     var initiales: String = ""
+    var rol: String = "admin"
+    var perfilId: UUID?
 
     private let auth = SupabaseService.shared.client.auth
 
@@ -43,6 +45,23 @@ final class AuthViewModel {
         initiales = parts.map { String($0.prefix(1)) }.joined().uppercased()
         if initiales.isEmpty, let first = name.first {
             initiales = String(first).uppercased()
+        }
+        await fetchPerfil(userId: user.id)
+    }
+
+    private func fetchPerfil(userId: UUID) async {
+        do {
+            let perfil: Perfil = try await SupabaseService.shared.client
+                .from("perfiles")
+                .select("id, nombre, rol")
+                .eq("id", value: userId.uuidString)
+                .single()
+                .execute()
+                .value
+            rol = perfil.rol
+            perfilId = perfil.id
+        } catch {
+            rol = "admin"
         }
     }
 
@@ -83,6 +102,10 @@ final class AuthViewModel {
 
     func signOut() async {
         try? await auth.signOut()
+        rol = "admin"
+        perfilId = nil
+        displayName = ""
+        initiales = ""
         authState = .unauthenticated
     }
 

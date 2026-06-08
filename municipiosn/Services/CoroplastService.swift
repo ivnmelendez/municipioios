@@ -1,0 +1,198 @@
+import Foundation
+import Supabase
+
+struct CaraParaCambio: Identifiable {
+    let id: UUID
+    let tipo: String
+    let campanaActual: CampanaBasica?
+    var nuevaCampana: CampanaBasica?
+}
+
+struct CampanaBasica: Codable, Identifiable {
+    let id: UUID
+    let nombre: String
+    let fotoUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, nombre
+        case fotoUrl = "foto_url"
+    }
+}
+
+private struct CaraConCampanaRaw: Codable {
+    let id: UUID
+    let tipo: String
+    let carasCampanas: [CaraCampanaSimple]
+
+    struct CaraCampanaSimple: Codable {
+        let activa: Bool
+        let campanas: CampanaBasica?
+
+        enum CodingKeys: String, CodingKey {
+            case activa, campanas
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, tipo
+        case carasCampanas = "caras_campanas"
+    }
+}
+
+private struct RondinInsert: Encodable {
+    let fecha: String
+    let created_by: String
+}
+
+private struct RondinEstructuraInsert: Encodable {
+    let rondin_id: String
+    let estructura_id: String
+    let accion: String
+    let foto_antes_url: String?
+    let foto_despues_url: String?
+    let notas: String?
+}
+
+private struct CaraCampanaInsert: Encodable {
+    let cara_id: String
+    let campana_id: String
+    let fecha_inicio: String
+    let activa: Bool
+}
+
+final class CoroplastService {
+    static let shared = CoroplastService()
+    private var client: SupabaseClient { SupabaseService.shared.client }
+
+    private init() {}
+
+    func fetchCampanasActivas() async throws -> [CampanaBasica] {
+        try await client
+            .from("campanas")
+            .select("id, nombre, foto_url")
+            .eq("activa", value: true)
+            .order("nombre")
+            .execute()
+            .value
+    }
+
+    func fetchCarasParaCambio(estructuraId: UUID) async throws -> [CaraParaCambio] {
+        let raw: [CaraConCampanaRaw] = try await client
+            .from("caras")
+            .select("id, tipo, caras_campanas(activa, campanas(id, nombre, foto_url))")
+            .eq("estructura_id", value: estructuraId.uuidString)
+            .execute()
+            .value
+
+        return raw.map { cara in
+            let activa = cara.carasCampanas.first(where: { $0.activa })
+            return CaraParaCambio(
+                id: cara.id,
+                tipo: cara.tipo,
+                campanaActual: activa?.campanas,
+                nuevaCampana: nil
+            )
+        }
+    }
+
+    func registrarReparacion(
+        estructuraId: UUID,
+        userId: UUID,
+        fotoAntesUrl: String?,
+        fotoDespuesUrl: String?,
+        notas: String?
+    ) async throws {
+        let rondinId = try await crearRondin(userId: userId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "reparacion_coroplast",
+                foto_antes_url: fotoAntesUrl,
+                foto_despues_url: fotoDespuesUrl,
+                notas: notas
+            ))
+            .execute()
+    }
+
+    func registrarCambio(
+        estructuraId: UUID,
+        userId: UUID,
+        carasNuevasCampanas: [(caraId: UUID, campanaId: UUID)],
+        fotoAntesUrl: String?,
+        fotoDespuesUrl: String?,
+        notas: String?
+    ) async throws {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        let hoy = formatter.string(from: Date())
+
+        let caraIds = carasNuevasCampanas.map { $0.caraId.uuidString }
+
+        // Close active campaigns on these faces
+        try await client
+            .from("caras_campanas")
+            .update(["activa": false, "fecha_fin": hoy])
+            .eq("activa", value: true)
+            .in("cara_id", values: caraIds)
+            .execute()
+
+        // Insert new campaign assignments
+        let inserts = carasNuevasCampanas.map { cara in
+            CaraCampanaInsert(
+                cara_id: cara.caraId.uuidString,
+                campana_id: cara.campanaId.uuidString,
+                fecha_inicio: hoy,
+                activa: true
+            )
+        }
+        try await client
+            .from("caras_campanas")
+            .insert(inserts)
+            .execute()
+
+        // Log the intervention
+        let rondinId = try await crearRondin(userId: userId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "cambio_coroplast",
+                foto_antes_url: fotoAntesUrl,
+                foto_despues_url: fotoDespuesUrl,
+                notas: notas
+            ))
+            .execute()
+    }
+
+    func uploadFoto(data: Data, path: String) async throws -> String {
+        let fileOptions = FileOptions(contentType: "image/jpeg")
+        try await client.storage
+            .from("rondines")
+            .upload(path: path, file: data, options: fileOptions)
+        return try client.storage
+            .from("rondines")
+            .getPublicURL(path: path)
+            .absoluteString
+    }
+
+    private func crearRondin(userId: UUID) async throws -> UUID {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        let hoy = formatter.string(from: Date())
+
+        struct RondinResponse: Codable {
+            let id: UUID
+        }
+        let result: RondinResponse = try await client
+            .from("rondines")
+            .insert(RondinInsert(fecha: hoy, created_by: userId.uuidString))
+            .select("id")
+            .single()
+            .execute()
+            .value
+        return result.id
+    }
+}

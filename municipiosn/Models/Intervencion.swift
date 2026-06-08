@@ -6,6 +6,8 @@ enum AccionIntervencion: String, Codable {
     case reparacion
     case instalacion
     case cambio_rotoplas
+    case cambio_coroplast
+    case reparacion_coroplast
 }
 
 struct Perfil: Codable, Identifiable {

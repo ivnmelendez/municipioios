@@ -5,28 +5,31 @@ struct ContentView: View {
     @State private var intervencionesVM = IntervencionesViewModel()
 
     var body: some View {
-        TabView {
-            Tab("Dashboard", systemImage: "chart.bar.fill") {
-                DashboardView()
-            }
+        if authVM.rol == "campo" {
+            CampoRootView(authVM: authVM)
+        } else {
+            TabView {
+                Tab("Dashboard", systemImage: "chart.bar.fill") {
+                    DashboardView()
+                }
 
-            Tab("Mapa", systemImage: "map.fill") {
-                MapaView()
-            }
+                Tab("Mapa", systemImage: "map.fill") {
+                    MapaView()
+                }
 
-            Tab("Estructuras", systemImage: "square.stack.fill") {
-                EstructurasListView()
-            }
+                Tab("Estructuras", systemImage: "square.stack.fill") {
+                    EstructurasListView()
+                }
 
-            Tab("Cambios", systemImage: "arrow.triangle.2.circlepath") {
-                IntervencionesView()
+                Tab("Cambios", systemImage: "arrow.triangle.2.circlepath") {
+                    IntervencionesView()
+                }
+                .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
             }
-            .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
-
-        }
-        .tint(Color("MunicipioCyan"))
-        .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
-            intervencionesVM.badgeCount += 1
+            .tint(Color("MunicipioCyan"))
+            .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
+                intervencionesVM.badgeCount += 1
+            }
         }
     }
 }
