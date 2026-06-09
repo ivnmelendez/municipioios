@@ -121,7 +121,9 @@ struct MapaView: View {
         rutaPolyline = ruta.polyline
         let km = String(format: "%.1f km", ruta.distance / 1000)
         let min = Int(ruta.expectedTravelTime / 60)
-        rutaInfo = RutaInfo(estructuraNumero: numero, distancia: km, tiempo: "\(min) min")
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
+            rutaInfo = RutaInfo(estructuraNumero: numero, distancia: km, tiempo: "\(min) min")
+        }
         pendingCommand = .fitRoute(ruta.polyline.boundingMapRect)
     }
 
@@ -229,13 +231,15 @@ struct MapaView: View {
                     }
                     Spacer()
                     Button {
-                        rutaPolyline = nil
-                        rutaInfo = nil
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            rutaPolyline = nil
+                            rutaInfo = nil
+                        }
                     } label: {
                         Text("Cancelar")
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
                     }
+                    .buttonStyle(.glass(.regular))
+                    .tint(.red)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -478,7 +482,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             views.forEach { view in
                 guard view.annotation is EstructuraMKAnnotation else { return }
                 view.alpha = 0
-                UIView.animate(withDuration: 0.4, delay: 0, options: .curveEaseOut) {
+                UIView.animate(springDuration: 0.35, bounce: 0) {
                     view.alpha = 1
                 }
             }
