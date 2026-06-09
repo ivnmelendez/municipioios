@@ -8,6 +8,25 @@ enum AccionIntervencion: String, Codable {
     case cambio_coroplast
     case reparacion_coroplast
     case reporte_dano
+    case reactivacion
+}
+
+enum TipoDano: String, Codable, CaseIterable {
+    case coroplast_roto
+    case sin_coroplast
+    case destruida
+
+    var label: String {
+        switch self {
+        case .coroplast_roto: return "Coroplast roto"
+        case .sin_coroplast: return "Sin coroplast"
+        case .destruida: return "Destruida"
+        }
+    }
+
+    var estadoResultante: EstadoEstructura {
+        self == .destruida ? .destruida : .dañada
+    }
 }
 
 struct Perfil: Codable, Identifiable {

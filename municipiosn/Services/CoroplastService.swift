@@ -48,6 +48,7 @@ private struct RondinEstructuraInsert: Encodable {
     let rondin_id: String
     let estructura_id: String
     let accion: String
+    let tipo_dano: String?
     let foto_antes_url: String?
     let foto_despues_url: String?
     let notas: String?
@@ -118,6 +119,7 @@ final class CoroplastService {
                 rondin_id: rondinId.uuidString,
                 estructura_id: estructuraId.uuidString,
                 accion: "reparacion_coroplast",
+                tipo_dano: nil,
                 foto_antes_url: fotoAntesUrl,
                 foto_despues_url: fotoDespuesUrl,
                 notas: notas
@@ -127,6 +129,7 @@ final class CoroplastService {
 
     func registrarCambio(
         estructuraId: UUID,
+        estadoActual: EstadoEstructura,
         userId: UUID,
         carasNuevasCampanas: [(caraId: UUID, campanaId: UUID)],
         fotoAntesUrl: String?,
@@ -139,7 +142,6 @@ final class CoroplastService {
 
         let caraIds = carasNuevasCampanas.map { $0.caraId.uuidString }
 
-        // Close active campaigns on these faces
         try await client
             .from("caras_campanas")
             .update(CerrarCampanaUpdate(activa: false, fecha_fin: hoy))
@@ -147,7 +149,6 @@ final class CoroplastService {
             .in("cara_id", values: caraIds)
             .execute()
 
-        // Insert new campaign assignments
         let inserts = carasNuevasCampanas.map { cara in
             CaraCampanaInsert(
                 cara_id: cara.caraId.uuidString,
@@ -161,7 +162,6 @@ final class CoroplastService {
             .insert(inserts)
             .execute()
 
-        // Log the intervention
         let rondinId = try await crearRondin(userId: userId)
         try await client
             .from("rondines_estructuras")
@@ -169,16 +169,26 @@ final class CoroplastService {
                 rondin_id: rondinId.uuidString,
                 estructura_id: estructuraId.uuidString,
                 accion: "cambio_coroplast",
+                tipo_dano: nil,
                 foto_antes_url: fotoAntesUrl,
                 foto_despues_url: fotoDespuesUrl,
                 notas: notas
             ))
             .execute()
+
+        if estadoActual == .dañada {
+            try await client
+                .from("estructuras")
+                .update(EstadoUpdate(estado: "activa"))
+                .eq("id", value: estructuraId.uuidString)
+                .execute()
+        }
     }
 
     func reportarDano(
         estructuraId: UUID,
         userId: UUID,
+        tipoDano: TipoDano,
         fotoUrl: String?,
         notas: String?
     ) async throws {
@@ -189,6 +199,7 @@ final class CoroplastService {
                 rondin_id: rondinId.uuidString,
                 estructura_id: estructuraId.uuidString,
                 accion: "reporte_dano",
+                tipo_dano: tipoDano.rawValue,
                 foto_antes_url: fotoUrl,
                 foto_despues_url: nil,
                 notas: notas
@@ -196,7 +207,33 @@ final class CoroplastService {
             .execute()
         try await client
             .from("estructuras")
-            .update(EstadoUpdate(estado: "dañada"))
+            .update(EstadoUpdate(estado: tipoDano.estadoResultante.rawValue))
+            .eq("id", value: estructuraId.uuidString)
+            .execute()
+    }
+
+    func reactivarEstructura(
+        estructuraId: UUID,
+        userId: UUID,
+        fotoProveedorUrl: String?,
+        notas: String?
+    ) async throws {
+        let rondinId = try await crearRondin(userId: userId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "reactivacion",
+                tipo_dano: nil,
+                foto_antes_url: fotoProveedorUrl,
+                foto_despues_url: nil,
+                notas: notas
+            ))
+            .execute()
+        try await client
+            .from("estructuras")
+            .update(EstadoUpdate(estado: "activa"))
             .eq("id", value: estructuraId.uuidString)
             .execute()
     }

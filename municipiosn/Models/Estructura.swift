@@ -23,6 +23,7 @@ struct CampanaEnColonia: Identifiable {
 enum EstadoEstructura: String, Codable, CaseIterable {
     case activa
     case dañada
+    case destruida
     case en_reparacion
     case inactiva
 }

@@ -5,6 +5,7 @@ extension EstadoEstructura {
         switch self {
         case .activa: Color(hex: "#16a34a")
         case .dañada: Color(hex: "#dc2626")
+        case .destruida: Color(hex: "#7c3aed")
         case .en_reparacion: Color(hex: "#d97706")
         case .inactiva: Color(hex: "#94a3b8")
         }
@@ -14,6 +15,7 @@ extension EstadoEstructura {
         switch self {
         case .activa: "Activa"
         case .dañada: "Dañada"
+        case .destruida: "Destruida"
         case .en_reparacion: "En reparación"
         case .inactiva: "Inactiva"
         }
@@ -23,6 +25,7 @@ extension EstadoEstructura {
         switch self {
         case .activa: "checkmark.circle.fill"
         case .dañada: "exclamationmark.triangle.fill"
+        case .destruida: "xmark.octagon.fill"
         case .en_reparacion: "wrench.and.screwdriver.fill"
         case .inactiva: "xmark.circle.fill"
         }

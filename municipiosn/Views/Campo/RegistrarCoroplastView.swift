@@ -1,9 +1,9 @@
 import SwiftUI
 import PhotosUI
 
-enum TipoAccionCoroplast {
-    case reparacion, cambio
-}
+enum TipoAccionCoroplast { case reparacion, cambio }
+
+private enum Paso { case accion, campanas, fotoAntes, fotoDespues, confirmar }
 
 struct RegistrarCoroplastView: View {
     let estructura: EstructuraConParque
@@ -11,6 +11,7 @@ struct RegistrarCoroplastView: View {
     let userId: UUID?
 
     @Environment(\.dismiss) private var dismiss
+    @State private var paso: Paso = .accion
     @State private var tipoSeleccionado: TipoAccionCoroplast?
     @State private var caras: [CaraParaCambio] = []
     @State private var notas: String = ""
@@ -19,32 +20,58 @@ struct RegistrarCoroplastView: View {
     @State private var fotoAntesUI: UIImage?
     @State private var fotoDespuesUI: UIImage?
     @State private var isLoading = false
-    @State private var errorMessage: String?
     @State private var cargandoCaras = false
+    @State private var errorMessage: String?
     @State private var exito = false
+    @State private var avanzando = true
+
+    private var esCambio: Bool { tipoSeleccionado == .cambio }
+
+    private var totalPasos: Int { esCambio ? 5 : 4 }
+
+    private var pasoNumero: Int {
+        switch paso {
+        case .accion:     return 1
+        case .campanas:   return 2
+        case .fotoAntes:  return esCambio ? 3 : 2
+        case .fotoDespues: return esCambio ? 4 : 3
+        case .confirmar:  return totalPasos
+        }
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    estructuraHeader
-                    accionSelector
-                    if tipoSeleccionado != nil {
-                        fotosSection
-                        notasSection
-                        if tipoSeleccionado == .cambio {
-                            carasSection
-                        }
-                        submitButton
-                    }
+            VStack(spacing: 0) {
+                estructuraHeader
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+
+                progresoIndicador
+                    .padding(.vertical, 20)
+
+                ZStack {
+                    if paso == .accion     { pasoAccion.transition(transicion) }
+                    if paso == .campanas   { pasoCampanas.transition(transicion) }
+                    if paso == .fotoAntes  { pasoFoto(esAntes: true).transition(transicion) }
+                    if paso == .fotoDespues { pasoFoto(esAntes: false).transition(transicion) }
+                    if paso == .confirmar  { pasoConfirmar.transition(transicion) }
                 }
-                .padding()
+                .animation(.spring(duration: 0.35), value: paso)
+
+                Spacer()
             }
             .navigationTitle("Registrar acción")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancelar") { dismiss() }
+                    if paso == .accion {
+                        Button("Cancelar") { dismiss() }
+                    } else {
+                        Button(action: retroceder) {
+                            Image(systemName: "chevron.left")
+                            Text("Atrás")
+                        }
+                    }
                 }
             }
             .alert("Error", isPresented: .constant(errorMessage != nil)) {
@@ -53,150 +80,235 @@ struct RegistrarCoroplastView: View {
                 Text(errorMessage ?? "")
             }
             .overlay {
-                if exito {
-                    exitoOverlay
-                }
+                if exito { exitoOverlay }
             }
         }
     }
 
-    // MARK: - Sections
+    private var transicion: AnyTransition {
+        avanzando
+            ? .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+            : .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing))
+    }
+
+    private func avanzar(a nuevoPaso: Paso) {
+        avanzando = true
+        withAnimation { paso = nuevoPaso }
+    }
+
+    // MARK: - Header
 
     private var estructuraHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(estructura.numero)
-                            .font(.title2.bold())
-                        if let local = estructura.numeroLocal {
-                            Text(local)
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    if let parque = estructura.parques {
-                        Text(parque.nombre)
-                            .foregroundStyle(.secondary)
-                        if let colonia = parque.colonias {
-                            Text(colonia.nombre)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(estructura.numero)
+                        .font(.title3.bold())
+                    if let local = estructura.numeroLocal {
+                        Text(local).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
-                Spacer()
-                EstadoBadge(estado: estructura.estado)
+                if let parque = estructura.parques {
+                    Text(parque.nombre).foregroundStyle(.secondary).font(.subheadline)
+                    if let colonia = parque.colonias {
+                        Text(colonia.nombre).font(.caption).foregroundStyle(.tertiary)
+                    }
+                }
             }
+            Spacer()
+            EstadoBadge(estado: estructura.estado)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private var accionSelector: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("¿Qué se hizo?")
-                .font(.headline)
-            HStack(spacing: 12) {
-                accionCard(
-                    titulo: "Reparación",
-                    descripcion: "Coroplast dañado\no fuera de lugar",
-                    icono: "wrench.and.screwdriver.fill",
-                    tipo: .reparacion
-                )
-                accionCard(
-                    titulo: "Cambio",
-                    descripcion: "Coroplast nuevo\ncon campaña",
-                    icono: "arrow.2.squarepath",
-                    tipo: .cambio
-                )
+    // MARK: - Progreso
+
+    private var progresoIndicador: some View {
+        HStack(spacing: 8) {
+            ForEach(1...totalPasos, id: \.self) { n in
+                Capsule()
+                    .fill(n <= pasoNumero ? Color("MunicipioCyan") : Color.secondary.opacity(0.3))
+                    .frame(width: n == pasoNumero ? 28 : 10, height: 8)
+                    .animation(.spring(duration: 0.3), value: pasoNumero)
             }
         }
     }
 
-    private func accionCard(titulo: String, descripcion: String, icono: String, tipo: TipoAccionCoroplast) -> some View {
-        let seleccionado = tipoSeleccionado == tipo
-        return Button {
-            withAnimation(.spring(duration: 0.25)) {
-                tipoSeleccionado = tipo
-            }
-            if tipo == .cambio && caras.isEmpty {
-                Task { await cargarCaras() }
-            }
-        } label: {
+    // MARK: - Paso 1: Acción
+
+    private var pasoAccion: some View {
+        VStack(spacing: 24) {
             VStack(spacing: 8) {
-                Image(systemName: icono)
-                    .font(.title2)
-                    .foregroundStyle(seleccionado ? .white : Color("MunicipioCyan"))
-                Text(titulo)
-                    .font(.headline)
-                    .foregroundStyle(seleccionado ? .white : .primary)
-                Text(descripcion)
-                    .font(.caption)
+                Text("¿Qué vas a hacer?")
+                    .font(.title2.bold())
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(seleccionado ? .white.opacity(0.85) : .secondary)
+                Text("Paso 1 de \(totalPasos)")
+                    .font(.caption).foregroundStyle(.tertiary)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(seleccionado ? Color("MunicipioCyan") : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(seleccionado ? Color.clear : Color.secondary.opacity(0.2), lineWidth: 1)
-            )
+            .padding(.horizontal, 24)
+
+            VStack(spacing: 14) {
+                opcionButton(
+                    icono: "wrench.and.screwdriver.fill",
+                    titulo: "Reparar el coroplast",
+                    subtitulo: "El coroplast está dañado o fuera de lugar"
+                ) {
+                    tipoSeleccionado = .reparacion
+                    avanzar(a: .fotoAntes)
+                }
+                opcionButton(
+                    icono: "arrow.2.squarepath",
+                    titulo: "Cambiar con campaña nueva",
+                    subtitulo: "Se va a instalar un coroplast nuevo con campaña diferente"
+                ) {
+                    tipoSeleccionado = .cambio
+                    if caras.isEmpty { Task { await cargarCaras() } }
+                    avanzar(a: .campanas)
+                }
+            }
+            .padding(.horizontal, 20)
         }
-        .buttonStyle(.plain)
     }
 
-    private var fotosSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Fotos")
-                .font(.headline)
-            HStack(spacing: 12) {
-                fotoPickerCard(titulo: "Antes", item: $fotoAntesItem, imagen: $fotoAntesUI)
-                fotoPickerCard(titulo: "Después", item: $fotoDespuesItem, imagen: $fotoDespuesUI)
-            }
-        }
-    }
+    // MARK: - Paso 2: Campañas (solo cambio)
 
-    private func fotoPickerCard(titulo: String, item: Binding<PhotosPickerItem?>, imagen: Binding<UIImage?>) -> some View {
-        PhotosPicker(selection: item, matching: .images) {
-            ZStack {
-                if let img = imagen.wrappedValue {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 120)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.secondarySystemGroupedBackground))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 120)
-                        .overlay {
-                            VStack(spacing: 6) {
-                                Image(systemName: "camera.fill")
-                                    .font(.title2)
-                                    .foregroundStyle(.secondary)
-                                Text(titulo)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+    private var pasoCampanas: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 8) {
+                Text("¿Qué campaña va a ir en cada cara?")
+                    .font(.title2.bold())
+                    .multilineTextAlignment(.center)
+                Text("Paso 2 de \(totalPasos)")
+                    .font(.caption).foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
+
+            if cargandoCaras {
+                ProgressView("Cargando caras...")
+                    .frame(maxWidth: .infinity).padding(.top, 40)
+            } else if caras.isEmpty {
+                Text("Sin caras registradas para esta estructura.")
+                    .font(.subheadline).foregroundStyle(.secondary).padding()
+            } else {
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach($caras) { $cara in
+                            CaraCampanaRow(cara: $cara, campanas: campanas)
                         }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
+
+                continuar(habilitado: todasCarasAsignadas) {
+                    avanzar(a: .fotoAntes)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
             }
         }
-        .onChange(of: item.wrappedValue) { _, newItem in
-            Task {
-                if let data = try? await newItem?.loadTransferable(type: Data.self),
-                   let ui = UIImage(data: data) {
-                    imagen.wrappedValue = ui
+    }
+
+    // MARK: - Pasos de foto (antes / después)
+
+    private func pasoFoto(esAntes: Bool) -> some View {
+        let item: Binding<PhotosPickerItem?> = esAntes ? $fotoAntesItem : $fotoDespuesItem
+        let imagen: Binding<UIImage?> = esAntes ? $fotoAntesUI : $fotoDespuesUI
+        let titulo = esAntes ? "Foto de ANTES" : "Foto de DESPUÉS"
+        let subtitulo = esAntes
+            ? "Toma una foto del coroplast como está ahora, antes de tocarlo"
+            : "Toma una foto del coroplast ya terminado"
+        let numero = pasoNumero
+        let total = totalPasos
+        let siguientePaso: Paso = esAntes ? .fotoDespues : .confirmar
+        let tieneFoto = esAntes ? fotoAntesUI != nil : fotoDespuesUI != nil
+
+        return VStack(spacing: 24) {
+            VStack(spacing: 8) {
+                Text(titulo)
+                    .font(.title2.bold())
+                Text(subtitulo)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                Text("Paso \(numero) de \(total)")
+                    .font(.caption).foregroundStyle(.tertiary)
+            }
+
+            PhotosPicker(selection: item, matching: .images) {
+                ZStack {
+                    if let img = imagen.wrappedValue {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 260)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .overlay(alignment: .bottomTrailing) {
+                                Image(systemName: "pencil.circle.fill")
+                                    .font(.title)
+                                    .foregroundStyle(.white)
+                                    .shadow(radius: 4)
+                                    .padding(12)
+                            }
+                    } else {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 260)
+                            .overlay {
+                                VStack(spacing: 14) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 48))
+                                        .foregroundStyle(Color("MunicipioCyan"))
+                                    Text("Tocar para tomar foto")
+                                        .font(.headline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                    }
                 }
             }
+            .onChange(of: item.wrappedValue) { _, newItem in
+                Task {
+                    if let data = try? await newItem?.loadTransferable(type: Data.self),
+                       let ui = UIImage(data: data) {
+                        imagen.wrappedValue = ui
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+
+            continuar(habilitado: tieneFoto) {
+                avanzar(a: siguientePaso)
+            }
+            .padding(.horizontal, 20)
         }
-        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Paso final: Confirmar
+
+    private var pasoConfirmar: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                VStack(spacing: 8) {
+                    Text("¿Alguna nota antes de registrar?")
+                        .font(.title2.bold())
+                    Text("Paso \(pasoNumero) de \(totalPasos)")
+                        .font(.caption).foregroundStyle(.tertiary)
+                }
+
+                notasSection
+
+                submitButton
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
+        }
     }
 
     private var notasSection: some View {
@@ -210,47 +322,27 @@ struct RegistrarCoroplastView: View {
         }
     }
 
-    private var carasSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Asignar campaña por cara")
-                .font(.headline)
-            if cargandoCaras {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            } else if caras.isEmpty {
-                Text("Sin caras registradas para esta estructura.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding()
-            } else {
-                ForEach($caras) { $cara in
-                    CaraCampanaRow(cara: $cara, campanas: campanas)
-                }
-            }
-        }
-    }
-
     private var submitButton: some View {
         Button(action: enviar) {
             HStack {
                 if isLoading {
-                    ProgressView()
-                        .tint(.white)
+                    ProgressView().tint(.white)
                 } else {
-                    Image(systemName: tipoSeleccionado == .cambio ? "arrow.2.squarepath" : "checkmark")
-                    Text(tipoSeleccionado == .cambio ? "Registrar cambio" : "Registrar reparación")
+                    Image(systemName: esCambio ? "arrow.2.squarepath" : "checkmark")
+                    Text(esCambio ? "Registrar cambio" : "Registrar reparación")
                 }
             }
-            .font(.headline)
+            .font(.headline.bold())
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding()
+            .padding(.vertical, 16)
             .background(Color("MunicipioCyan"), in: RoundedRectangle(cornerRadius: 14))
         }
-        .disabled(isLoading || !puedeEnviar)
-        .opacity(puedeEnviar ? 1 : 0.5)
+        .disabled(isLoading)
+        .opacity(isLoading ? 0.6 : 1)
     }
+
+    // MARK: - Éxito
 
     private var exitoOverlay: some View {
         ZStack {
@@ -262,23 +354,78 @@ struct RegistrarCoroplastView: View {
                 Text("¡Registrado!")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
+                Text(esCambio ? "Cambio de coroplast registrado." : "Reparación registrada.")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.85))
             }
+            .padding(40)
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                dismiss()
-            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { dismiss() }
         }
     }
 
-    // MARK: - Logic
+    // MARK: - Helpers
 
-    private var puedeEnviar: Bool {
-        guard let tipo = tipoSeleccionado else { return false }
-        if tipo == .cambio {
-            return !cargandoCaras && caras.allSatisfy { $0.nuevaCampana != nil }
+    private var todasCarasAsignadas: Bool {
+        !caras.isEmpty && caras.allSatisfy { $0.nuevaCampana != nil }
+    }
+
+    private func opcionButton(icono: String, titulo: String, subtitulo: String, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            HStack(spacing: 16) {
+                Image(systemName: icono)
+                    .font(.title)
+                    .foregroundStyle(Color("MunicipioCyan"))
+                    .frame(width: 44)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(titulo)
+                        .font(.headline).foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                    Text(subtitulo)
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.bold()).foregroundStyle(.tertiary)
+            }
+            .padding(18)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color("MunicipioCyan").opacity(0.25), lineWidth: 1.5))
         }
-        return true
+        .buttonStyle(.plain)
+    }
+
+    private func continuar(habilitado: Bool, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            HStack {
+                Text("Continuar")
+                Image(systemName: "chevron.right")
+            }
+            .font(.headline.bold())
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                habilitado ? Color("MunicipioCyan") : Color.secondary.opacity(0.4),
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+        }
+        .disabled(!habilitado)
+    }
+
+    private func retroceder() {
+        avanzando = false
+        withAnimation {
+            switch paso {
+            case .accion:      break
+            case .campanas:    paso = .accion
+            case .fotoAntes:   paso = esCambio ? .campanas : .accion
+            case .fotoDespues: paso = .fotoAntes
+            case .confirmar:   paso = .fotoDespues
+            }
+        }
     }
 
     private func cargarCaras() async {
@@ -292,7 +439,7 @@ struct RegistrarCoroplastView: View {
     }
 
     private func enviar() {
-        guard let tipo = tipoSeleccionado, let userId = userId else { return }
+        guard let tipo = tipoSeleccionado, let userId else { return }
         Task {
             isLoading = true
             defer { isLoading = false }
@@ -317,6 +464,7 @@ struct RegistrarCoroplastView: View {
                     }
                     try await CoroplastService.shared.registrarCambio(
                         estructuraId: estructura.id,
+                        estadoActual: estructura.estado,
                         userId: userId,
                         carasNuevasCampanas: asignaciones,
                         fotoAntesUrl: antesUrl,
@@ -333,9 +481,7 @@ struct RegistrarCoroplastView: View {
     }
 
     private func subirFotoSiExiste(_ image: UIImage?, nombre: String) async throws -> String? {
-        guard let image = image,
-              let data = image.jpegData(compressionQuality: 0.8),
-              let userId = userId else { return nil }
+        guard let image, let data = image.jpegData(compressionQuality: 0.8), let userId else { return nil }
         let path = "\(userId.uuidString)/\(UUID().uuidString)_\(nombre).jpg"
         return try? await CoroplastService.shared.uploadFoto(data: data, path: path)
     }
@@ -351,29 +497,24 @@ private struct CaraCampanaRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("Cara \(cara.tipo.uppercased())", systemImage: "rectangle.portrait")
+                Text("Cara \(cara.tipo.uppercased())")
                     .font(.headline)
                 Spacer()
                 if let actual = cara.campanaActual {
                     Text("Actual: \(actual.nombre)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
 
-            Button {
-                showPicker = true
-            } label: {
+            Button { showPicker = true } label: {
                 HStack(spacing: 12) {
                     if let nueva = cara.nuevaCampana {
                         CampanaThumbnail(campana: nueva, size: 64)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(nueva.nombre)
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.primary)
+                                .font(.subheadline.bold()).foregroundStyle(.primary)
                             Label("Campaña asignada", systemImage: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.green)
+                                .font(.caption).foregroundStyle(.green)
                         }
                     } else {
                         ZStack {
@@ -381,17 +522,14 @@ private struct CaraCampanaRow: View {
                                 .fill(Color("MunicipioCyan").opacity(0.12))
                                 .frame(width: 52, height: 52)
                             Image(systemName: "plus.circle.dashed")
-                                .font(.title2)
-                                .foregroundStyle(Color("MunicipioCyan"))
+                                .font(.title2).foregroundStyle(Color("MunicipioCyan"))
                         }
                         Text("Tocar para elegir campaña")
-                            .font(.subheadline)
-                            .foregroundStyle(Color("MunicipioCyan"))
+                            .font(.subheadline).foregroundStyle(Color("MunicipioCyan"))
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
+                        .font(.subheadline).foregroundStyle(.tertiary)
                 }
                 .padding(14)
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
@@ -417,10 +555,8 @@ private struct CampanaThumbnail: View {
             if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
                 AsyncImage(url: url) { phase in
                     switch phase {
-                    case .success(let img):
-                        img.resizable().scaledToFill()
-                    default:
-                        placeholderIcon
+                    case .success(let img): img.resizable().scaledToFill()
+                    default: placeholderIcon
                     }
                 }
             } else {
@@ -434,8 +570,7 @@ private struct CampanaThumbnail: View {
     private var placeholderIcon: some View {
         ZStack {
             Color(.tertiarySystemGroupedBackground)
-            Image(systemName: "megaphone.fill")
-                .foregroundStyle(.secondary)
+            Image(systemName: "megaphone.fill").foregroundStyle(.secondary)
         }
     }
 }
@@ -482,8 +617,7 @@ private struct CampanaPickerSheet: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancelar") { dismiss() }
-                        .font(.body)
+                    Button("Cancelar") { dismiss() }.font(.body)
                 }
             }
         }
