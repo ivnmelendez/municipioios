@@ -73,6 +73,7 @@ private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
 struct MapaView: View {
     var mostrarCampanas: Bool = true
     var onRegistrarCambio: ((EstructuraConParque) -> Void)? = nil
+    var onReportarDano: ((EstructuraConParque) -> Void)? = nil
     @State private var vm = MapaViewModel()
     @State private var coloniasPolygons: [GeoPolygon] = []
     @State private var municipioPolygons: [GeoPolygon] = []
@@ -275,6 +276,10 @@ struct MapaView: View {
                     caras: vm.carasDetalle,
                     mostrarCampanas: mostrarCampanas,
                     onRegistrarCambio: onRegistrarCambio.map { callback in {
+                        vm.mostrarDetalle = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { callback(estructura) }
+                    } },
+                    onReportarDano: onReportarDano.map { callback in {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { callback(estructura) }
                     } },
@@ -579,6 +584,7 @@ struct EstructuraDetalleSheet: View {
     let caras: [CaraDetalle]
     var mostrarCampanas: Bool = true
     var onRegistrarCambio: (() -> Void)? = nil
+    var onReportarDano: (() -> Void)? = nil
     var onLlegar: ((Double, Double) -> Void)? = nil
 
     @State private var fotoFullscreen: IdentifiableURL?
@@ -708,6 +714,20 @@ struct EstructuraDetalleSheet: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(Color("MunicipioCyan"))
+                            .controlSize(.large)
+                        }
+
+                        if let reportar = onReportarDano {
+                            Button {
+                                reportar()
+                            } label: {
+                                Label("Reportar daño", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.headline.weight(.bold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.red)
                             .controlSize(.large)
                         }
                     }

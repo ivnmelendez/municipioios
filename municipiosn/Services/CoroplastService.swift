@@ -65,6 +65,10 @@ private struct CerrarCampanaUpdate: Encodable {
     let fecha_fin: String
 }
 
+private struct EstadoUpdate: Encodable {
+    let estado: String
+}
+
 final class CoroplastService {
     static let shared = CoroplastService()
     private var client: SupabaseClient { SupabaseService.shared.client }
@@ -169,6 +173,31 @@ final class CoroplastService {
                 foto_despues_url: fotoDespuesUrl,
                 notas: notas
             ))
+            .execute()
+    }
+
+    func reportarDano(
+        estructuraId: UUID,
+        userId: UUID,
+        fotoUrl: String?,
+        notas: String?
+    ) async throws {
+        let rondinId = try await crearRondin(userId: userId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "reporte_dano",
+                foto_antes_url: fotoUrl,
+                foto_despues_url: nil,
+                notas: notas
+            ))
+            .execute()
+        try await client
+            .from("estructuras")
+            .update(EstadoUpdate(estado: "dañada"))
+            .eq("id", value: estructuraId.uuidString)
             .execute()
     }
 

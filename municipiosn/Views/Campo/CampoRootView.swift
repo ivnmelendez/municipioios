@@ -4,13 +4,16 @@ struct CampoRootView: View {
     let authVM: AuthViewModel
     @State private var vm = CampoViewModel()
     @State private var estructuraSeleccionada: EstructuraConParque?
+    @State private var estructuraParaReporte: EstructuraConParque?
 
     var body: some View {
         TabView {
             Tab("Mapa", systemImage: "map.fill") {
-                MapaView(mostrarCampanas: false, onRegistrarCambio: { estructura in
-                    estructuraSeleccionada = estructura
-                })
+                MapaView(
+                    mostrarCampanas: false,
+                    onRegistrarCambio: { estructura in estructuraSeleccionada = estructura },
+                    onReportarDano: { estructura in estructuraParaReporte = estructura }
+                )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }
             Tab("Estructuras", systemImage: "square.stack.fill") {
@@ -24,6 +27,9 @@ struct CampoRootView: View {
                 campanas: vm.campanas,
                 userId: authVM.perfilId
             )
+        }
+        .sheet(item: $estructuraParaReporte) { estructura in
+            ReportarDanoView(estructura: estructura, userId: authVM.perfilId)
         }
     }
 
