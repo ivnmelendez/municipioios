@@ -349,46 +349,94 @@ private struct CaraCampanaRow: View {
     @State private var showPicker = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label(cara.tipo.capitalized, systemImage: "rectangle.portrait")
-                    .font(.subheadline.bold())
+                Label("Cara \(cara.tipo.uppercased())", systemImage: "rectangle.portrait")
+                    .font(.headline)
                 Spacer()
                 if let actual = cara.campanaActual {
-                    Text("Antes: \(actual.nombre)")
-                        .font(.caption2)
+                    Text("Actual: \(actual.nombre)")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
+
             Button {
                 showPicker = true
             } label: {
-                HStack {
+                HStack(spacing: 12) {
                     if let nueva = cara.nuevaCampana {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text(nueva.nombre)
-                            .foregroundStyle(.primary)
+                        CampanaThumbnail(campana: nueva, size: 64)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(nueva.nombre)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.primary)
+                            Label("Campaña asignada", systemImage: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        }
                     } else {
-                        Image(systemName: "plus.circle.dashed")
-                            .foregroundStyle(Color("MunicipioCyan"))
-                        Text("Seleccionar campaña")
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color("MunicipioCyan").opacity(0.12))
+                                .frame(width: 52, height: 52)
+                            Image(systemName: "plus.circle.dashed")
+                                .font(.title2)
+                                .foregroundStyle(Color("MunicipioCyan"))
+                        }
+                        Text("Tocar para elegir campaña")
+                            .font(.subheadline)
                             .foregroundStyle(Color("MunicipioCyan"))
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.tertiary)
                 }
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                .padding(14)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
             }
+            .buttonStyle(.plain)
             .sheet(isPresented: $showPicker) {
                 CampanaPickerSheet(campanas: campanas, seleccionada: $cara.nuevaCampana)
             }
         }
         .padding()
-        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// MARK: - CampanaThumbnail
+
+private struct CampanaThumbnail: View {
+    let campana: CampanaBasica
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().scaledToFill()
+                    default:
+                        placeholderIcon
+                    }
+                }
+            } else {
+                placeholderIcon
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.22))
+    }
+
+    private var placeholderIcon: some View {
+        ZStack {
+            Color(.tertiarySystemGroupedBackground)
+            Image(systemName: "megaphone.fill")
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
@@ -412,23 +460,30 @@ private struct CampanaPickerSheet: View {
                     seleccionada = campana
                     dismiss()
                 } label: {
-                    HStack {
+                    HStack(spacing: 14) {
+                        CampanaThumbnail(campana: campana, size: 88)
                         Text(campana.nombre)
+                            .font(.title3.weight(.medium))
                             .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
                         Spacer()
                         if seleccionada?.id == campana.id {
-                            Image(systemName: "checkmark")
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.title2)
                                 .foregroundStyle(Color("MunicipioCyan"))
                         }
                     }
+                    .padding(.vertical, 6)
                 }
             }
+            .listStyle(.insetGrouped)
             .searchable(text: $busqueda, prompt: "Buscar campaña")
-            .navigationTitle("Campaña")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Elige la campaña")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") { dismiss() }
+                        .font(.body)
                 }
             }
         }
