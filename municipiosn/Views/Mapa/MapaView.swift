@@ -609,6 +609,7 @@ struct IdentifiableURL: Identifiable {
 }
 
 struct EstructuraDetalleSheet: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let estructura: EstructuraConParque
     let caras: [CaraDetalle]
     var mostrarCampanas: Bool = true
@@ -807,8 +808,8 @@ struct EstructuraDetalleSheet: View {
             })
         }
         .scrollBounceBehavior(.basedOnSize)
-        .presentationDetents([.height(contentHeight)])
-        .presentationDragIndicator(.hidden)
+        .presentationDetents(sizeClass == .regular ? [.large] : [.height(contentHeight)])
+        .presentationDragIndicator(sizeClass == .regular ? .visible : .hidden)
         .presentationContentInteraction(.scrolls)
         .fullScreenCover(item: $fotoFullscreen) { item in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
