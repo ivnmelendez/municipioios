@@ -93,7 +93,6 @@ struct MapaView: View {
     @State private var semanas: [RutaSemana] = []
     @State private var rutaItems: [RutaEstructuraItem] = []
     @State private var mostrarSemanasPicker = false
-    @State private var estructuraAccionRuta: RutaEstructuraItem? = nil
     @State private var estructuraRutaParaAccion: EstructuraConParque? = nil
     @State private var estructuraRutaParaDano: EstructuraConParque? = nil
 
@@ -183,13 +182,7 @@ struct MapaView: View {
                 rutaPolyline: rutaPolyline,
                 pendingCommand: $pendingCommand,
                 onSelect: { estructura in
-                    if modoRuta != nil {
-                        if let item = rutaItems.first(where: { $0.estructura.id == estructura.id }) {
-                            estructuraAccionRuta = item
-                        }
-                    } else {
-                        Task { await vm.seleccionar(estructura) }
-                    }
+                    Task { await vm.seleccionar(estructura) }
                 }
             )
             .ignoresSafeArea()
@@ -347,48 +340,39 @@ struct MapaView: View {
         }
         .sheet(isPresented: $vm.mostrarDetalle) {
             if let estructura = vm.estructuraSeleccionada {
+                let enRuta = modoRuta != nil
+                let rutaItem = rutaItems.first(where: { $0.estructura.id == estructura.id })
                 EstructuraDetalleSheet(
                     estructura: estructura,
                     caras: vm.carasDetalle,
                     mostrarCampanas: mostrarCampanas,
-                    onRegistrarCambio: onRegistrarCambio.map { callback in {
+                    onOk: enRuta ? {
+                        if let item = rutaItem { marcarRevision(item: item) }
+                        vm.mostrarDetalle = false
+                    } : nil,
+                    onRegistrarCambio: enRuta ? {
+                        vm.mostrarDetalle = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            estructuraRutaParaAccion = estructura
+                        }
+                    } : onRegistrarCambio.map { callback in {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { callback(estructura) }
                     } },
-                    onReportarDano: onReportarDano.map { callback in {
+                    onReportarDano: enRuta ? {
+                        vm.mostrarDetalle = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            estructuraRutaParaDano = estructura
+                        }
+                    } : onReportarDano.map { callback in {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { callback(estructura) }
                     } },
-                    onLlegar: { lat, lng in
-                        vm.mostrarDetalle = false
-                        Task { await calcularRuta(a: CLLocationCoordinate2D(latitude: lat, longitude: lng), numero: estructura.numero) }
-                    }
                 )
             }
         }
         .sheet(isPresented: $mostrarSemanasPicker) {
             semanasPickerSheet
-        }
-        .sheet(item: $estructuraAccionRuta) { item in
-            if let semana = modoRuta {
-                RutaModoAccionSheet(
-                    item: item,
-                    accentColor: Color(hex: semana.color),
-                    onRevision: { marcarRevision(item: item) },
-                    onAccion: {
-                        estructuraAccionRuta = nil
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            estructuraRutaParaAccion = item.estructura
-                        }
-                    },
-                    onDano: {
-                        estructuraAccionRuta = nil
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            estructuraRutaParaDano = item.estructura
-                        }
-                    }
-                )
-            }
         }
         .sheet(item: $estructuraRutaParaAccion) { estructura in
             RegistrarCoroplastView(
@@ -803,10 +787,9 @@ struct EstructuraDetalleSheet: View {
     let estructura: EstructuraConParque
     let caras: [CaraDetalle]
     var mostrarCampanas: Bool = true
+    var onOk: (() -> Void)? = nil
     var onRegistrarCambio: (() -> Void)? = nil
     var onReportarDano: (() -> Void)? = nil
-    var onLlegar: ((Double, Double) -> Void)? = nil
-
     @State private var fotoFullscreen: IdentifiableURL?
     @State private var contentHeight: CGFloat = 420
 
@@ -949,26 +932,29 @@ struct EstructuraDetalleSheet: View {
                     .font(.subheadline).foregroundStyle(Color("TextMuted"))
             }
             if let lat = estructura.lat, let lng = estructura.lng {
-                HStack(spacing: 10) {
-                    Button { onLlegar?(lat, lng) } label: {
-                        Label("Mapa", systemImage: "arrow.triangle.turn.up.right.circle.fill")
-                            .font(.subheadline.weight(.semibold))
+                Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
+                    HStack(spacing: 6) {
+                        GoogleMapsIcon()
+                        Text("Cómo llegar").font(.subheadline.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(red: 0.26, green: 0.52, blue: 0.96))
+                .controlSize(.regular)
+            }
+            if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil {
+                Divider().padding(.top, 8)
+                if let ok = onOk {
+                    Button { ok() } label: {
+                        Label("Está bien", systemImage: "checkmark.circle.fill")
+                            .font(.headline.weight(.bold))
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color("MunicipioCyan"))
-                    .controlSize(.regular)
-
-                    Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
-                        HStack(spacing: 6) {
-                            GoogleMapsIcon()
-                            Text("Google Maps").font(.subheadline.weight(.semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color(red: 0.26, green: 0.52, blue: 0.96))
-                    .controlSize(.regular)
+                    .tint(.green)
+                    .controlSize(.large)
                 }
                 if let registrar = onRegistrarCambio {
                     Button { registrar() } label: {
@@ -1171,143 +1157,3 @@ private struct GoogleMapsIcon: View {
     }
 }
 
-// MARK: - RutaModoAccionSheet
-
-private struct RutaModoAccionSheet: View {
-    let item: RutaEstructuraItem
-    let accentColor: Color
-    let onRevision: () -> Void
-    let onAccion: () -> Void
-    let onDano: () -> Void
-
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                estructuraHeader
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-
-                if item.estructura.lat != nil && item.estructura.lng != nil {
-                    Button(action: abrirNavegacion) {
-                        Label("Cómo llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.blue, in: RoundedRectangle(cornerRadius: 12))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                }
-
-                VStack(spacing: 14) {
-                    opcionButton(
-                        icono: "checkmark.circle.fill",
-                        color: .green,
-                        titulo: "Está bien",
-                        subtitulo: "La estructura está en buen estado"
-                    ) {
-                        onRevision()
-                        dismiss()
-                    }
-
-                    opcionButton(
-                        icono: "wrench.and.screwdriver.fill",
-                        color: Color("MunicipioCyan"),
-                        titulo: "Registrar acción",
-                        subtitulo: "Cambio o reparación de coroplast"
-                    ) {
-                        onAccion()
-                    }
-
-                    opcionButton(
-                        icono: "exclamationmark.triangle.fill",
-                        color: .orange,
-                        titulo: "Reportar daño",
-                        subtitulo: "Tiene daño que no puedes arreglar ahora"
-                    ) {
-                        onDano()
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-
-                Spacer()
-            }
-            .navigationTitle("¿Qué pasa aquí?")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancelar") { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
-
-    private var estructuraHeader: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(accentColor.opacity(0.15))
-                    .frame(width: 36, height: 36)
-                Text("\(item.orden)")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(accentColor)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.estructura.numero)
-                    .font(.title3.bold())
-                if let parque = item.estructura.parques {
-                    Text(parque.nombre)
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                }
-            }
-            Spacer()
-            EstadoBadge(estado: item.estructura.estado)
-        }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-    }
-
-    private func abrirNavegacion() {
-        guard let lat = item.estructura.lat, let lng = item.estructura.lng else { return }
-        let google = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")
-        let apple = URL(string: "maps://?daddr=\(lat),\(lng)")
-        if let url = google, UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
-        } else if let url = apple {
-            UIApplication.shared.open(url)
-        }
-    }
-
-    private func opcionButton(icono: String, color: Color, titulo: String, subtitulo: String, accion: @escaping () -> Void) -> some View {
-        Button(action: accion) {
-            HStack(spacing: 16) {
-                Image(systemName: icono)
-                    .font(.title)
-                    .foregroundStyle(color)
-                    .frame(width: 44)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(titulo)
-                        .font(.headline).foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
-                    Text(subtitulo)
-                        .font(.subheadline).foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.subheadline.bold()).foregroundStyle(.tertiary)
-            }
-            .padding(18)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(color.opacity(0.25), lineWidth: 1.5))
-        }
-        .buttonStyle(.plain)
-    }
-}
