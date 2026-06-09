@@ -91,6 +91,7 @@ struct MapaView: View {
 
     @State private var modoRuta: RutaSemana? = nil
     @State private var semanas: [RutaSemana] = []
+    @State private var cargandoSemanas = false
     @State private var rutaItems: [RutaEstructuraItem] = []
     @State private var mostrarSemanasPicker = false
     @State private var estructuraRutaParaAccion: EstructuraConParque? = nil
@@ -238,9 +239,12 @@ struct MapaView: View {
                         if modoRuta != nil {
                             withAnimation { modoRuta = nil; rutaItems = [] }
                         } else {
+                            semanas = []
+                            cargandoSemanas = true
+                            mostrarSemanasPicker = true
                             Task {
                                 semanas = (try? await RutasService.shared.fetchSemanasRecientes()) ?? []
-                                mostrarSemanasPicker = true
+                                cargandoSemanas = false
                             }
                         }
                     } label: {
@@ -430,7 +434,10 @@ struct MapaView: View {
     private var semanasPickerSheet: some View {
         NavigationStack {
             Group {
-                if semanas.isEmpty {
+                if cargandoSemanas {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if semanas.isEmpty {
                     ContentUnavailableView("Sin semanas", systemImage: "calendar.badge.exclamationmark",
                         description: Text("No hay rutas disponibles."))
                 } else {
@@ -915,9 +922,18 @@ struct EstructuraDetalleSheet: View {
 
     private var infoView: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Ubicación")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color("TextMuted"))
+            HStack {
+                Text("Ubicación")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Spacer()
+                if let lat = estructura.lat, let lng = estructura.lng {
+                    Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
+                        GoogleMapsCircleButton()
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             if let colonia = estructura.parques?.colonias {
                 Label(colonia.nombre, systemImage: "map").font(.subheadline)
             } else {
@@ -930,18 +946,6 @@ struct EstructuraDetalleSheet: View {
             } else {
                 Label("Sin parque asignado", systemImage: "tree")
                     .font(.subheadline).foregroundStyle(Color("TextMuted"))
-            }
-            if let lat = estructura.lat, let lng = estructura.lng {
-                Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
-                    HStack(spacing: 6) {
-                        GoogleMapsIcon()
-                        Text("Cómo llegar").font(.subheadline.weight(.semibold))
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.26, green: 0.52, blue: 0.96))
-                .controlSize(.regular)
             }
             if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil {
                 Divider().padding(.top, 8)
@@ -1142,18 +1146,24 @@ struct CampanaRow: View {
 
 // MARK: - Google Maps icon
 
-private struct GoogleMapsIcon: View {
+private struct GoogleMapsCircleButton: View {
     var body: some View {
-        ZStack {
+        HStack(spacing: 6) {
             Circle()
                 .fill(Color(red: 0.26, green: 0.52, blue: 0.96))
-                .frame(width: 14, height: 14)
+                .frame(width: 22, height: 22)
                 .overlay {
                     Text("G")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.white)
                 }
+            Text("Maps")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color(red: 0.26, green: 0.52, blue: 0.96))
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color(red: 0.26, green: 0.52, blue: 0.96).opacity(0.1), in: Capsule())
     }
 }
 
