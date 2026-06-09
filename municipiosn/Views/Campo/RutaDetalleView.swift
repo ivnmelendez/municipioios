@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct RutaDetalleView: View {
     let semana: RutaSemana
@@ -11,6 +12,7 @@ struct RutaDetalleView: View {
     @State private var estructuraAccion: RutaEstructuraItem?
     @State private var estructuraParaAccion: EstructuraConParque?
     @State private var estructuraParaDano: EstructuraConParque?
+    @State private var mostrarMapa = false
 
     private var visitadasCount: Int { items.filter { $0.visitada }.count }
     private var accentColor: Color { Color(hex: semana.color) }
@@ -26,11 +28,10 @@ struct RutaDetalleView: View {
                     ProgressView("Cargando estructuras...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if items.isEmpty {
-                    ContentUnavailableView {
-                        Label("Sin estructuras", systemImage: "building.2")
-                    } description: {
-                        Text("Esta ruta no tiene estructuras asignadas.")
-                    }
+                    ContentUnavailableView("Sin estructuras", systemImage: "building.2",
+                        description: Text("Esta ruta no tiene estructuras asignadas."))
+                } else if mostrarMapa {
+                    rutaMapa
                 } else {
                     lista
                 }
@@ -38,6 +39,17 @@ struct RutaDetalleView: View {
         }
         .navigationTitle("Semana \(semana.numero)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if !items.isEmpty {
+                    Button {
+                        withAnimation(.spring(duration: 0.3)) { mostrarMapa.toggle() }
+                    } label: {
+                        Image(systemName: mostrarMapa ? "list.bullet" : "map")
+                    }
+                }
+            }
+        }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") { errorMessage = nil }
         } message: {
@@ -95,12 +107,9 @@ struct RutaDetalleView: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(accentColor)
             }
-
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.2))
-                        .frame(height: 10)
+                    Capsule().fill(Color.secondary.opacity(0.2)).frame(height: 10)
                     Capsule()
                         .fill(accentColor)
                         .frame(
@@ -130,6 +139,61 @@ struct RutaDetalleView: View {
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    // MARK: - Mapa
+
+    private var rutaMapa: some View {
+        let anotaciones = items.compactMap { item -> RutaAnotacion? in
+            guard let lat = item.estructura.lat, let lng = item.estructura.lng else { return nil }
+            return RutaAnotacion(
+                id: item.id,
+                orden: item.orden,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                visitada: item.visitada
+            )
+        }
+
+        let region: MapCameraPosition = {
+            guard !anotaciones.isEmpty else {
+                return .automatic
+            }
+            let lats = anotaciones.map { $0.coordinate.latitude }
+            let lngs = anotaciones.map { $0.coordinate.longitude }
+            let center = CLLocationCoordinate2D(
+                latitude: (lats.min()! + lats.max()!) / 2,
+                longitude: (lngs.min()! + lngs.max()!) / 2
+            )
+            let span = MKCoordinateSpan(
+                latitudeDelta: max((lats.max()! - lats.min()!) * 1.4, 0.005),
+                longitudeDelta: max((lngs.max()! - lngs.min()!) * 1.4, 0.005)
+            )
+            return .region(MKCoordinateRegion(center: center, span: span))
+        }()
+
+        return Map(initialPosition: region) {
+            ForEach(anotaciones) { anotacion in
+                Annotation("", coordinate: anotacion.coordinate) {
+                    Button {
+                        if let item = items.first(where: { $0.id == anotacion.id }) {
+                            estructuraAccion = item
+                        }
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(anotacion.visitada ? Color.green : accentColor)
+                                .frame(width: 36, height: 36)
+                                .shadow(radius: 3)
+                            Text("\(anotacion.orden)")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+            }
+        }
+        .mapStyle(.standard)
+        .ignoresSafeArea(edges: .bottom)
     }
 
     // MARK: - Actions
@@ -171,6 +235,15 @@ struct RutaDetalleView: View {
     }
 }
 
+// MARK: - RutaAnotacion
+
+private struct RutaAnotacion: Identifiable {
+    let id: UUID
+    let orden: Int
+    let coordinate: CLLocationCoordinate2D
+    let visitada: Bool
+}
+
 // MARK: - EstructuraRow
 
 private struct RutaEstructuraRow: View {
@@ -187,6 +260,8 @@ private struct RutaEstructuraRow: View {
                     .font(.headline.bold())
                     .foregroundStyle(accentColor)
             }
+
+            estructuraFoto
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.estructura.numero)
@@ -211,6 +286,33 @@ private struct RutaEstructuraRow: View {
         .padding(.vertical, 6)
         .opacity(item.visitada ? 0.6 : 1)
     }
+
+    private var estructuraFoto: some View {
+        Group {
+            if let urlStr = item.estructura.fotoUrl, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().scaledToFill()
+                    default:
+                        fotoPlaceholder
+                    }
+                }
+            } else {
+                fotoPlaceholder
+            }
+        }
+        .frame(width: 52, height: 52)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var fotoPlaceholder: some View {
+        ZStack {
+            Color(.tertiarySystemGroupedBackground)
+            Image(systemName: "photo")
+                .foregroundStyle(.tertiary)
+        }
+    }
 }
 
 // MARK: - AccionSheet
@@ -223,7 +325,6 @@ private struct AccionSheet: View {
     let onDano: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var marcandoRevision = false
 
     var body: some View {
         NavigationStack {
@@ -239,11 +340,8 @@ private struct AccionSheet: View {
                         titulo: "Está bien",
                         subtitulo: "La estructura está en buen estado"
                     ) {
-                        marcandoRevision = true
-                        Task {
-                            onRevision()
-                            dismiss()
-                        }
+                        onRevision()
+                        dismiss()
                     }
 
                     opcionButton(
@@ -282,20 +380,18 @@ private struct AccionSheet: View {
     }
 
     private var estructuraHeader: some View {
-        HStack {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accentColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Text("\(item.orden)")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(accentColor)
+            }
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(accentColor.opacity(0.15))
-                            .frame(width: 36, height: 36)
-                        Text("\(item.orden)")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(accentColor)
-                    }
-                    Text(item.estructura.numero)
-                        .font(.title3.bold())
-                }
+                Text(item.estructura.numero)
+                    .font(.title3.bold())
                 if let parque = item.estructura.parques {
                     Text(parque.nombre)
                         .foregroundStyle(.secondary)
@@ -318,18 +414,15 @@ private struct AccionSheet: View {
                     .frame(width: 44)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(titulo)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                        .font(.headline).foregroundStyle(.primary)
                         .multilineTextAlignment(.leading)
                     Text(subtitulo)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.subheadline).foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.tertiary)
+                    .font(.subheadline.bold()).foregroundStyle(.tertiary)
             }
             .padding(18)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
