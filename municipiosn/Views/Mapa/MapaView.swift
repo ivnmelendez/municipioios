@@ -809,7 +809,7 @@ struct EstructuraDetalleSheet: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .presentationDetents(sizeClass == .regular ? [.large] : [.height(contentHeight)])
-        .presentationSizing(sizeClass == .regular ? .page : .automatic)
+        .presentationSizing(.page)
         .presentationDragIndicator(sizeClass == .regular ? .visible : .hidden)
         .presentationContentInteraction(.scrolls)
         .fullScreenCover(item: $fotoFullscreen) { item in
