@@ -474,6 +474,16 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             return view
         }
 
+        func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+            views.forEach { view in
+                guard view.annotation is EstructuraMKAnnotation else { return }
+                view.alpha = 0
+                UIView.animate(withDuration: 0.4, delay: 0, options: .curveEaseOut) {
+                    view.alpha = 1
+                }
+            }
+        }
+
         func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
             mapView.deselectAnnotation(annotation, animated: false)
             guard let ann = annotation as? EstructuraMKAnnotation else { return }
