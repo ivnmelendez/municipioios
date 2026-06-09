@@ -523,8 +523,6 @@ private struct BusquedaResultados: View {
     let resultados: [EstructuraAnnotation]
     let onSeleccionar: (EstructuraAnnotation) -> Void
 
-    private var visibles: [EstructuraAnnotation] { Array(resultados.prefix(8)) }
-
     var body: some View {
         if resultados.isEmpty {
             Button {} label: {
@@ -544,13 +542,17 @@ private struct BusquedaResultados: View {
             .buttonBorderShape(.roundedRectangle(radius: 16))
             .disabled(true)
         } else {
-            VStack(spacing: 6) {
-                ForEach(visibles) { anotacion in
-                    BusquedaResultRow(anotacion: anotacion) {
-                        onSeleccionar(anotacion)
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(spacing: 6) {
+                    ForEach(resultados) { anotacion in
+                        BusquedaResultRow(anotacion: anotacion) {
+                            onSeleccionar(anotacion)
+                        }
                     }
                 }
             }
+            .frame(maxHeight: 320)
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 }
