@@ -658,7 +658,7 @@ struct EstructuraDetalleSheet: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: sizeClass == .regular ? 520 : 380)
+                                    .frame(height: sizeClass == .regular ? 680 : 380)
                                     .clipped()
                                     .overlay(alignment: .bottomTrailing) {
                                         Image(systemName: "arrow.up.left.and.arrow.down.right")
@@ -675,7 +675,7 @@ struct EstructuraDetalleSheet: View {
                             EmptyView()
                         default:
                             Color.secondary.opacity(0.1)
-                                .frame(height: sizeClass == .regular ? 520 : 380)
+                                .frame(height: sizeClass == .regular ? 680 : 380)
                                 .overlay { ProgressView() }
                         }
                     }
@@ -763,7 +763,7 @@ struct EstructuraDetalleSheet: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .padding(.vertical, sizeClass == .regular ? 40 : 16)
 
                 // Campañas
                 if mostrarCampanas && !caras.isEmpty {
