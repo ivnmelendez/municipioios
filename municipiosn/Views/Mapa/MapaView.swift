@@ -542,7 +542,7 @@ private struct BusquedaResultados: View {
             .buttonBorderShape(.roundedRectangle(radius: 16))
             .disabled(true)
         } else {
-            ScrollView(.vertical, showsIndicators: true) {
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 6) {
                     ForEach(resultados) { anotacion in
                         BusquedaResultRow(anotacion: anotacion) {
@@ -550,9 +550,22 @@ private struct BusquedaResultados: View {
                         }
                     }
                 }
+                .padding(.vertical, 10)
             }
-            .frame(maxHeight: 320)
+            .frame(maxHeight: .infinity)
             .scrollBounceBehavior(.basedOnSize)
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.05),
+                        .init(color: .black, location: 0.88),
+                        .init(color: .clear, location: 1),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
     }
 }
