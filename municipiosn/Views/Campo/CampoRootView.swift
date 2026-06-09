@@ -12,13 +12,11 @@ struct CampoRootView: View {
                 MapaView(
                     mostrarCampanas: false,
                     onRegistrarCambio: { estructura in estructuraSeleccionada = estructura },
-                    onReportarDano: { estructura in estructuraParaReporte = estructura }
+                    onReportarDano: { estructura in estructuraParaReporte = estructura },
+                    userId: authVM.perfilId,
+                    campanas: vm.campanas
                 )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
-            }
-            Tab("Rutas", systemImage: "route") {
-                RutasTabView(userId: authVM.perfilId, campanas: vm.campanas)
-                    .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }
             Tab("Configuración", systemImage: "gearshape.fill") {
                 configTab

@@ -74,6 +74,9 @@ struct MapaView: View {
     var mostrarCampanas: Bool = true
     var onRegistrarCambio: ((EstructuraConParque) -> Void)? = nil
     var onReportarDano: ((EstructuraConParque) -> Void)? = nil
+    var userId: UUID? = nil
+    var campanas: [CampanaBasica] = []
+
     @State private var vm = MapaViewModel()
     @State private var coloniasPolygons: [GeoPolygon] = []
     @State private var municipioPolygons: [GeoPolygon] = []
@@ -85,6 +88,14 @@ struct MapaView: View {
     @State private var rutaInfo: RutaInfo?
     @State private var calculandoRuta = false
     @FocusState private var searchFocused: Bool
+
+    @State private var modoRuta: RutaSemana? = nil
+    @State private var semanas: [RutaSemana] = []
+    @State private var rutaItems: [RutaEstructuraItem] = []
+    @State private var mostrarSemanasPicker = false
+    @State private var estructuraAccionRuta: RutaEstructuraItem? = nil
+    @State private var estructuraRutaParaAccion: EstructuraConParque? = nil
+    @State private var estructuraRutaParaDano: EstructuraConParque? = nil
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -110,6 +121,22 @@ struct MapaView: View {
         }
     }
 
+    private var anotacionesEfectivas: [EstructuraAnnotation] {
+        guard modoRuta != nil else { return anotacionesFiltradas }
+        return rutaItems.compactMap { item in
+            guard let lat = item.estructura.lat, let lng = item.estructura.lng else { return nil }
+            return EstructuraAnnotation(
+                id: item.estructura.id,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                estado: item.estructura.estado,
+                numero: item.estructura.numero,
+                estructura: item.estructura
+            )
+        }
+    }
+
+    private var visitadasEnRuta: Int { rutaItems.filter { $0.visitada }.count }
+
     private func calcularRuta(a destino: CLLocationCoordinate2D, numero: String) async {
         calculandoRuta = true
         defer { calculandoRuta = false }
@@ -127,6 +154,24 @@ struct MapaView: View {
         pendingCommand = .fitRoute(ruta.polyline.boundingMapRect)
     }
 
+    private func marcarRevision(item: RutaEstructuraItem) {
+        guard let userId, let semana = modoRuta else { return }
+        Task {
+            try? await RutasService.shared.marcarRevision(
+                estructuraId: item.estructura.id,
+                rutaSemanaId: semana.id,
+                userId: userId
+            )
+            marcarVisitadaLocal(estructuraId: item.estructura.id)
+        }
+    }
+
+    private func marcarVisitadaLocal(estructuraId: UUID) {
+        if let idx = rutaItems.firstIndex(where: { $0.estructura.id == estructuraId }) {
+            rutaItems[idx].visitada = true
+        }
+    }
+
     var body: some View {
         NavigationStack {
         ZStack(alignment: .bottom) {
@@ -134,16 +179,26 @@ struct MapaView: View {
                 coloniasPolygons: coloniasPolygons,
                 municipioPolygons: municipioPolygons,
                 coloniasConEstructuras: coloniasConEstructuras,
-                anotaciones: anotacionesFiltradas,
+                anotaciones: anotacionesEfectivas,
                 rutaPolyline: rutaPolyline,
                 pendingCommand: $pendingCommand,
                 onSelect: { estructura in
-                    Task { await vm.seleccionar(estructura) }
+                    if modoRuta != nil {
+                        if let item = rutaItems.first(where: { $0.estructura.id == estructura.id }) {
+                            estructuraAccionRuta = item
+                        }
+                    } else {
+                        Task { await vm.seleccionar(estructura) }
+                    }
                 }
             )
             .ignoresSafeArea()
             .overlay(alignment: .top) {
                 VStack(spacing: 8) {
+                    if let semana = modoRuta {
+                        rutaBannerView(semana: semana)
+                    }
+
                     Button { searchFocused = true } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
@@ -186,6 +241,23 @@ struct MapaView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 VStack(spacing: 8) {
+                    Button {
+                        if modoRuta != nil {
+                            withAnimation { modoRuta = nil; rutaItems = [] }
+                        } else {
+                            Task {
+                                semanas = (try? await RutasService.shared.fetchSemanasRecientes()) ?? []
+                                mostrarSemanasPicker = true
+                            }
+                        }
+                    } label: {
+                        Image(systemName: modoRuta != nil ? "xmark" : "point.3.connected.trianglepath.dotted")
+                            .foregroundStyle(modoRuta != nil ? Color.red : Color("MunicipioCyan"))
+                    }
+                    .buttonStyle(.glass(.regular))
+                    .controlSize(.large)
+                    .buttonBorderShape(.circle)
+
                     Button {
                         locationManager.requestWhenInUseAuthorization()
                         pendingCommand = .centerOnUser
@@ -294,10 +366,135 @@ struct MapaView: View {
                 )
             }
         }
+        .sheet(isPresented: $mostrarSemanasPicker) {
+            semanasPickerSheet
+        }
+        .sheet(item: $estructuraAccionRuta) { item in
+            if let semana = modoRuta {
+                RutaModoAccionSheet(
+                    item: item,
+                    accentColor: Color(hex: semana.color),
+                    onRevision: { marcarRevision(item: item) },
+                    onAccion: {
+                        estructuraAccionRuta = nil
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            estructuraRutaParaAccion = item.estructura
+                        }
+                    },
+                    onDano: {
+                        estructuraAccionRuta = nil
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            estructuraRutaParaDano = item.estructura
+                        }
+                    }
+                )
+            }
+        }
+        .sheet(item: $estructuraRutaParaAccion) { estructura in
+            RegistrarCoroplastView(
+                estructura: estructura,
+                campanas: campanas,
+                userId: userId,
+                rutaSemanaId: modoRuta?.id,
+                onCompletion: { marcarVisitadaLocal(estructuraId: estructura.id) }
+            )
+        }
+        .sheet(item: $estructuraRutaParaDano) { estructura in
+            ReportarDanoView(
+                estructura: estructura,
+                userId: userId,
+                rutaSemanaId: modoRuta?.id,
+                onCompletion: { marcarVisitadaLocal(estructuraId: estructura.id) }
+            )
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         }
+    }
+
+    // MARK: - Route Banner
+
+    private func rutaBannerView(semana: RutaSemana) -> some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Color(hex: semana.color))
+                .frame(width: 12, height: 12)
+            Text("Semana \(semana.numero)")
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            Text("\(visitadasEnRuta)/\(rutaItems.count) visitadas")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color(hex: semana.color))
+            Button {
+                withAnimation { modoRuta = nil; rutaItems = [] }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    // MARK: - Semanas Picker Sheet
+
+    private var semanasPickerSheet: some View {
+        NavigationStack {
+            Group {
+                if semanas.isEmpty {
+                    ContentUnavailableView("Sin semanas", systemImage: "calendar.badge.exclamationmark",
+                        description: Text("No hay rutas disponibles."))
+                } else {
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            ForEach(semanas) { semana in
+                                semanaTarjeta(semana: semana)
+                            }
+                        }
+                        .padding(20)
+                    }
+                }
+            }
+            .navigationTitle("Seleccionar ruta")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { mostrarSemanasPicker = false }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func semanaTarjeta(semana: RutaSemana) -> some View {
+        Button {
+            mostrarSemanasPicker = false
+            modoRuta = semana
+            Task {
+                rutaItems = (try? await RutasService.shared.fetchEstructurasEnRuta(
+                    rutaSemanaId: semana.id,
+                    userId: userId ?? UUID()
+                )) ?? []
+            }
+        } label: {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: semana.color))
+                Text("Semana \(semana.numero)")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .padding(20)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 100)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -324,7 +521,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
-        // Defer initial region to next run loop so SwiftUI layout finishes first
         if !context.coordinator.initialRegionSet {
             context.coordinator.initialRegionSet = true
             DispatchQueue.main.async {
@@ -332,7 +528,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
         }
 
-        // Handle imperative commands
         if let cmd = pendingCommand {
             switch cmd {
             case .centerOnUser:
@@ -357,7 +552,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             DispatchQueue.main.async { pendingCommand = nil }
         }
 
-        // Sync route polyline
         let existingPolylines = mapView.overlays.compactMap { $0 as? MKPolyline }
         if let ruta = rutaPolyline {
             if existingPolylines.first !== ruta {
@@ -368,10 +562,8 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             existingPolylines.forEach { mapView.removeOverlay($0) }
         }
 
-        // Keep coordinator in sync for renderers
         context.coordinator.coloniasConEstructuras = coloniasConEstructuras
 
-        // Reload overlays when polygon data or highlight data changes
         let needsOverlayReload = context.coordinator.loadedPolygonCount != coloniasPolygons.count
             || context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
 
@@ -391,7 +583,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 mapView.addOverlay(mkPoly, level: .aboveRoads)
             }
 
-            // Fade in on first load
             if context.coordinator.isFirstLoad && !coloniasPolygons.isEmpty {
                 context.coordinator.isFirstLoad = false
                 mapView.alpha = 0
@@ -401,7 +592,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
         }
 
-        // Sync annotations (handles search filtering too)
         let currentIds = Set(mapView.annotations.compactMap { ($0 as? EstructuraMKAnnotation)?.estructura.id })
         let newIds = Set(anotaciones.map { $0.id })
         if currentIds != newIds {
@@ -969,7 +1159,6 @@ struct CampanaRow: View {
 private struct GoogleMapsIcon: View {
     var body: some View {
         ZStack {
-            // Pin shape
             Circle()
                 .fill(Color(red: 0.26, green: 0.52, blue: 0.96))
                 .frame(width: 14, height: 14)
@@ -979,5 +1168,146 @@ private struct GoogleMapsIcon: View {
                         .foregroundStyle(.white)
                 }
         }
+    }
+}
+
+// MARK: - RutaModoAccionSheet
+
+private struct RutaModoAccionSheet: View {
+    let item: RutaEstructuraItem
+    let accentColor: Color
+    let onRevision: () -> Void
+    let onAccion: () -> Void
+    let onDano: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                estructuraHeader
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+
+                if item.estructura.lat != nil && item.estructura.lng != nil {
+                    Button(action: abrirNavegacion) {
+                        Label("Cómo llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.blue, in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                }
+
+                VStack(spacing: 14) {
+                    opcionButton(
+                        icono: "checkmark.circle.fill",
+                        color: .green,
+                        titulo: "Está bien",
+                        subtitulo: "La estructura está en buen estado"
+                    ) {
+                        onRevision()
+                        dismiss()
+                    }
+
+                    opcionButton(
+                        icono: "wrench.and.screwdriver.fill",
+                        color: Color("MunicipioCyan"),
+                        titulo: "Registrar acción",
+                        subtitulo: "Cambio o reparación de coroplast"
+                    ) {
+                        onAccion()
+                    }
+
+                    opcionButton(
+                        icono: "exclamationmark.triangle.fill",
+                        color: .orange,
+                        titulo: "Reportar daño",
+                        subtitulo: "Tiene daño que no puedes arreglar ahora"
+                    ) {
+                        onDano()
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+
+                Spacer()
+            }
+            .navigationTitle("¿Qué pasa aquí?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancelar") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var estructuraHeader: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accentColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Text("\(item.orden)")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(accentColor)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.estructura.numero)
+                    .font(.title3.bold())
+                if let parque = item.estructura.parques {
+                    Text(parque.nombre)
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+            }
+            Spacer()
+            EstadoBadge(estado: item.estructura.estado)
+        }
+        .padding()
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func abrirNavegacion() {
+        guard let lat = item.estructura.lat, let lng = item.estructura.lng else { return }
+        let google = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")
+        let apple = URL(string: "maps://?daddr=\(lat),\(lng)")
+        if let url = google, UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else if let url = apple {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func opcionButton(icono: String, color: Color, titulo: String, subtitulo: String, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            HStack(spacing: 16) {
+                Image(systemName: icono)
+                    .font(.title)
+                    .foregroundStyle(color)
+                    .frame(width: 44)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(titulo)
+                        .font(.headline).foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                    Text(subtitulo)
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.bold()).foregroundStyle(.tertiary)
+            }
+            .padding(18)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(color.opacity(0.25), lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
     }
 }
