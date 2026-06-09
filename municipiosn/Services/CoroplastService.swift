@@ -42,6 +42,7 @@ private struct CaraConCampanaRaw: Codable {
 private struct RondinInsert: Encodable {
     let fecha: String
     let created_by: String
+    let ruta_semana_id: String?
 }
 
 private struct RondinEstructuraInsert: Encodable {
@@ -108,11 +109,12 @@ final class CoroplastService {
     func registrarReparacion(
         estructuraId: UUID,
         userId: UUID,
+        rutaSemanaId: UUID? = nil,
         fotoAntesUrl: String?,
         fotoDespuesUrl: String?,
         notas: String?
     ) async throws {
-        let rondinId = try await crearRondin(userId: userId)
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
             .from("rondines_estructuras")
             .insert(RondinEstructuraInsert(
@@ -131,6 +133,7 @@ final class CoroplastService {
         estructuraId: UUID,
         estadoActual: EstadoEstructura,
         userId: UUID,
+        rutaSemanaId: UUID? = nil,
         carasNuevasCampanas: [(caraId: UUID, campanaId: UUID)],
         fotoAntesUrl: String?,
         fotoDespuesUrl: String?,
@@ -162,7 +165,7 @@ final class CoroplastService {
             .insert(inserts)
             .execute()
 
-        let rondinId = try await crearRondin(userId: userId)
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
             .from("rondines_estructuras")
             .insert(RondinEstructuraInsert(
@@ -188,11 +191,12 @@ final class CoroplastService {
     func reportarDano(
         estructuraId: UUID,
         userId: UUID,
+        rutaSemanaId: UUID? = nil,
         tipoDano: TipoDano,
         fotoUrl: String?,
         notas: String?
     ) async throws {
-        let rondinId = try await crearRondin(userId: userId)
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
             .from("rondines_estructuras")
             .insert(RondinEstructuraInsert(
@@ -215,10 +219,11 @@ final class CoroplastService {
     func reactivarEstructura(
         estructuraId: UUID,
         userId: UUID,
+        rutaSemanaId: UUID? = nil,
         fotoProveedorUrl: String?,
         notas: String?
     ) async throws {
-        let rondinId = try await crearRondin(userId: userId)
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
             .from("rondines_estructuras")
             .insert(RondinEstructuraInsert(
@@ -249,7 +254,23 @@ final class CoroplastService {
             .absoluteString
     }
 
-    private func crearRondin(userId: UUID) async throws -> UUID {
+    func registrarRevision(estructuraId: UUID, rutaSemanaId: UUID, userId: UUID) async throws {
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "revision",
+                tipo_dano: nil,
+                foto_antes_url: nil,
+                foto_despues_url: nil,
+                notas: nil
+            ))
+            .execute()
+    }
+
+    private func crearRondin(userId: UUID, rutaSemanaId: UUID? = nil) async throws -> UUID {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         let hoy = formatter.string(from: Date())
@@ -259,7 +280,11 @@ final class CoroplastService {
         }
         let result: RondinResponse = try await client
             .from("rondines")
-            .insert(RondinInsert(fecha: hoy, created_by: userId.uuidString))
+            .insert(RondinInsert(
+                fecha: hoy,
+                created_by: userId.uuidString,
+                ruta_semana_id: rutaSemanaId?.uuidString
+            ))
             .select("id")
             .single()
             .execute()

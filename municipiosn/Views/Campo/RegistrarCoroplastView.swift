@@ -9,6 +9,7 @@ struct RegistrarCoroplastView: View {
     let estructura: EstructuraConParque
     let campanas: [CampanaBasica]
     let userId: UUID?
+    var rutaSemanaId: UUID? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var paso: Paso = .accion
@@ -453,6 +454,7 @@ struct RegistrarCoroplastView: View {
                     try await CoroplastService.shared.registrarReparacion(
                         estructuraId: estructura.id,
                         userId: userId,
+                        rutaSemanaId: rutaSemanaId,
                         fotoAntesUrl: antesUrl,
                         fotoDespuesUrl: despuesUrl,
                         notas: notasVal
@@ -466,6 +468,7 @@ struct RegistrarCoroplastView: View {
                         estructuraId: estructura.id,
                         estadoActual: estructura.estado,
                         userId: userId,
+                        rutaSemanaId: rutaSemanaId,
                         carasNuevasCampanas: asignaciones,
                         fotoAntesUrl: antesUrl,
                         fotoDespuesUrl: despuesUrl,

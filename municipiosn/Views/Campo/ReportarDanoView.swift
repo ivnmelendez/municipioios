@@ -6,6 +6,7 @@ private enum Paso { case seleccion, foto, confirmar }
 struct ReportarDanoView: View {
     let estructura: EstructuraConParque
     let userId: UUID?
+    var rutaSemanaId: UUID? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var paso: Paso = .seleccion
@@ -385,6 +386,7 @@ struct ReportarDanoView: View {
                 try await CoroplastService.shared.reportarDano(
                     estructuraId: estructura.id,
                     userId: userId,
+                    rutaSemanaId: rutaSemanaId,
                     tipoDano: tipoDano,
                     fotoUrl: fotoUrl,
                     notas: notas.isEmpty ? nil : notas

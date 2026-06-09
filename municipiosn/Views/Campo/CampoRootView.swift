@@ -16,6 +16,10 @@ struct CampoRootView: View {
                 )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }
+            Tab("Rutas", systemImage: "route") {
+                RutasTabView(userId: authVM.perfilId, campanas: vm.campanas)
+                    .task { if vm.campanas.isEmpty { await vm.cargar() } }
+            }
             Tab("Configuración", systemImage: "gearshape.fill") {
                 configTab
             }
