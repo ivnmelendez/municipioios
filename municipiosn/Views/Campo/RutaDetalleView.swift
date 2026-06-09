@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 struct RutaDetalleView: View {
     let semana: RutaSemana
@@ -12,8 +13,6 @@ struct RutaDetalleView: View {
     @State private var estructuraAccion: RutaEstructuraItem?
     @State private var estructuraParaAccion: EstructuraConParque?
     @State private var estructuraParaDano: EstructuraConParque?
-    @State private var mostrarMapa = false
-
     private var visitadasCount: Int { items.filter { $0.visitada }.count }
     private var accentColor: Color { Color(hex: semana.color) }
 
@@ -30,8 +29,6 @@ struct RutaDetalleView: View {
                 } else if items.isEmpty {
                     ContentUnavailableView("Sin estructuras", systemImage: "building.2",
                         description: Text("Esta ruta no tiene estructuras asignadas."))
-                } else if mostrarMapa {
-                    rutaMapa
                 } else {
                     lista
                 }
@@ -39,17 +36,6 @@ struct RutaDetalleView: View {
         }
         .navigationTitle("Semana \(semana.numero)")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if !items.isEmpty {
-                    Button {
-                        withAnimation(.spring(duration: 0.3)) { mostrarMapa.toggle() }
-                    } label: {
-                        Image(systemName: mostrarMapa ? "list.bullet" : "map")
-                    }
-                }
-            }
-        }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") { errorMessage = nil }
         } message: {
@@ -79,17 +65,17 @@ struct RutaDetalleView: View {
                 estructura: estructura,
                 campanas: campanas,
                 userId: userId,
-                rutaSemanaId: semana.id
+                rutaSemanaId: semana.id,
+                onCompletion: { marcarVisitadaLocal(estructuraId: estructura.id) }
             )
-            .onDisappear { marcarVisitadaLocal(estructuraId: estructura.id) }
         }
         .sheet(item: $estructuraParaDano) { estructura in
             ReportarDanoView(
                 estructura: estructura,
                 userId: userId,
-                rutaSemanaId: semana.id
+                rutaSemanaId: semana.id,
+                onCompletion: { marcarVisitadaLocal(estructuraId: estructura.id) }
             )
-            .onDisappear { marcarVisitadaLocal(estructuraId: estructura.id) }
         }
         .task { await cargar() }
     }
@@ -141,60 +127,6 @@ struct RutaDetalleView: View {
         .listStyle(.insetGrouped)
     }
 
-    // MARK: - Mapa
-
-    private var rutaMapa: some View {
-        let anotaciones = items.compactMap { item -> RutaAnotacion? in
-            guard let lat = item.estructura.lat, let lng = item.estructura.lng else { return nil }
-            return RutaAnotacion(
-                id: item.id,
-                orden: item.orden,
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-                visitada: item.visitada
-            )
-        }
-
-        let region: MapCameraPosition = {
-            guard !anotaciones.isEmpty else {
-                return .automatic
-            }
-            let lats = anotaciones.map { $0.coordinate.latitude }
-            let lngs = anotaciones.map { $0.coordinate.longitude }
-            let center = CLLocationCoordinate2D(
-                latitude: (lats.min()! + lats.max()!) / 2,
-                longitude: (lngs.min()! + lngs.max()!) / 2
-            )
-            let span = MKCoordinateSpan(
-                latitudeDelta: max((lats.max()! - lats.min()!) * 1.4, 0.005),
-                longitudeDelta: max((lngs.max()! - lngs.min()!) * 1.4, 0.005)
-            )
-            return .region(MKCoordinateRegion(center: center, span: span))
-        }()
-
-        return Map(initialPosition: region) {
-            ForEach(anotaciones) { anotacion in
-                Annotation("", coordinate: anotacion.coordinate) {
-                    Button {
-                        if let item = items.first(where: { $0.id == anotacion.id }) {
-                            estructuraAccion = item
-                        }
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(anotacion.visitada ? Color.green : accentColor)
-                                .frame(width: 36, height: 36)
-                                .shadow(radius: 3)
-                            Text("\(anotacion.orden)")
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.white)
-                        }
-                    }
-                }
-            }
-        }
-        .mapStyle(.standard)
-        .ignoresSafeArea(edges: .bottom)
-    }
 
     // MARK: - Actions
 
@@ -233,15 +165,6 @@ struct RutaDetalleView: View {
             items[idx].visitada = true
         }
     }
-}
-
-// MARK: - RutaAnotacion
-
-private struct RutaAnotacion: Identifiable {
-    let id: UUID
-    let orden: Int
-    let coordinate: CLLocationCoordinate2D
-    let visitada: Bool
 }
 
 // MARK: - EstructuraRow
@@ -333,6 +256,19 @@ private struct AccionSheet: View {
                     .padding(.horizontal)
                     .padding(.top, 12)
 
+                if item.estructura.lat != nil && item.estructura.lng != nil {
+                    Button(action: abrirNavegacion) {
+                        Label("Cómo llegar", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.blue, in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                }
+
                 VStack(spacing: 14) {
                     opcionButton(
                         icono: "checkmark.circle.fill",
@@ -403,6 +339,17 @@ private struct AccionSheet: View {
         }
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func abrirNavegacion() {
+        guard let lat = item.estructura.lat, let lng = item.estructura.lng else { return }
+        let googleMaps = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")
+        let appleMaps = URL(string: "maps://?daddr=\(lat),\(lng)")
+        if let url = googleMaps, UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else if let url = appleMaps {
+            UIApplication.shared.open(url)
+        }
     }
 
     private func opcionButton(icono: String, color: Color, titulo: String, subtitulo: String, accion: @escaping () -> Void) -> some View {

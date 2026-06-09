@@ -43,6 +43,15 @@ private struct RondinInsert: Encodable {
     let fecha: String
     let created_by: String
     let ruta_semana_id: String?
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(fecha, forKey: .fecha)
+        try c.encode(created_by, forKey: .created_by)
+        if let id = ruta_semana_id { try c.encode(id, forKey: .ruta_semana_id) }
+    }
+
+    enum CodingKeys: String, CodingKey { case fecha, created_by, ruta_semana_id }
 }
 
 private struct RondinEstructuraInsert: Encodable {

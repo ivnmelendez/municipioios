@@ -7,6 +7,7 @@ struct ReportarDanoView: View {
     let estructura: EstructuraConParque
     let userId: UUID?
     var rutaSemanaId: UUID? = nil
+    var onCompletion: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var paso: Paso = .seleccion
@@ -301,7 +302,10 @@ struct ReportarDanoView: View {
             .padding(40)
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { dismiss() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                onCompletion?()
+                dismiss()
+            }
         }
     }
 
