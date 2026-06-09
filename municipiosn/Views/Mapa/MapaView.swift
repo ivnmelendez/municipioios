@@ -629,176 +629,50 @@ struct EstructuraDetalleSheet: View {
     }
 
     var body: some View {
+        GeometryReader { geo in
+            let isLandscape = sizeClass == .regular && geo.size.width > geo.size.height
+            if isLandscape { landscapeLayout } else { portraitLayout }
+        }
+        .presentationDetents(sizeClass == .regular ? [.large] : [.height(contentHeight)])
+        .presentationSizing(.page)
+        .presentationDragIndicator(sizeClass == .regular ? .visible : .hidden)
+        .presentationContentInteraction(.scrolls)
+        .fullScreenCover(item: $fotoFullscreen) { item in
+            FotoFullscreenView(url: item.url, titulo: item.titulo)
+        }
+    }
+
+    // MARK: Layouts
+
+    private var landscapeLayout: some View {
+        HStack(spacing: 0) {
+            fotoView(fixedHeight: nil)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Divider()
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 0) {
+                    headerView
+                    Divider()
+                    infoView
+                    if mostrarCampanas && !caras.isEmpty { Divider(); campanasView }
+                    if let n = estructura.notas, !n.isEmpty { Divider(); notasView(n) }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity)
+            .scrollBounceBehavior(.basedOnSize)
+        }
+    }
+
+    private var portraitLayout: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 0) {
-                // Compact header — visible at small detent
-                HStack(spacing: 12) {
-                    Text(estructura.numero)
-                        .font(.headline)
-                        .layoutPriority(1)
-                    Spacer(minLength: 8)
-                    EstadoBadge(estado: estructura.estado)
-                        .fixedSize()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 20)
-
+                headerView
                 Divider()
-
-                // Foto estructura
-                if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            Button {
-                                fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
-                            } label: {
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: sizeClass == .regular ? 680 : 380)
-                                    .clipped()
-                                    .overlay(alignment: .bottomTrailing) {
-                                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.white)
-                                            .padding(6)
-                                            .background(.black.opacity(0.4), in: Circle())
-                                            .padding(10)
-                                    }
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        case .failure:
-                            EmptyView()
-                        default:
-                            Color.secondary.opacity(0.1)
-                                .frame(height: sizeClass == .regular ? 680 : 380)
-                                .overlay { ProgressView() }
-                        }
-                    }
-
-                    Divider()
-                }
-
-                // Ubicación completa
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Ubicación")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color("TextMuted"))
-                    if let colonia = estructura.parques?.colonias {
-                        Label(colonia.nombre, systemImage: "map")
-                            .font(.subheadline)
-                    } else {
-                        Label("Sin colonia asignada", systemImage: "map")
-                            .font(.subheadline)
-                            .foregroundStyle(Color("TextMuted"))
-                    }
-                    if let parque = estructura.parques {
-                        Label(parque.nombre, systemImage: "tree")
-                            .font(.subheadline)
-                            .foregroundStyle(Color("TextMuted"))
-                    } else {
-                        Label("Sin parque asignado", systemImage: "tree")
-                            .font(.subheadline)
-                            .foregroundStyle(Color("TextMuted"))
-                    }
-                    if let lat = estructura.lat, let lng = estructura.lng {
-                        HStack(spacing: 10) {
-                            Button {
-                                onLlegar?(lat, lng)
-                            } label: {
-                                Label("Mapa", systemImage: "arrow.triangle.turn.up.right.circle.fill")
-                                    .font(.subheadline.weight(.semibold))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color("MunicipioCyan"))
-                            .controlSize(.regular)
-
-                            Button {
-                                abrirGoogleMaps(lat: lat, lng: lng)
-                            } label: {
-                                HStack(spacing: 6) {
-                                    GoogleMapsIcon()
-                                    Text("Google Maps")
-                                        .font(.subheadline.weight(.semibold))
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color(red: 0.26, green: 0.52, blue: 0.96))
-                            .controlSize(.regular)
-                        }
-
-                        if let registrar = onRegistrarCambio {
-                            Button {
-                                registrar()
-                            } label: {
-                                Label("Registrar coroplast", systemImage: "square.and.pencil")
-                                    .font(.headline.weight(.bold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 4)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color("MunicipioCyan"))
-                            .controlSize(.large)
-                        }
-
-                        if let reportar = onReportarDano {
-                            Button {
-                                reportar()
-                            } label: {
-                                Label("Reportar daño", systemImage: "exclamationmark.triangle.fill")
-                                    .font(.headline.weight(.bold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 4)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.red)
-                            .controlSize(.large)
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, sizeClass == .regular ? 40 : 16)
-
-                // Campañas
-                if mostrarCampanas && !caras.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Campañas activas")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color("TextMuted"))
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
-                            .padding(.bottom, 12)
-
-                        ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
-                            CampanaRow(cara: cara, onTapFoto: { url in
-                                fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña Cara \(cara.tipo)")
-                            })
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 16)
-                        }
-                    }
-
-                }
-
-                // Notas
-                if let notas = estructura.notas, !notas.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Notas")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color("TextMuted"))
-                        Text(notas)
-                            .font(.body)
-                    }
-                    .padding(20)
-                }
+                fotoView(fixedHeight: sizeClass == .regular ? 680 : 380)
+                infoView
+                if mostrarCampanas && !caras.isEmpty { Divider(); campanasView }
+                if let n = estructura.notas, !n.isEmpty { Divider(); notasView(n) }
             }
             .frame(maxWidth: .infinity)
             .background(GeometryReader { geo in
@@ -808,13 +682,158 @@ struct EstructuraDetalleSheet: View {
             })
         }
         .scrollBounceBehavior(.basedOnSize)
-        .presentationDetents(sizeClass == .regular ? [.large] : [.height(contentHeight)])
-        .presentationSizing(.page)
-        .presentationDragIndicator(sizeClass == .regular ? .visible : .hidden)
-        .presentationContentInteraction(.scrolls)
-        .fullScreenCover(item: $fotoFullscreen) { item in
-            FotoFullscreenView(url: item.url, titulo: item.titulo)
+    }
+
+    // MARK: Sections
+
+    private var headerView: some View {
+        HStack(spacing: 12) {
+            Text(estructura.numero)
+                .font(.headline)
+                .layoutPriority(1)
+            Spacer(minLength: 8)
+            EstadoBadge(estado: estructura.estado)
+                .fixedSize()
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 20)
+    }
+
+    @ViewBuilder
+    private func fotoView(fixedHeight: CGFloat?) -> some View {
+        if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    Button {
+                        fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
+                    } label: {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: fixedHeight)
+                            .frame(maxHeight: fixedHeight == nil ? .infinity : nil)
+                            .clipped()
+                            .overlay(alignment: .bottomTrailing) {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(6)
+                                    .background(.black.opacity(0.4), in: Circle())
+                                    .padding(10)
+                            }
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                case .failure:
+                    EmptyView()
+                default:
+                    Color.secondary.opacity(0.1)
+                        .frame(height: fixedHeight)
+                        .frame(maxHeight: fixedHeight == nil ? .infinity : nil)
+                        .overlay { ProgressView() }
+                }
+            }
+            if fixedHeight != nil { Divider() }
+        }
+    }
+
+    private var infoView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Ubicación")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color("TextMuted"))
+            if let colonia = estructura.parques?.colonias {
+                Label(colonia.nombre, systemImage: "map").font(.subheadline)
+            } else {
+                Label("Sin colonia asignada", systemImage: "map")
+                    .font(.subheadline).foregroundStyle(Color("TextMuted"))
+            }
+            if let parque = estructura.parques {
+                Label(parque.nombre, systemImage: "tree")
+                    .font(.subheadline).foregroundStyle(Color("TextMuted"))
+            } else {
+                Label("Sin parque asignado", systemImage: "tree")
+                    .font(.subheadline).foregroundStyle(Color("TextMuted"))
+            }
+            if let lat = estructura.lat, let lng = estructura.lng {
+                HStack(spacing: 10) {
+                    Button { onLlegar?(lat, lng) } label: {
+                        Label("Mapa", systemImage: "arrow.triangle.turn.up.right.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color("MunicipioCyan"))
+                    .controlSize(.regular)
+
+                    Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
+                        HStack(spacing: 6) {
+                            GoogleMapsIcon()
+                            Text("Google Maps").font(.subheadline.weight(.semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(red: 0.26, green: 0.52, blue: 0.96))
+                    .controlSize(.regular)
+                }
+                if let registrar = onRegistrarCambio {
+                    Button { registrar() } label: {
+                        Label("Registrar coroplast", systemImage: "square.and.pencil")
+                            .font(.headline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color("MunicipioCyan"))
+                    .controlSize(.large)
+                }
+                if let reportar = onReportarDano {
+                    Button { reportar() } label: {
+                        Label("Reportar daño", systemImage: "exclamationmark.triangle.fill")
+                            .font(.headline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                    .controlSize(.large)
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, sizeClass == .regular ? 40 : 16)
+    }
+
+    private var campanasView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Campañas activas")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color("TextMuted"))
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
+            ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
+                CampanaRow(cara: cara, onTapFoto: { url in
+                    fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña Cara \(cara.tipo)")
+                })
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+            }
+        }
+    }
+
+    private func notasView(_ notas: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Notas")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color("TextMuted"))
+            Text(notas).font(.body)
+        }
+        .padding(20)
     }
 }
 
