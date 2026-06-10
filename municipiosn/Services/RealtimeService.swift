@@ -23,6 +23,7 @@ final class RealtimeService {
 
     func subscribir() async {
         guard channel == nil else { return }
+        await client.realtimeV2.removeAllChannels()
         let channel = client.realtimeV2.channel("campo_actividad")
 
         subIntervencion = channel.onPostgresChange(
@@ -54,7 +55,9 @@ final class RealtimeService {
     }
 
     func desuscribir() async {
-        await channel?.unsubscribe()
+        if let ch = channel {
+            await client.realtimeV2.removeChannel(ch)
+        }
         subIntervencion = nil
         subDano = nil
         channel = nil
