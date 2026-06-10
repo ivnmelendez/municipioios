@@ -245,49 +245,50 @@ struct MapaView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .overlay(alignment: .bottomTrailing) {
-                VStack(spacing: 8) {
-                    if !coloniaSemanaColors.isEmpty {
-                        Button {
-                            let newValue = !mostrarRutas
-                            mostrarRutas = newValue
-                            mapController.updateRouteColors(
-                                mostrarRutas: newValue,
-                                colors: coloniaSemanaColors,
-                                tieneEstructuras: coloniasConEstructuras
-                            )
-                        } label: {
-                            Image(systemName: "map")
-                        }
-                        .buttonStyle(.glass(.regular))
-                        .controlSize(.large)
-                        .buttonBorderShape(.circle)
-                    }
-
+            VStack(spacing: 8) {
+                if !coloniaSemanaColors.isEmpty {
                     Button {
-                        locationManager.requestWhenInUseAuthorization()
-                        mapController.centerOnUser()
+                        let newValue = !mostrarRutas
+                        mostrarRutas = newValue
+                        mapController.updateRouteColors(
+                            mostrarRutas: newValue,
+                            colors: coloniaSemanaColors,
+                            tieneEstructuras: coloniasConEstructuras
+                        )
                     } label: {
-                        Image(systemName: "location.fill")
-                            .foregroundStyle(Color("MunicipioCyan"))
-                    }
-                    .buttonStyle(.glass(.regular))
-                    .controlSize(.large)
-                    .buttonBorderShape(.circle)
-
-                    Button {
-                        mapController.resetRegion()
-                    } label: {
-                        Image(systemName: "mappin.and.ellipse")
-                            .foregroundStyle(Color("Navy"))
+                        Image(systemName: "map")
                     }
                     .buttonStyle(.glass(.regular))
                     .controlSize(.large)
                     .buttonBorderShape(.circle)
                 }
-                .padding(.trailing, 16)
-                .padding(.bottom, 20)
+
+                Button {
+                    locationManager.requestWhenInUseAuthorization()
+                    mapController.centerOnUser()
+                } label: {
+                    Image(systemName: "location.fill")
+                        .foregroundStyle(Color("MunicipioCyan"))
+                }
+                .buttonStyle(.glass(.regular))
+                .controlSize(.large)
+                .buttonBorderShape(.circle)
+
+                Button {
+                    mapController.resetRegion()
+                } label: {
+                    Image(systemName: "mappin.and.ellipse")
+                        .foregroundStyle(Color("Navy"))
+                }
+                .buttonStyle(.glass(.regular))
+                .controlSize(.large)
+                .buttonBorderShape(.circle)
             }
+            .padding(.trailing, 16)
+            .padding(.bottom, 20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .allowsHitTesting(true)
+            .transaction { $0.animation = nil }
 
             if vm.isLoading {
                 HStack {
