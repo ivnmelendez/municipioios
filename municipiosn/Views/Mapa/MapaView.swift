@@ -123,6 +123,7 @@ struct MapaView: View {
 
     @State private var estructuraSemanaMap: [UUID: RutaSemana] = [:]
     @State private var coloniaSemanaColors: [String: String] = [:]
+    @State private var mostrarRutas: Bool = false
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
 
@@ -158,7 +159,7 @@ struct MapaView: View {
                 coloniasPolygons: coloniasPolygons,
                 municipioPolygons: municipioPolygons,
                 coloniasConEstructuras: coloniasConEstructuras,
-                coloniaSemanaColors: coloniaSemanaColors,
+                coloniaSemanaColors: mostrarRutas ? coloniaSemanaColors : [:],
                 anotaciones: anotacionesFiltradas,
                 semanaMapVersion: estructuraSemanaMap.count,
                 pendingCommand: $pendingCommand,
@@ -211,6 +212,20 @@ struct MapaView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 VStack(spacing: 8) {
+                    if !coloniaSemanaColors.isEmpty {
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                mostrarRutas.toggle()
+                            }
+                        } label: {
+                            Image(systemName: "point.3.connected.trianglepath.dotted")
+                                .foregroundStyle(mostrarRutas ? Color("MunicipioCyan") : Color.secondary)
+                        }
+                        .buttonStyle(.glass(.regular))
+                        .controlSize(.large)
+                        .buttonBorderShape(.circle)
+                    }
+
                     Button {
                         locationManager.requestWhenInUseAuthorization()
                         pendingCommand = .centerOnUser
