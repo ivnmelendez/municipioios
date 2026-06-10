@@ -76,7 +76,7 @@ struct ConfiguracionView: View {
                                     Text("Notificaciones")
                                         .font(.body.weight(.medium))
                                         .foregroundStyle(.primary)
-                                    Text("Cambios de rotoplas en tiempo real")
+                                    Text("Intervenciones, daños y rondín del sábado")
                                         .font(.caption)
                                         .foregroundStyle(Color("TextMuted"))
                                 }
@@ -86,6 +86,13 @@ struct ConfiguracionView: View {
                             }
                         }
                         .tint(Color("MunicipioCyan"))
+                        .onChange(of: notificaciones) { _, habilitadas in
+                            if habilitadas {
+                                RealtimeService.shared.programarNotificacionSabado()
+                            } else {
+                                RealtimeService.shared.cancelarNotificacionSabado()
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 20)

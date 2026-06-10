@@ -11,67 +11,118 @@ final class RealtimeService {
     var badgeCount: Int = 0
 
     private var channel: RealtimeChannelV2?
-    private var subscription: RealtimeSubscription?
+    private var subIntervencion: RealtimeSubscription?
+    private var subDano: RealtimeSubscription?
     private let client = SupabaseService.shared.client
-
-    private init() {}
-
-    func subscribir() async {
-        let channel = client.realtimeV2.channel("rondines_estructuras_rotoplas")
-
-        subscription = channel.onPostgresChange(
-            InsertAction.self,
-            schema: "public",
-            table: "rondines_estructuras",
-            filter: "accion=eq.cambio_rotoplas"
-        ) { [weak self] change in
-            Task { @MainActor [weak self] in
-                await self?.handleInsert(change)
-            }
-        }
-
-        try? await channel.subscribeWithError()
-        self.channel = channel
-    }
-
-    func desuscribir() async {
-        await channel?.unsubscribe()
-        subscription = nil
-        channel = nil
-    }
 
     private var notificacionesHabilitadas: Bool {
         UserDefaults.standard.object(forKey: "notificacionesHabilitadas") as? Bool ?? true
     }
 
-    private func handleInsert(_ change: InsertAction) async {
-        NotificationCenter.default.post(name: .nuevoCambioRotoplas, object: nil)
+    private init() {}
 
+    func subscribir() async {
+        let channel = client.realtimeV2.channel("campo_actividad")
+
+        subIntervencion = channel.onPostgresChange(
+            InsertAction.self,
+            schema: "public",
+            table: "rondines_estructuras",
+            filter: "accion=eq.cambio_coroplast"
+        ) { [weak self] change in
+            Task { @MainActor [weak self] in
+                self?.handleInsert(change, tipo: .intervencion)
+            }
+        }
+
+        subDano = channel.onPostgresChange(
+            InsertAction.self,
+            schema: "public",
+            table: "rondines_estructuras",
+            filter: "accion=eq.reporte_dano"
+        ) { [weak self] change in
+            Task { @MainActor [weak self] in
+                self?.handleInsert(change, tipo: .dano)
+            }
+        }
+
+        try? await channel.subscribeWithError()
+        self.channel = channel
+
+        programarNotificacionSabado()
+    }
+
+    func desuscribir() async {
+        await channel?.unsubscribe()
+        subIntervencion = nil
+        subDano = nil
+        channel = nil
+    }
+
+    // MARK: - Sábado 6pm
+
+    func programarNotificacionSabado() {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: ["rondin_sabado"])
+
+        guard notificacionesHabilitadas else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Historial de rondín disponible"
+        content.body = "Ya puedes revisar las estructuras visitadas hoy por el equipo de campo."
+        content.sound = .default
+
+        var comps = DateComponents()
+        comps.weekday = 7   // Sábado
+        comps.hour = 18
+        comps.minute = 0
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
+        let request = UNNotificationRequest(
+            identifier: "rondin_sabado",
+            content: content,
+            trigger: trigger
+        )
+        Task { try? await center.add(request) }
+    }
+
+    func cancelarNotificacionSabado() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: ["rondin_sabado"])
+    }
+
+    // MARK: - Realtime handler
+
+    private enum TipoEvento { case intervencion, dano }
+
+    private func handleInsert(_ change: InsertAction, tipo: TipoEvento) {
+        NotificationCenter.default.post(name: .nuevoCambioRotoplas, object: nil)
         guard notificacionesHabilitadas else { return }
 
         badgeCount += 1
 
-        let estructuraNum = change.record["estructuras"]?.objectValue?["numero"]?.stringValue ?? "—"
-        let parqueNom = change.record["estructuras"]?.objectValue?["parques"]?.objectValue?["nombre"]?.stringValue ?? "—"
-        let quien = change.record["rondines"]?.objectValue?["perfiles"]?.objectValue?["nombre"]?.stringValue ?? "—"
+        let num = change.record["estructura_id"]?.stringValue ?? "—"
 
-        await dispararNotificacion(estructuraNum: estructuraNum, parque: parqueNom, quien: quien)
-    }
+        let (titulo, cuerpo): (String, String) = switch tipo {
+        case .intervencion:
+            ("Cambio de coroplast registrado", "Estructura \(num)")
+        case .dano:
+            ("⚠️ Daño reportado", "Estructura \(num) necesita atención")
+        }
 
-    private func dispararNotificacion(estructuraNum: String, parque: String, quien: String) async {
-        let content = UNMutableNotificationContent()
-        content.title = "Nuevo cambio de rotoplas"
-        content.body = "\(estructuraNum) · \(parque) — \(quien)"
-        content.sound = .default
-        content.badge = NSNumber(value: badgeCount)
-
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-
-        try? await UNUserNotificationCenter.current().add(request)
+        Task {
+            let content = UNMutableNotificationContent()
+            content.title = titulo
+            content.body = cuerpo
+            content.sound = .default
+            content.badge = NSNumber(value: badgeCount)
+            let request = UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil
+            )
+            try? await UNUserNotificationCenter.current().add(request)
+        }
     }
 }
 

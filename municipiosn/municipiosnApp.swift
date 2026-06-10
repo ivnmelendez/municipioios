@@ -6,6 +6,11 @@ struct municipiosnApp: App {
     @State private var authVM = AuthViewModel()
 
     init() {
+        URLCache.shared = URLCache(
+            memoryCapacity: 50 * 1024 * 1024,
+            diskCapacity: 200 * 1024 * 1024,
+            directory: nil
+        )
         Task {
             try? await UNUserNotificationCenter.current().requestAuthorization(
                 options: [.alert, .sound, .badge]
