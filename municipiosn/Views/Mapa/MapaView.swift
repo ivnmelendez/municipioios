@@ -332,14 +332,19 @@ struct MapaView: View {
                     onOk: userId != nil ? {
                         guard let uid = userId else { return }
                         vm.visitadasHoy.insert(estructura.id)
-                        Task {
-                            try? await RutasService.shared.marcarRevision(
-                                estructuraId: estructura.id,
-                                rutaSemanaId: semana?.id,
-                                userId: uid
-                            )
-                        }
                         vm.mostrarDetalle = false
+                        Task {
+                            do {
+                                try await RutasService.shared.marcarRevision(
+                                    estructuraId: estructura.id,
+                                    rutaSemanaId: semana?.id,
+                                    userId: uid
+                                )
+                            } catch {
+                                vm.errorAccion = error.localizedDescription
+                                print("❌ marcarRevision: \(error)")
+                            }
+                        }
                     } : nil,
                     onRegistrarCambio: userId != nil ? {
                         vm.mostrarDetalle = false
@@ -374,6 +379,14 @@ struct MapaView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .alert("Error al guardar", isPresented: Binding(
+            get: { vm.errorAccion != nil },
+            set: { if !$0 { vm.errorAccion = nil } }
+        )) {
+            Button("OK", role: .cancel) { vm.errorAccion = nil }
+        } message: {
+            Text(vm.errorAccion ?? "")
+        }
         }
     }
 }

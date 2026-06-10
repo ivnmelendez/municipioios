@@ -9,6 +9,7 @@ final class MapaViewModel {
     var carasDetalle: [CaraDetalle] = []
     var mostrarDetalle = false
     var errorMessage: String?
+    var errorAccion: String?
     var isLoading = false
     var visitadasHoy: Set<UUID> = []
 
