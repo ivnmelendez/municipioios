@@ -11,11 +11,6 @@ struct municipiosnApp: App {
             diskCapacity: 200 * 1024 * 1024,
             directory: nil
         )
-        Task {
-            try? await UNUserNotificationCenter.current().requestAuthorization(
-                options: [.alert, .sound, .badge]
-            )
-        }
     }
 
     var body: some Scene {
@@ -30,6 +25,11 @@ struct municipiosnApp: App {
                     ContentView(authVM: authVM)
                         .environment(authVM)
                         .task { await RealtimeService.shared.subscribir() }
+                        .task {
+                            try? await UNUserNotificationCenter.current().requestAuthorization(
+                                options: [.alert, .sound, .badge]
+                            )
+                        }
                 case .unauthenticated:
                     LoginView(vm: authVM)
                 }

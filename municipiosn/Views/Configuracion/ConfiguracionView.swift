@@ -88,7 +88,7 @@ struct ConfiguracionView: View {
                         .tint(Color("MunicipioCyan"))
                         .onChange(of: notificaciones) { _, habilitadas in
                             if habilitadas {
-                                RealtimeService.shared.programarNotificacionSabado()
+                                Task { await pedirPermisoNotificaciones() }
                             } else {
                                 RealtimeService.shared.cancelarNotificacionSabado()
                             }
@@ -187,6 +187,27 @@ struct ConfiguracionView: View {
         guard let data = try? Data(contentsOf: url),
               let uiImage = UIImage(data: data) else { return }
         fotoPerfil = Image(uiImage: uiImage)
+    }
+
+    private func pedirPermisoNotificaciones() async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .notDetermined:
+            let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            if granted {
+                RealtimeService.shared.programarNotificacionSabado()
+            } else {
+                notificaciones = false
+            }
+        case .denied:
+            notificaciones = false
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                await UIApplication.shared.open(url)
+            }
+        default:
+            RealtimeService.shared.programarNotificacionSabado()
+        }
     }
 
     private func probarNotificacion() {
