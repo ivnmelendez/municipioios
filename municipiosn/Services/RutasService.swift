@@ -84,6 +84,36 @@ final class RutasService {
         }
     }
 
+    func fetchEstructuraSemanaMap() async throws -> [UUID: RutaSemana] {
+        let semanas = try await fetchSemanasRecientes()
+        guard !semanas.isEmpty else { return [:] }
+        let semanaById = Dictionary(uniqueKeysWithValues: semanas.map { ($0.id, $0) })
+
+        struct Link: Codable {
+            let estructuraId: UUID
+            let rutaSemanaId: UUID
+            enum CodingKeys: String, CodingKey {
+                case estructuraId = "estructura_id"
+                case rutaSemanaId = "ruta_semana_id"
+            }
+        }
+
+        let links: [Link] = try await client
+            .from("rutas_estructuras")
+            .select("estructura_id, ruta_semana_id")
+            .in("ruta_semana_id", values: semanas.map { $0.id.uuidString })
+            .execute()
+            .value
+
+        var result: [UUID: RutaSemana] = [:]
+        for link in links {
+            if let semana = semanaById[link.rutaSemanaId] {
+                result[link.estructuraId] = semana
+            }
+        }
+        return result
+    }
+
     func marcarRevision(estructuraId: UUID, rutaSemanaId: UUID, userId: UUID) async throws {
         try await CoroplastService.shared.registrarRevision(
             estructuraId: estructuraId,

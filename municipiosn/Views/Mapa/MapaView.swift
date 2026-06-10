@@ -10,6 +10,7 @@ struct EstructuraAnnotation: Identifiable {
     let estado: EstadoEstructura
     let numero: String
     let estructura: EstructuraConParque
+    var semanaColor: String? = nil
 }
 
 // MARK: - Helpers
@@ -45,13 +46,6 @@ private enum MapCommand {
     case centerOnUser
     case resetRegion
     case centerOn(CLLocationCoordinate2D)
-    case fitRoute(MKMapRect)
-}
-
-private struct RutaInfo {
-    let estructuraNumero: String
-    let distancia: String
-    let tiempo: String
 }
 
 // MARK: - MKAnnotation wrapper
@@ -60,11 +54,13 @@ private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
     let coordinate: CLLocationCoordinate2D
     let estructura: EstructuraConParque
     let estado: EstadoEstructura
+    let semanaColor: String?
 
     init(from a: EstructuraAnnotation) {
         self.coordinate = a.coordinate
         self.estructura = a.estructura
         self.estado = a.estado
+        self.semanaColor = a.semanaColor
     }
 }
 
@@ -72,8 +68,6 @@ private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
 
 struct MapaView: View {
     var mostrarCampanas: Bool = true
-    var onRegistrarCambio: ((EstructuraConParque) -> Void)? = nil
-    var onReportarDano: ((EstructuraConParque) -> Void)? = nil
     var userId: UUID? = nil
     var campanas: [CampanaBasica] = []
 
@@ -84,18 +78,11 @@ struct MapaView: View {
     @State private var locationManager = CLLocationManager()
     @State private var busqueda = ""
     @State private var pendingCommand: MapCommand? = nil
-    @State private var rutaPolyline: MKPolyline?
-    @State private var rutaInfo: RutaInfo?
-    @State private var calculandoRuta = false
     @FocusState private var searchFocused: Bool
 
-    @State private var modoRuta: RutaSemana? = nil
-    @State private var semanas: [RutaSemana] = []
-    @State private var cargandoSemanas = false
-    @State private var rutaItems: [RutaEstructuraItem] = []
-    @State private var mostrarSemanasPicker = false
-    @State private var estructuraRutaParaAccion: EstructuraConParque? = nil
-    @State private var estructuraRutaParaDano: EstructuraConParque? = nil
+    @State private var estructuraSemanaMap: [UUID: RutaSemana] = [:]
+    @State private var estructuraParaAccion: EstructuraConParque? = nil
+    @State private var estructuraParaDano: EstructuraConParque? = nil
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -105,7 +92,8 @@ struct MapaView: View {
                 coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
                 estado: e.estado,
                 numero: e.numero,
-                estructura: e
+                estructura: e,
+                semanaColor: estructuraSemanaMap[e.id]?.color
             )
         }
     }
@@ -121,56 +109,6 @@ struct MapaView: View {
         }
     }
 
-    private var anotacionesEfectivas: [EstructuraAnnotation] {
-        guard modoRuta != nil else { return anotacionesFiltradas }
-        return rutaItems.compactMap { item in
-            guard let lat = item.estructura.lat, let lng = item.estructura.lng else { return nil }
-            return EstructuraAnnotation(
-                id: item.estructura.id,
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-                estado: item.estructura.estado,
-                numero: item.estructura.numero,
-                estructura: item.estructura
-            )
-        }
-    }
-
-    private var visitadasEnRuta: Int { rutaItems.filter { $0.visitada }.count }
-
-    private func calcularRuta(a destino: CLLocationCoordinate2D, numero: String) async {
-        calculandoRuta = true
-        defer { calculandoRuta = false }
-        let request = MKDirections.Request()
-        request.source = MKMapItem.forCurrentLocation()
-        request.destination = MKMapItem(location: CLLocation(latitude: destino.latitude, longitude: destino.longitude), address: nil)
-        request.transportType = .automobile
-        guard let ruta = try? await MKDirections(request: request).calculate().routes.first else { return }
-        rutaPolyline = ruta.polyline
-        let km = String(format: "%.1f km", ruta.distance / 1000)
-        let min = Int(ruta.expectedTravelTime / 60)
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-            rutaInfo = RutaInfo(estructuraNumero: numero, distancia: km, tiempo: "\(min) min")
-        }
-        pendingCommand = .fitRoute(ruta.polyline.boundingMapRect)
-    }
-
-    private func marcarRevision(item: RutaEstructuraItem) {
-        guard let userId, let semana = modoRuta else { return }
-        Task {
-            try? await RutasService.shared.marcarRevision(
-                estructuraId: item.estructura.id,
-                rutaSemanaId: semana.id,
-                userId: userId
-            )
-            marcarVisitadaLocal(estructuraId: item.estructura.id)
-        }
-    }
-
-    private func marcarVisitadaLocal(estructuraId: UUID) {
-        if let idx = rutaItems.firstIndex(where: { $0.estructura.id == estructuraId }) {
-            rutaItems[idx].visitada = true
-        }
-    }
 
     var body: some View {
         NavigationStack {
@@ -179,8 +117,8 @@ struct MapaView: View {
                 coloniasPolygons: coloniasPolygons,
                 municipioPolygons: municipioPolygons,
                 coloniasConEstructuras: coloniasConEstructuras,
-                anotaciones: anotacionesEfectivas,
-                rutaPolyline: rutaPolyline,
+                anotaciones: anotacionesFiltradas,
+                semanaMapVersion: estructuraSemanaMap.count,
                 pendingCommand: $pendingCommand,
                 onSelect: { estructura in
                     Task { await vm.seleccionar(estructura) }
@@ -189,10 +127,6 @@ struct MapaView: View {
             .ignoresSafeArea()
             .overlay(alignment: .top) {
                 VStack(spacing: 8) {
-                    if let semana = modoRuta {
-                        rutaBannerView(semana: semana)
-                    }
-
                     Button { searchFocused = true } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
@@ -236,26 +170,6 @@ struct MapaView: View {
             .overlay(alignment: .bottomTrailing) {
                 VStack(spacing: 8) {
                     Button {
-                        if modoRuta != nil {
-                            withAnimation { modoRuta = nil; rutaItems = [] }
-                        } else {
-                            semanas = []
-                            cargandoSemanas = true
-                            mostrarSemanasPicker = true
-                            Task {
-                                semanas = (try? await RutasService.shared.fetchSemanasRecientes()) ?? []
-                                cargandoSemanas = false
-                            }
-                        }
-                    } label: {
-                        Image(systemName: modoRuta != nil ? "xmark" : "point.3.connected.trianglepath.dotted")
-                            .foregroundStyle(modoRuta != nil ? Color.red : Color("MunicipioCyan"))
-                    }
-                    .buttonStyle(.glass(.regular))
-                    .controlSize(.large)
-                    .buttonBorderShape(.circle)
-
-                    Button {
                         locationManager.requestWhenInUseAuthorization()
                         pendingCommand = .centerOnUser
                     } label: {
@@ -278,44 +192,6 @@ struct MapaView: View {
                 }
                 .padding(.trailing, 16)
                 .padding(.bottom, 20)
-            }
-
-            if calculandoRuta {
-                HStack(spacing: 8) {
-                    ProgressView()
-                    Text("Calculando ruta…")
-                        .font(.caption)
-                }
-                .padding(12)
-                .background(.regularMaterial, in: Capsule())
-                .padding(.bottom, 100)
-            } else if let info = rutaInfo {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(info.estructuraNumero)
-                            .font(.subheadline.bold())
-                        Text("\(info.distancia) · \(info.tiempo)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            rutaPolyline = nil
-                            rutaInfo = nil
-                        }
-                    } label: {
-                        Text("Cancelar")
-                    }
-                    .buttonStyle(.glass(.regular))
-                    .tint(.red)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
             if vm.isLoading {
@@ -341,151 +217,60 @@ struct MapaView: View {
                 polygons: coloniasPolygons,
                 estructuras: vm.estructuras
             )
+            estructuraSemanaMap = (try? await RutasService.shared.fetchEstructuraSemanaMap()) ?? [:]
         }
         .sheet(isPresented: $vm.mostrarDetalle) {
             if let estructura = vm.estructuraSeleccionada {
-                let enRuta = modoRuta != nil
-                let rutaItem = rutaItems.first(where: { $0.estructura.id == estructura.id })
+                let semana = estructuraSemanaMap[estructura.id]
                 EstructuraDetalleSheet(
                     estructura: estructura,
                     caras: vm.carasDetalle,
                     mostrarCampanas: mostrarCampanas,
-                    onOk: enRuta ? {
-                        if let item = rutaItem { marcarRevision(item: item) }
+                    onOk: (userId != nil && semana != nil) ? {
+                        guard let uid = userId, let s = semana else { return }
+                        Task {
+                            try? await RutasService.shared.marcarRevision(
+                                estructuraId: estructura.id,
+                                rutaSemanaId: s.id,
+                                userId: uid
+                            )
+                        }
                         vm.mostrarDetalle = false
                     } : nil,
-                    onRegistrarCambio: enRuta ? {
+                    onRegistrarCambio: userId != nil ? {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            estructuraRutaParaAccion = estructura
+                            estructuraParaAccion = estructura
                         }
-                    } : onRegistrarCambio.map { callback in {
-                        vm.mostrarDetalle = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { callback(estructura) }
-                    } },
-                    onReportarDano: enRuta ? {
+                    } : nil,
+                    onReportarDano: userId != nil ? {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            estructuraRutaParaDano = estructura
+                            estructuraParaDano = estructura
                         }
-                    } : onReportarDano.map { callback in {
-                        vm.mostrarDetalle = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { callback(estructura) }
-                    } },
+                    } : nil
                 )
             }
         }
-        .sheet(isPresented: $mostrarSemanasPicker) {
-            semanasPickerSheet
-        }
-        .sheet(item: $estructuraRutaParaAccion) { estructura in
+        .sheet(item: $estructuraParaAccion) { estructura in
             RegistrarCoroplastView(
                 estructura: estructura,
                 campanas: campanas,
                 userId: userId,
-                rutaSemanaId: modoRuta?.id,
-                onCompletion: { marcarVisitadaLocal(estructuraId: estructura.id) }
+                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
             )
         }
-        .sheet(item: $estructuraRutaParaDano) { estructura in
+        .sheet(item: $estructuraParaDano) { estructura in
             ReportarDanoView(
                 estructura: estructura,
                 userId: userId,
-                rutaSemanaId: modoRuta?.id,
-                onCompletion: { marcarVisitadaLocal(estructuraId: estructura.id) }
+                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
             )
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         }
-    }
-
-    // MARK: - Route Banner
-
-    private func rutaBannerView(semana: RutaSemana) -> some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(Color(hex: semana.color))
-                .frame(width: 12, height: 12)
-            Text("Semana \(semana.numero)")
-                .font(.subheadline.weight(.semibold))
-            Spacer()
-            Text("\(visitadasEnRuta)/\(rutaItems.count) visitadas")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color(hex: semana.color))
-            Button {
-                withAnimation { modoRuta = nil; rutaItems = [] }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .transition(.move(edge: .top).combined(with: .opacity))
-    }
-
-    // MARK: - Semanas Picker Sheet
-
-    private var semanasPickerSheet: some View {
-        NavigationStack {
-            Group {
-                if cargandoSemanas {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if semanas.isEmpty {
-                    ContentUnavailableView("Sin semanas", systemImage: "calendar.badge.exclamationmark",
-                        description: Text("No hay rutas disponibles."))
-                } else {
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            ForEach(semanas) { semana in
-                                semanaTarjeta(semana: semana)
-                            }
-                        }
-                        .padding(20)
-                    }
-                }
-            }
-            .navigationTitle("Seleccionar ruta")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { mostrarSemanasPicker = false }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
-
-    private func semanaTarjeta(semana: RutaSemana) -> some View {
-        Button {
-            mostrarSemanasPicker = false
-            modoRuta = semana
-            Task {
-                rutaItems = (try? await RutasService.shared.fetchEstructurasEnRuta(
-                    rutaSemanaId: semana.id,
-                    userId: userId ?? UUID()
-                )) ?? []
-            }
-        } label: {
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: semana.color))
-                Text("Semana \(semana.numero)")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-                    .padding(20)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 100)
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -496,7 +281,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let municipioPolygons: [GeoPolygon]
     let coloniasConEstructuras: Set<String>
     let anotaciones: [EstructuraAnnotation]
-    let rutaPolyline: MKPolyline?
+    let semanaMapVersion: Int
     @Binding var pendingCommand: MapCommand?
     let onSelect: (EstructuraConParque) -> Void
 
@@ -533,24 +318,8 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     ),
                     animated: true
                 )
-            case .fitRoute(let rect):
-                mapView.setVisibleMapRect(
-                    rect,
-                    edgePadding: UIEdgeInsets(top: 80, left: 40, bottom: 200, right: 40),
-                    animated: true
-                )
             }
             DispatchQueue.main.async { pendingCommand = nil }
-        }
-
-        let existingPolylines = mapView.overlays.compactMap { $0 as? MKPolyline }
-        if let ruta = rutaPolyline {
-            if existingPolylines.first !== ruta {
-                existingPolylines.forEach { mapView.removeOverlay($0) }
-                mapView.addOverlay(ruta, level: .aboveRoads)
-            }
-        } else if !existingPolylines.isEmpty {
-            existingPolylines.forEach { mapView.removeOverlay($0) }
         }
 
         context.coordinator.coloniasConEstructuras = coloniasConEstructuras
@@ -585,7 +354,9 @@ private struct MKMapViewWrapper: UIViewRepresentable {
 
         let currentIds = Set(mapView.annotations.compactMap { ($0 as? EstructuraMKAnnotation)?.estructura.id })
         let newIds = Set(anotaciones.map { $0.id })
-        if currentIds != newIds {
+        let semanaVersionChanged = context.coordinator.loadedSemanaVersion != semanaMapVersion
+        if currentIds != newIds || semanaVersionChanged {
+            context.coordinator.loadedSemanaVersion = semanaMapVersion
             mapView.removeAnnotations(mapView.annotations.filter { $0 is EstructuraMKAnnotation })
             mapView.addAnnotations(anotaciones.map { EstructuraMKAnnotation(from: $0) })
         }
@@ -598,10 +369,30 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var coloniasConEstructuras: Set<String> = []
         var loadedPolygonCount = 0
         var loadedHighlightCount = 0
+        var loadedSemanaVersion = -1
         var isFirstLoad = true
         var initialRegionSet = false
+        private var markerCache: [String: UIImage] = [:]
 
-        private static let markerImage: UIImage = {
+        init(onSelect: @escaping (EstructuraConParque) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        func markerImage(colorHex: String?) -> UIImage {
+            let key = colorHex ?? "default"
+            if let cached = markerCache[key] { return cached }
+            let fillColor: UIColor
+            if let hex = colorHex, let c = UIColor(hex: hex) {
+                fillColor = c
+            } else {
+                fillColor = UIColor(named: "Navy") ?? .systemBlue
+            }
+            let image = Self.renderMarker(color: fillColor)
+            markerCache[key] = image
+            return image
+        }
+
+        private static func renderMarker(color: UIColor) -> UIImage {
             let size: CGFloat = 20
             let canvas = CGSize(width: size + 3, height: size + 3)
             return UIGraphicsImageRenderer(size: canvas).image { ctx in
@@ -610,17 +401,13 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     offset: CGSize(width: 0, height: 2), blur: 3,
                     color: UIColor.black.withAlphaComponent(0.3).cgColor
                 )
-                UIColor(named: "Navy")?.setFill()
+                color.setFill()
                 ctx.cgContext.fillEllipse(in: rect)
                 ctx.cgContext.setShadow(offset: .zero, blur: 0, color: nil)
                 UIColor.white.setStroke()
                 ctx.cgContext.setLineWidth(2.5)
                 ctx.cgContext.strokeEllipse(in: rect.insetBy(dx: 1.25, dy: 1.25))
             }
-        }()
-
-        init(onSelect: @escaping (EstructuraConParque) -> Void) {
-            self.onSelect = onSelect
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -650,12 +437,12 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            guard annotation is EstructuraMKAnnotation else { return nil }
+            guard let ann = annotation as? EstructuraMKAnnotation else { return nil }
             let id = "estructura"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                 ?? MKAnnotationView(annotation: annotation, reuseIdentifier: id)
             view.annotation = annotation
-            view.image = Self.markerImage
+            view.image = markerImage(colorHex: ann.semanaColor)
             return view
         }
 
@@ -673,6 +460,22 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             mapView.deselectAnnotation(annotation, animated: false)
             guard let ann = annotation as? EstructuraMKAnnotation else { return }
             onSelect(ann.estructura)
+        }
+    }
+}
+
+// MARK: - UIColor hex
+
+private extension UIColor {
+    convenience init?(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        guard Scanner(string: hex).scanHexInt64(&int) else { return nil }
+        switch hex.count {
+        case 6:
+            self.init(red: Double(int >> 16) / 255, green: Double(int >> 8 & 0xFF) / 255, blue: Double(int & 0xFF) / 255, alpha: 1)
+        default:
+            return nil
         }
     }
 }

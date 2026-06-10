@@ -3,16 +3,12 @@ import SwiftUI
 struct CampoRootView: View {
     let authVM: AuthViewModel
     @State private var vm = CampoViewModel()
-    @State private var estructuraSeleccionada: EstructuraConParque?
-    @State private var estructuraParaReporte: EstructuraConParque?
 
     var body: some View {
         TabView {
             Tab("Mapa", systemImage: "map.fill") {
                 MapaView(
                     mostrarCampanas: false,
-                    onRegistrarCambio: { estructura in estructuraSeleccionada = estructura },
-                    onReportarDano: { estructura in estructuraParaReporte = estructura },
                     userId: authVM.perfilId,
                     campanas: vm.campanas
                 )
@@ -23,16 +19,6 @@ struct CampoRootView: View {
             }
         }
         .tint(Color("MunicipioCyan"))
-        .sheet(item: $estructuraSeleccionada) { estructura in
-            RegistrarCoroplastView(
-                estructura: estructura,
-                campanas: vm.campanas,
-                userId: authVM.perfilId
-            )
-        }
-        .sheet(item: $estructuraParaReporte) { estructura in
-            ReportarDanoView(estructura: estructura, userId: authVM.perfilId)
-        }
     }
 
     private var configTab: some View {
