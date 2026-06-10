@@ -83,12 +83,46 @@ private final class ExteriorDimRenderer: MKOverlayRenderer {
     }
 }
 
-// MARK: - Map command bridge
+// MARK: - Map controller (bypasses SwiftUI state to avoid re-render flicker)
 
-private enum MapCommand {
-    case centerOnUser
-    case resetRegion
-    case centerOn(CLLocationCoordinate2D)
+private final class MapController {
+    weak var mapView: MKMapView?
+
+    func centerOnUser() {
+        mapView?.setUserTrackingMode(.follow, animated: true)
+    }
+
+    func resetRegion() {
+        mapView?.setRegion(municipioRegion, animated: true)
+    }
+
+    func centerOn(_ coord: CLLocationCoordinate2D) {
+        mapView?.setRegion(
+            MKCoordinateRegion(center: coord, span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)),
+            animated: true
+        )
+    }
+
+    func updateRouteColors(mostrarRutas: Bool, colors: [String: String], tieneEstructuras: Set<String>) {
+        guard let mapView else { return }
+        for overlay in mapView.overlays {
+            guard let polygon = overlay as? MKPolygon,
+                  let renderer = mapView.renderer(for: overlay) as? MKPolygonRenderer,
+                  polygon.title != "__municipio__" else { continue }
+            let cvegeo = polygon.title ?? ""
+            if mostrarRutas, let hexColor = colors[cvegeo], let color = UIColor(hex: hexColor) {
+                renderer.fillColor = color.withAlphaComponent(0.20)
+                renderer.strokeColor = color.withAlphaComponent(0.60)
+                renderer.lineWidth = 1.5
+            } else {
+                let tiene = tieneEstructuras.contains(cvegeo)
+                renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tiene ? 0.20 : 0.05)
+                renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tiene ? 0.55 : 0.25)
+                renderer.lineWidth = 1
+            }
+            renderer.setNeedsDisplay()
+        }
+    }
 }
 
 // MARK: - MKAnnotation wrapper
@@ -118,7 +152,7 @@ struct MapaView: View {
     @State private var coloniasConEstructuras: Set<String> = []
     @State private var locationManager = CLLocationManager()
     @State private var busqueda = ""
-    @State private var pendingCommand: MapCommand? = nil
+    @State private var mapController = MapController()
     @FocusState private var searchFocused: Bool
 
     @State private var estructuraSemanaMap: [UUID: RutaSemana] = [:]
@@ -163,7 +197,7 @@ struct MapaView: View {
                 mostrarRutas: mostrarRutas,
                 anotaciones: anotacionesFiltradas,
                 semanaMapVersion: estructuraSemanaMap.count,
-                pendingCommand: $pendingCommand,
+                mapController: mapController,
                 onSelect: { estructura in
                     Task { await vm.seleccionar(estructura) }
                 }
@@ -201,7 +235,7 @@ struct MapaView: View {
                         BusquedaResultados(
                             resultados: anotacionesFiltradas,
                             onSeleccionar: { anotacion in
-                                pendingCommand = .centerOn(anotacion.coordinate)
+                                mapController.centerOn(anotacion.coordinate)
                                 Task { await vm.seleccionar(anotacion.estructura) }
                                 busqueda = ""
                                 searchFocused = false
@@ -215,7 +249,13 @@ struct MapaView: View {
                 VStack(spacing: 8) {
                     if !coloniaSemanaColors.isEmpty {
                         Button {
-                            mostrarRutas.toggle()
+                            let newValue = !mostrarRutas
+                            mostrarRutas = newValue
+                            mapController.updateRouteColors(
+                                mostrarRutas: newValue,
+                                colors: coloniaSemanaColors,
+                                tieneEstructuras: coloniasConEstructuras
+                            )
                         } label: {
                             Image(systemName: "map")
                         }
@@ -226,7 +266,7 @@ struct MapaView: View {
 
                     Button {
                         locationManager.requestWhenInUseAuthorization()
-                        pendingCommand = .centerOnUser
+                        mapController.centerOnUser()
                     } label: {
                         Image(systemName: "location.fill")
                             .foregroundStyle(Color("MunicipioCyan"))
@@ -236,7 +276,7 @@ struct MapaView: View {
                     .buttonBorderShape(.circle)
 
                     Button {
-                        pendingCommand = .resetRegion
+                        mapController.resetRegion()
                     } label: {
                         Image(systemName: "mappin.and.ellipse")
                             .foregroundStyle(Color("Navy"))
@@ -344,7 +384,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let mostrarRutas: Bool
     let anotaciones: [EstructuraAnnotation]
     let semanaMapVersion: Int
-    @Binding var pendingCommand: MapCommand?
+    let mapController: MapController
     let onSelect: (EstructuraConParque) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect) }
@@ -355,6 +395,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         mapView.showsUserLocation = true
         mapView.showsCompass = false
         mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .realistic)
+        mapController.mapView = mapView
         return mapView
     }
 
@@ -366,48 +407,9 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
         }
 
-        if let cmd = pendingCommand {
-            switch cmd {
-            case .centerOnUser:
-                mapView.setUserTrackingMode(.follow, animated: true)
-            case .resetRegion:
-                mapView.setRegion(municipioRegion, animated: true)
-            case .centerOn(let coord):
-                mapView.setRegion(
-                    MKCoordinateRegion(
-                        center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
-                    ),
-                    animated: true
-                )
-            }
-            DispatchQueue.main.async { pendingCommand = nil }
-        }
-
         context.coordinator.coloniasConEstructuras = coloniasConEstructuras
         context.coordinator.coloniaSemanaColors = coloniaSemanaColors
-        if context.coordinator.mostrarRutas != mostrarRutas {
-            context.coordinator.mostrarRutas = mostrarRutas
-            for overlay in mapView.overlays {
-                guard let polygon = overlay as? MKPolygon,
-                      let renderer = mapView.renderer(for: overlay) as? MKPolygonRenderer,
-                      polygon.title != "__municipio__" else { continue }
-                let cvegeo = polygon.title ?? ""
-                if mostrarRutas,
-                   let hexColor = coloniaSemanaColors[cvegeo],
-                   let color = UIColor(hex: hexColor) {
-                    renderer.fillColor = color.withAlphaComponent(0.20)
-                    renderer.strokeColor = color.withAlphaComponent(0.60)
-                    renderer.lineWidth = 1.5
-                } else {
-                    let tieneEstructuras = coloniasConEstructuras.contains(cvegeo)
-                    renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.20 : 0.05)
-                    renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.55 : 0.25)
-                    renderer.lineWidth = 1
-                }
-                renderer.setNeedsDisplay()
-            }
-        }
+        context.coordinator.mostrarRutas = mostrarRutas
 
         let needsOverlayReload = context.coordinator.loadedPolygonCount != coloniasPolygons.count
             || context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
