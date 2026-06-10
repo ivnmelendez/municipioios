@@ -218,7 +218,7 @@ struct MapaView: View {
                                 mostrarRutas.toggle()
                             }
                         } label: {
-                            Image(systemName: mostrarRutas ? "swatchpalette.fill" : "swatchpalette")
+                            Image(systemName: mostrarRutas ? "map.fill" : "map")
                                 .foregroundStyle(mostrarRutas ? Color("MunicipioCyan") : Color.secondary)
                         }
                         .buttonStyle(.glass(.regular))
