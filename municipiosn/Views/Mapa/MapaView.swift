@@ -214,12 +214,9 @@ struct MapaView: View {
                 VStack(spacing: 8) {
                     if !coloniaSemanaColors.isEmpty {
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                mostrarRutas.toggle()
-                            }
+                            mostrarRutas.toggle()
                         } label: {
                             Image(systemName: mostrarRutas ? "map.fill" : "map")
-                                .foregroundStyle(mostrarRutas ? Color("MunicipioCyan") : Color.secondary)
                         }
                         .buttonStyle(.glass(.regular))
                         .controlSize(.large)
