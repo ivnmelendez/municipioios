@@ -159,7 +159,8 @@ struct MapaView: View {
                 coloniasPolygons: coloniasPolygons,
                 municipioPolygons: municipioPolygons,
                 coloniasConEstructuras: coloniasConEstructuras,
-                coloniaSemanaColors: mostrarRutas ? coloniaSemanaColors : [:],
+                coloniaSemanaColors: coloniaSemanaColors,
+                mostrarRutas: mostrarRutas,
                 anotaciones: anotacionesFiltradas,
                 semanaMapVersion: estructuraSemanaMap.count,
                 pendingCommand: $pendingCommand,
@@ -340,6 +341,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let municipioPolygons: [GeoPolygon]
     let coloniasConEstructuras: Set<String>
     let coloniaSemanaColors: [String: String]
+    let mostrarRutas: Bool
     let anotaciones: [EstructuraAnnotation]
     let semanaMapVersion: Int
     @Binding var pendingCommand: MapCommand?
@@ -384,6 +386,28 @@ private struct MKMapViewWrapper: UIViewRepresentable {
 
         context.coordinator.coloniasConEstructuras = coloniasConEstructuras
         context.coordinator.coloniaSemanaColors = coloniaSemanaColors
+        if context.coordinator.mostrarRutas != mostrarRutas {
+            context.coordinator.mostrarRutas = mostrarRutas
+            for overlay in mapView.overlays {
+                guard let polygon = overlay as? MKPolygon,
+                      let renderer = mapView.renderer(for: overlay) as? MKPolygonRenderer,
+                      polygon.title != "__municipio__" else { continue }
+                let cvegeo = polygon.title ?? ""
+                if mostrarRutas,
+                   let hexColor = coloniaSemanaColors[cvegeo],
+                   let color = UIColor(hex: hexColor) {
+                    renderer.fillColor = color.withAlphaComponent(0.20)
+                    renderer.strokeColor = color.withAlphaComponent(0.60)
+                    renderer.lineWidth = 1.5
+                } else {
+                    let tieneEstructuras = coloniasConEstructuras.contains(cvegeo)
+                    renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.20 : 0.05)
+                    renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.55 : 0.25)
+                    renderer.lineWidth = 1
+                }
+                renderer.setNeedsDisplay()
+            }
+        }
 
         let needsOverlayReload = context.coordinator.loadedPolygonCount != coloniasPolygons.count
             || context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
@@ -436,6 +460,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         let onSelect: (EstructuraConParque) -> Void
         var coloniasConEstructuras: Set<String> = []
         var coloniaSemanaColors: [String: String] = [:]
+        var mostrarRutas: Bool = false
         var loadedPolygonCount = 0
         var loadedHighlightCount = 0
         var loadedSemanaVersion = -1
@@ -502,7 +527,8 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 renderer.fillColor = .clear
             } else {
                 let cvegeo = polygon.title ?? ""
-                if let hexColor = coloniaSemanaColors[cvegeo],
+                if mostrarRutas,
+                   let hexColor = coloniaSemanaColors[cvegeo],
                    let color = UIColor(hex: hexColor) {
                     renderer.fillColor = color.withAlphaComponent(0.20)
                     renderer.strokeColor = color.withAlphaComponent(0.60)
