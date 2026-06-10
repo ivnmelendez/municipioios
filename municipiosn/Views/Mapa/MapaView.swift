@@ -218,7 +218,7 @@ struct MapaView: View {
                                 mostrarRutas.toggle()
                             }
                         } label: {
-                            Image(systemName: "point.3.connected.trianglepath.dotted")
+                            Image(systemName: mostrarRutas ? "swatchpalette.fill" : "swatchpalette")
                                 .foregroundStyle(mostrarRutas ? Color("MunicipioCyan") : Color.secondary)
                         }
                         .buttonStyle(.glass(.regular))
@@ -512,8 +512,8 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     renderer.lineWidth = 1.5
                 } else {
                     let tieneEstructuras = coloniasConEstructuras.contains(cvegeo)
-                    renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.10 : 0.03)
-                    renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.35 : 0.2)
+                    renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.20 : 0.05)
+                    renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.55 : 0.25)
                     renderer.lineWidth = 1
                 }
             }
