@@ -78,7 +78,7 @@ private final class ExteriorDimRenderer: MKOverlayRenderer {
             pts.dropFirst().forEach { context.addLine(to: $0) }
             context.closePath()
         }
-        context.setFillColor(UIColor.black.withAlphaComponent(0.13).cgColor)
+        context.setFillColor(UIColor.black.withAlphaComponent(0.10).cgColor)
         context.fillPath(using: .evenOdd)
     }
 }
