@@ -97,6 +97,32 @@ struct ConfiguracionView: View {
                 }
                 .padding(.horizontal, 20)
 
+                // MARK: Probar notificación (debug)
+                #if DEBUG
+                configuracionRow {
+                    Button {
+                        probarNotificacion()
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Probar notificación de rondín")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                Text("Llega en 5 minutos — cierra la app para probar")
+                                    .font(.caption)
+                                    .foregroundStyle(Color("TextMuted"))
+                            }
+                        } icon: {
+                            Image(systemName: "bell.and.waves.left.and.right.fill")
+                                .foregroundStyle(Color("Navy"))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                #endif
+
                 // MARK: Cerrar sesión
                 Button {
                     confirmarCerrarSesion = true
@@ -161,6 +187,16 @@ struct ConfiguracionView: View {
         guard let data = try? Data(contentsOf: url),
               let uiImage = UIImage(data: data) else { return }
         fotoPerfil = Image(uiImage: uiImage)
+    }
+
+    private func probarNotificacion() {
+        let content = UNMutableNotificationContent()
+        content.title = "Historial de rondín disponible"
+        content.body = "Ya puedes revisar las estructuras visitadas hoy por el equipo de campo."
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 300, repeats: false)
+        let request = UNNotificationRequest(identifier: "rondin_prueba", content: content, trigger: trigger)
+        Task { try? await UNUserNotificationCenter.current().add(request) }
     }
 
     private func fotoURL() -> URL {
