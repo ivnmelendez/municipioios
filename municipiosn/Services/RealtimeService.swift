@@ -77,6 +77,8 @@ final class RealtimeService {
         comps.hour = 18
         comps.minute = 0
 
+        content.userInfo = ["destino": "rondines"]
+
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
         let request = UNNotificationRequest(
             identifier: "rondin_sabado",
@@ -128,4 +130,5 @@ final class RealtimeService {
 
 extension Notification.Name {
     static let nuevoCambioRotoplas = Notification.Name("nuevoCambioRotoplas")
+    static let abrirRondines = Notification.Name("abrirRondines")
 }

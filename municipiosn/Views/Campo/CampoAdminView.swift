@@ -39,5 +39,8 @@ struct CampoAdminView: View {
         .onChange(of: seccion) { _, new in
             if new == .intervenciones { badge = 0 }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .abrirRondines)) { _ in
+            seccion = .rondines
+        }
     }
 }

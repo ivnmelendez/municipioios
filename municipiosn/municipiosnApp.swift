@@ -1,6 +1,34 @@
 import SwiftUI
 import UserNotifications
 
+// MARK: - Notification tap handler
+
+final class NotificacionDelegate: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificacionDelegate()
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let destino = response.notification.request.content.userInfo["destino"] as? String
+        if destino == "rondines" {
+            NotificationCenter.default.post(name: .abrirRondines, object: nil)
+        }
+        completionHandler()
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound, .badge])
+    }
+}
+
+// MARK: - App
+
 @main
 struct municipiosnApp: App {
     @State private var authVM = AuthViewModel()
@@ -11,6 +39,7 @@ struct municipiosnApp: App {
             diskCapacity: 200 * 1024 * 1024,
             directory: nil
         )
+        UNUserNotificationCenter.current().delegate = NotificacionDelegate.shared
     }
 
     var body: some Scene {
