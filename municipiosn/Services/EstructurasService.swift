@@ -150,11 +150,10 @@ final class EstructurasService {
             .eq("activa", value: true)
             .execute()
             .value
-        async let rotoplas: [Intervencion] = fetchCambiosRotoplasEsteMes()
         async let coroplastCount = fetchNecesitanCoroplast()
         async let semana = fetchResumenSemana()
 
-        let (e, c, r) = try await (estructuras, campanas, rotoplas)
+        let (e, c) = try await (estructuras, campanas)
         let nc = (try? await coroplastCount) ?? 0
         let (visitas, cambios, danos) = (try? await semana) ?? (0, 0, 0)
 
@@ -165,7 +164,6 @@ final class EstructurasService {
         kpi.enReparacion = e.filter { $0.estado == .en_reparacion }.count
         kpi.inactivas = e.filter { $0.estado == .inactiva }.count
         kpi.campanasActivas = c.count
-        kpi.cambiosRotoplasEsteMes = r.count
         kpi.necesitanCoroplast = nc
         kpi.visitasSemana = visitas
         kpi.cambiosSemana = cambios
@@ -360,20 +358,4 @@ final class EstructurasService {
         }.sorted { $0.totalCaras > $1.totalCaras }
     }
 
-    private func fetchCambiosRotoplasEsteMes() async throws -> [Intervencion] {
-        let calendar = Calendar.current
-        let now = Date()
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        let isoStart = formatter.string(from: startOfMonth)
-
-        return try await client
-            .from("rondines_estructuras")
-            .select()
-            .eq("accion", value: "cambio_coroplast")
-            .gte("created_at", value: isoStart)
-            .execute()
-            .value
-    }
 }

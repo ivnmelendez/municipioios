@@ -69,11 +69,16 @@ struct CampanasChartCard: View {
 private struct CampanasListaCompleta: View {
     let datos: [UsoCampana]
     @Environment(\.dismiss) private var dismiss
+    @State private var busqueda = ""
+
+    private var filtrados: [UsoCampana] {
+        busqueda.isEmpty ? datos : datos.filter { $0.nombre.localizedCaseInsensitiveContains(busqueda) }
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(Array(datos.enumerated()), id: \.element.id) { index, item in
+                ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
                     HStack(spacing: 12) {
                         Text("\(index + 1)")
                             .font(.subheadline.weight(.bold))
@@ -90,6 +95,7 @@ private struct CampanasListaCompleta: View {
                     .padding(.vertical, 4)
                 }
             }
+            .searchable(text: $busqueda, prompt: "Buscar campaña")
             .navigationTitle("Campañas en uso")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

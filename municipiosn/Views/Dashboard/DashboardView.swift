@@ -161,12 +161,6 @@ struct DashboardView: View {
                             icono: "megaphone.fill",
                             color: Color("MunicipioCyan")
                         )
-                        KPICard(
-                            titulo: "Cambios este mes",
-                            valor: vm.kpi.cambiosRotoplasEsteMes,
-                            icono: "arrow.triangle.2.circlepath",
-                            color: Color("Navy")
-                        )
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 10)

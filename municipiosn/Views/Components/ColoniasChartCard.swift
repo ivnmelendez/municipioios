@@ -69,6 +69,11 @@ private struct ColoniasListaCompleta: View {
     let datos: [UsoColonia]
     let detalle: [ColoniaConCampanas]
     @Environment(\.dismiss) private var dismiss
+    @State private var busqueda = ""
+
+    private var filtrados: [UsoColonia] {
+        busqueda.isEmpty ? datos : datos.filter { $0.nombre.localizedCaseInsensitiveContains(busqueda) }
+    }
 
     private func detalleParaColonia(_ nombre: String) -> ColoniaConCampanas? {
         detalle.first { $0.nombre == nombre }
@@ -77,7 +82,7 @@ private struct ColoniasListaCompleta: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(Array(datos.enumerated()), id: \.element.id) { index, item in
+                ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
                     let detColonia = detalleParaColonia(item.nombre)
                     NavigationLink {
                         ColoniaDetalleView(colonia: detColonia ?? ColoniaConCampanas(
@@ -111,6 +116,7 @@ private struct ColoniasListaCompleta: View {
                     }
                 }
             }
+            .searchable(text: $busqueda, prompt: "Buscar colonia")
             .navigationTitle("Estructuras por colonia")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
