@@ -25,6 +25,10 @@ struct ContentView: View {
                     IntervencionesView()
                 }
                 .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
+
+                Tab("Historial", systemImage: "calendar.badge.clock") {
+                    HistorialCampoView()
+                }
             }
             .tint(Color("MunicipioCyan"))
             .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
