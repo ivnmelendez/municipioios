@@ -10,6 +10,7 @@ final class MapaViewModel {
     var mostrarDetalle = false
     var errorMessage: String?
     var isLoading = false
+    var visitadasHoy: Set<UUID> = []
 
     var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 25.7327, longitude: -100.2726),

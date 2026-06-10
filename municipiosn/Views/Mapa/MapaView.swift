@@ -325,8 +325,10 @@ struct MapaView: View {
                     estructura: estructura,
                     caras: vm.carasDetalle,
                     mostrarCampanas: mostrarCampanas,
+                    yaVisitada: vm.visitadasHoy.contains(estructura.id),
                     onOk: userId != nil ? {
                         guard let uid = userId else { return }
+                        vm.visitadasHoy.insert(estructura.id)
                         Task {
                             try? await RutasService.shared.marcarRevision(
                                 estructuraId: estructura.id,
@@ -705,6 +707,7 @@ struct EstructuraDetalleSheet: View {
     let estructura: EstructuraConParque
     let caras: [CaraDetalle]
     var mostrarCampanas: Bool = true
+    var yaVisitada: Bool = false
     var onOk: (() -> Void)? = nil
     var onRegistrarCambio: (() -> Void)? = nil
     var onReportarDano: (() -> Void)? = nil
@@ -862,7 +865,8 @@ struct EstructuraDetalleSheet: View {
                 Divider().padding(.top, 8)
                 if let ok = onOk {
                     Button { ok() } label: {
-                        Label("Está bien", systemImage: "checkmark.circle.fill")
+                        Label(yaVisitada ? "Revisada hoy" : "Está bien",
+                              systemImage: yaVisitada ? "checkmark.circle" : "checkmark.circle.fill")
                             .font(.headline.weight(.bold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 4)
@@ -870,6 +874,7 @@ struct EstructuraDetalleSheet: View {
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
                     .controlSize(.large)
+                    .disabled(yaVisitada)
                 }
                 if let registrar = onRegistrarCambio {
                     Button { registrar() } label: {

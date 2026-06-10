@@ -286,27 +286,12 @@ final class CoroplastService {
 
         struct RondinResponse: Codable { let id: UUID }
 
-        // Reuse existing rondin for today if one exists
-        let existentes: [RondinResponse] = try await client
-            .from("rondines")
-            .select("id")
-            .eq("created_by", value: userId.uuidString)
-            .eq("fecha", value: hoy)
-            .limit(1)
-            .execute()
-            .value
-
-        if let existente = existentes.first {
-            return existente.id
-        }
-
         let result: RondinResponse = try await client
             .from("rondines")
-            .insert(RondinInsert(
-                fecha: hoy,
-                created_by: userId.uuidString,
-                ruta_semana_id: rutaSemanaId?.uuidString
-            ))
+            .upsert(
+                RondinInsert(fecha: hoy, created_by: userId.uuidString, ruta_semana_id: rutaSemanaId?.uuidString),
+                onConflict: "created_by,fecha"
+            )
             .select("id")
             .single()
             .execute()
