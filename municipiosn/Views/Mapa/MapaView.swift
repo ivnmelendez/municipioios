@@ -58,6 +58,31 @@ private func computarColoniasConSemana(
     return result
 }
 
+// MARK: - Exterior dim overlay (even-odd fill, winding-order independent)
+
+private final class ExteriorDimOverlay: NSObject, MKOverlay {
+    let boundingMapRect: MKMapRect = .world
+    let coordinate = CLLocationCoordinate2D(latitude: 25.7367, longitude: -100.2726)
+    let municipioPolygons: [GeoPolygon]
+    init(_ polygons: [GeoPolygon]) { self.municipioPolygons = polygons }
+}
+
+private final class ExteriorDimRenderer: MKOverlayRenderer {
+    override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
+        guard let overlay = overlay as? ExteriorDimOverlay else { return }
+        context.addRect(rect(for: .world))
+        for geoPolygon in overlay.municipioPolygons {
+            let pts = geoPolygon.coordinates.map { point(for: MKMapPoint($0)) }
+            guard let first = pts.first else { continue }
+            context.move(to: first)
+            pts.dropFirst().forEach { context.addLine(to: $0) }
+            context.closePath()
+        }
+        context.setFillColor(UIColor.black.withAlphaComponent(0.20).cgColor)
+        context.fillPath(using: .evenOdd)
+    }
+}
+
 // MARK: - Map command bridge
 
 private enum MapCommand {
@@ -358,21 +383,9 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             context.coordinator.loadedSemanaColorCount = coloniaSemanaColors.count
             mapView.removeOverlays(mapView.overlays)
 
-            // Exterior dim: world rectangle with municipio as hole
+            // Exterior dim using even-odd renderer
             if !municipioPolygons.isEmpty {
-                let worldCoords: [CLLocationCoordinate2D] = [
-                    .init(latitude: -85, longitude: -180),
-                    .init(latitude:  85, longitude: -180),
-                    .init(latitude:  85, longitude:  180),
-                    .init(latitude: -85, longitude:  180),
-                ]
-                let holes = municipioPolygons.map { poly -> MKPolygon in
-                    let reversed = poly.coordinates.reversed() as [CLLocationCoordinate2D]
-                    return MKPolygon(coordinates: reversed, count: reversed.count)
-                }
-                let exterior = MKPolygon(coordinates: worldCoords, count: worldCoords.count, interiorPolygons: holes)
-                exterior.title = "__exterior__"
-                mapView.addOverlay(exterior, level: .aboveRoads)
+                mapView.addOverlay(ExteriorDimOverlay(municipioPolygons), level: .aboveRoads)
             }
 
             for poly in coloniasPolygons {
@@ -456,6 +469,9 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let dimOverlay = overlay as? ExteriorDimOverlay {
+                return ExteriorDimRenderer(overlay: dimOverlay)
+            }
             if let polyline = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: polyline)
                 renderer.strokeColor = UIColor.systemBlue
@@ -468,11 +484,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 return MKOverlayRenderer(overlay: overlay)
             }
             let renderer = MKPolygonRenderer(polygon: polygon)
-            if polygon.title == "__exterior__" {
-                renderer.fillColor = UIColor.black.withAlphaComponent(0.20)
-                renderer.strokeColor = .clear
-                renderer.lineWidth = 0
-            } else if polygon.title == "__municipio__" {
+            if polygon.title == "__municipio__" {
                 renderer.strokeColor = UIColor(named: "Navy")
                 renderer.lineWidth = 2.5
                 renderer.fillColor = .clear
