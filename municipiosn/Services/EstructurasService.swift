@@ -152,9 +152,11 @@ final class EstructurasService {
             .value
         async let rotoplas: [Intervencion] = fetchCambiosRotoplasEsteMes()
         async let coroplastCount = fetchNecesitanCoroplast()
+        async let semana = fetchResumenSemana()
 
         let (e, c, r) = try await (estructuras, campanas, rotoplas)
         let nc = (try? await coroplastCount) ?? 0
+        let (visitas, cambios, danos) = (try? await semana) ?? (0, 0, 0)
 
         var kpi = KPIData()
         kpi.totalEstructuras = e.count
@@ -165,8 +167,51 @@ final class EstructurasService {
         kpi.campanasActivas = c.count
         kpi.cambiosRotoplasEsteMes = r.count
         kpi.necesitanCoroplast = nc
+        kpi.visitasSemana = visitas
+        kpi.cambiosSemana = cambios
+        kpi.danosSemana = danos
         kpi.isLoaded = true
         return kpi
+    }
+
+    private func fetchResumenSemana() async throws -> (visitas: Int, cambios: Int, danos: Int) {
+        let calendar = Calendar.current
+        let hoy = Date()
+        let inicioSemana = calendar.dateInterval(of: .weekOfYear, for: hoy)?.start ?? hoy
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withFullDate]
+        let desdeStr = isoFormatter.string(from: inicioSemana)
+        let hastaStr = isoFormatter.string(from: hoy)
+
+        struct VisitaRow: Codable {
+            let estructuraId: UUID
+            enum CodingKeys: String, CodingKey { case estructuraId = "estructura_id" }
+        }
+        struct AccionRow: Codable {
+            let accion: String
+        }
+
+        async let visitasRaw: [VisitaRow] = client
+            .from("rondines_estructuras")
+            .select("estructura_id, rondines!inner(fecha)")
+            .gte("rondines.fecha", value: desdeStr)
+            .lte("rondines.fecha", value: hastaStr)
+            .execute()
+            .value
+
+        async let accionesRaw: [AccionRow] = client
+            .from("rondines_estructuras")
+            .select("accion, rondines!inner(fecha)")
+            .gte("rondines.fecha", value: desdeStr)
+            .lte("rondines.fecha", value: hastaStr)
+            .execute()
+            .value
+
+        let (visitas, acciones) = try await (visitasRaw, accionesRaw)
+        let visitasUnicas = Set(visitas.map { $0.estructuraId }).count
+        let cambios = acciones.filter { ["cambio_coroplast", "reparacion_coroplast", "reactivacion"].contains($0.accion) }.count
+        let danos = acciones.filter { $0.accion == "reporte_dano" }.count
+        return (visitasUnicas, cambios, danos)
     }
 
     private func fetchNecesitanCoroplast() async throws -> Int {

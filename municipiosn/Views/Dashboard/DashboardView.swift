@@ -174,33 +174,41 @@ struct DashboardView: View {
                     .offset(y: aparecer ? 0 : 14)
                     .animation(.spring(duration: 0.5, bounce: 0.12).delay(0.22), value: aparecer)
 
+                    // MARK: Esta semana
+                    if vm.kpi.isLoaded {
+                        DashboardSectionHeader(titulo: "Esta semana")
+                            .padding(.top, 24)
+                            .opacity(aparecer ? 1 : 0)
+                            .offset(y: aparecer ? 0 : 10)
+                            .animation(.spring(duration: 0.45).delay(0.32), value: aparecer)
+
+                        ActividadSemanaCard(kpi: vm.kpi)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 10)
+                            .opacity(aparecer ? 1 : 0)
+                            .offset(y: aparecer ? 0 : 14)
+                            .animation(.spring(duration: 0.5, bounce: 0.12).delay(0.36), value: aparecer)
+                    }
+
                     // MARK: Estadísticas
                     if !vm.usoCampanas.isEmpty || vm.kpi.isLoaded {
                         DashboardSectionHeader(titulo: "Estadísticas")
                             .padding(.top, 24)
                             .opacity(aparecer ? 1 : 0)
                             .offset(y: aparecer ? 0 : 10)
-                            .animation(.spring(duration: 0.45).delay(0.32), value: aparecer)
+                            .animation(.spring(duration: 0.45).delay(0.40), value: aparecer)
 
                         VStack(spacing: 10) {
                             CampanasChartCard(datos: vm.usoCampanas)
-
                             if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
                                 ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
-                            }
-
-                            if vm.totalColoniasGeo > 0 {
-                                CoberturaColoniasCard(
-                                    conEstructuras: vm.coloniasConEstructuras,
-                                    sinEstructuras: vm.coloniasSinEstructuras
-                                )
                             }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
                         .opacity(aparecer ? 1 : 0)
                         .offset(y: aparecer ? 0 : 18)
-                        .animation(.spring(duration: 0.55, bounce: 0.1).delay(0.38), value: aparecer)
+                        .animation(.spring(duration: 0.55, bounce: 0.1).delay(0.46), value: aparecer)
                     }
                 }
 
@@ -235,5 +243,54 @@ struct DashboardView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         }
+    }
+}
+
+private struct ActividadSemanaCard: View {
+    let kpi: KPIData
+
+    var body: some View {
+        VStack(spacing: 0) {
+            fila(
+                icono: "checkmark.circle.fill",
+                color: Color(hex: "#16a34a"),
+                titulo: "Estructuras revisadas",
+                valor: kpi.visitasSemana
+            )
+            Divider().padding(.leading, 44)
+            fila(
+                icono: "arrow.triangle.2.circlepath",
+                color: Color("MunicipioCyan"),
+                titulo: "Cambios realizados",
+                valor: kpi.cambiosSemana
+            )
+            Divider().padding(.leading, 44)
+            fila(
+                icono: "exclamationmark.triangle.fill",
+                color: Color(hex: "#dc2626"),
+                titulo: "Daños reportados",
+                valor: kpi.danosSemana
+            )
+        }
+        .padding(20)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private func fila(icono: String, color: Color, titulo: String, valor: Int) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icono)
+                .font(.title3)
+                .foregroundStyle(color)
+                .frame(width: 32)
+            Text(titulo)
+                .font(.body)
+                .foregroundStyle(.primary)
+            Spacer()
+            Text("\(valor)")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(color)
+                .monospacedDigit()
+        }
+        .padding(.vertical, 12)
     }
 }
