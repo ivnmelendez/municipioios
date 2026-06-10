@@ -17,7 +17,7 @@ final class MapaViewModel {
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
 
-    func cargar() async {
+    func cargar(userId: UUID? = nil) async {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
@@ -25,6 +25,9 @@ final class MapaViewModel {
 
         do {
             estructuras = try await EstructurasService.shared.fetchEstructuras()
+            if let uid = userId {
+                visitadasHoy = (try? await CoroplastService.shared.fetchVisitadasHoy(userId: uid)) ?? []
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

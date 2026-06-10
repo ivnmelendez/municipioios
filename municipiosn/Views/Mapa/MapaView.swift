@@ -304,7 +304,7 @@ struct MapaView: View {
         }
         .task {
             guard coloniasPolygons.isEmpty else { return }
-            await vm.cargar()
+            await vm.cargar(userId: userId)
             coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
             municipioPolygons = loadGeoPolygons(named: "san_nicolas")
             coloniasConEstructuras = computarColoniasConEstructuras(

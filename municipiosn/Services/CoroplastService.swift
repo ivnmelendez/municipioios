@@ -263,6 +263,36 @@ final class CoroplastService {
             .absoluteString
     }
 
+    func fetchVisitadasHoy(userId: UUID) async throws -> Set<UUID> {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        let hoy = formatter.string(from: Date())
+
+        struct RondinRow: Codable { let id: UUID }
+        let rondines: [RondinRow] = try await client
+            .from("rondines")
+            .select("id")
+            .eq("created_by", value: userId.uuidString)
+            .eq("fecha", value: hoy)
+            .execute()
+            .value
+
+        guard let rondinId = rondines.first?.id else { return [] }
+
+        struct Row: Codable {
+            let estructuraId: UUID
+            enum CodingKeys: String, CodingKey { case estructuraId = "estructura_id" }
+        }
+        let rows: [Row] = try await client
+            .from("rondines_estructuras")
+            .select("estructura_id")
+            .eq("rondin_id", value: rondinId.uuidString)
+            .execute()
+            .value
+
+        return Set(rows.map { $0.estructuraId })
+    }
+
     func registrarRevision(estructuraId: UUID, rutaSemanaId: UUID? = nil, userId: UUID) async throws {
         let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
