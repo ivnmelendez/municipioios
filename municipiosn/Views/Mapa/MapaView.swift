@@ -358,6 +358,22 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             context.coordinator.loadedSemanaColorCount = coloniaSemanaColors.count
             mapView.removeOverlays(mapView.overlays)
 
+            // Exterior dim: world rectangle with municipio as hole
+            if !municipioPolygons.isEmpty {
+                let worldCoords: [CLLocationCoordinate2D] = [
+                    .init(latitude: -85, longitude: -180),
+                    .init(latitude: -85, longitude:  180),
+                    .init(latitude:  85, longitude:  180),
+                    .init(latitude:  85, longitude: -180),
+                ]
+                let holes = municipioPolygons.map {
+                    MKPolygon(coordinates: $0.coordinates, count: $0.coordinates.count)
+                }
+                let exterior = MKPolygon(coordinates: worldCoords, count: worldCoords.count, interiorPolygons: holes)
+                exterior.title = "__exterior__"
+                mapView.addOverlay(exterior, level: .aboveRoads)
+            }
+
             for poly in coloniasPolygons {
                 let mkPoly = MKPolygon(coordinates: poly.coordinates, count: poly.coordinates.count)
                 mkPoly.title = poly.cvegeo
@@ -451,7 +467,11 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 return MKOverlayRenderer(overlay: overlay)
             }
             let renderer = MKPolygonRenderer(polygon: polygon)
-            if polygon.title == "__municipio__" {
+            if polygon.title == "__exterior__" {
+                renderer.fillColor = UIColor.black.withAlphaComponent(0.32)
+                renderer.strokeColor = .clear
+                renderer.lineWidth = 0
+            } else if polygon.title == "__municipio__" {
                 renderer.strokeColor = UIColor(named: "Navy")
                 renderer.lineWidth = 2.5
                 renderer.fillColor = .clear
