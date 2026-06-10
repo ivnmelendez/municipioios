@@ -362,12 +362,13 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             if !municipioPolygons.isEmpty {
                 let worldCoords: [CLLocationCoordinate2D] = [
                     .init(latitude: -85, longitude: -180),
-                    .init(latitude: -85, longitude:  180),
-                    .init(latitude:  85, longitude:  180),
                     .init(latitude:  85, longitude: -180),
+                    .init(latitude:  85, longitude:  180),
+                    .init(latitude: -85, longitude:  180),
                 ]
-                let holes = municipioPolygons.map {
-                    MKPolygon(coordinates: $0.coordinates, count: $0.coordinates.count)
+                let holes = municipioPolygons.map { poly -> MKPolygon in
+                    let reversed = poly.coordinates.reversed() as [CLLocationCoordinate2D]
+                    return MKPolygon(coordinates: reversed, count: reversed.count)
                 }
                 let exterior = MKPolygon(coordinates: worldCoords, count: worldCoords.count, interiorPolygons: holes)
                 exterior.title = "__exterior__"
@@ -468,7 +469,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
             let renderer = MKPolygonRenderer(polygon: polygon)
             if polygon.title == "__exterior__" {
-                renderer.fillColor = UIColor.black.withAlphaComponent(0.32)
+                renderer.fillColor = UIColor.black.withAlphaComponent(0.20)
                 renderer.strokeColor = .clear
                 renderer.lineWidth = 0
             } else if polygon.title == "__municipio__" {
