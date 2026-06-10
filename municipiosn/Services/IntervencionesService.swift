@@ -10,6 +10,7 @@ struct IntervencionCompleta: Codable, Identifiable {
     let rondinId: UUID
     let estructuraId: UUID
     let accion: AccionIntervencion
+    let tipoDano: TipoDano?
     let fotoAntesUrl: String?
     let fotoDespuesUrl: String?
     let notas: String?
@@ -21,6 +22,7 @@ struct IntervencionCompleta: Codable, Identifiable {
         case id, accion, notas
         case rondinId = "rondin_id"
         case estructuraId = "estructura_id"
+        case tipoDano = "tipo_dano"
         case fotoAntesUrl = "foto_antes_url"
         case fotoDespuesUrl = "foto_despues_url"
         case createdAt = "created_at"
@@ -31,6 +33,7 @@ struct IntervencionCompleta: Codable, Identifiable {
 struct EstructuraResumen: Codable, Identifiable {
     let id: UUID
     let numero: String
+    let estado: EstadoEstructura?
     let parques: ParqueResumen?
 }
 
@@ -44,6 +47,12 @@ struct RondinConPerfil: Codable, Identifiable {
     let perfiles: Perfil?
 }
 
+private let selectFields = """
+    *,
+    estructuras(id, numero, estado, parques(id, nombre)),
+    rondines(id, perfiles(id, nombre, rol))
+"""
+
 final class IntervencionesService {
     static let shared = IntervencionesService()
     private var client: SupabaseClient { SupabaseService.shared.client }
@@ -51,6 +60,15 @@ final class IntervencionesService {
     private init() {}
 
     func fetchCambiosRotoplas(filtro: FiltroFecha = .todo) async throws -> [IntervencionCompleta] {
+        let acciones = ["cambio_coroplast", "reparacion_coroplast", "reactivacion"]
+        return try await fetchIntervenciones(acciones: acciones, filtro: filtro)
+    }
+
+    func fetchDanos(filtro: FiltroFecha = .todo) async throws -> [IntervencionCompleta] {
+        return try await fetchIntervenciones(acciones: ["reporte_dano"], filtro: filtro)
+    }
+
+    private func fetchIntervenciones(acciones: [String], filtro: FiltroFecha) async throws -> [IntervencionCompleta] {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         let calendar = Calendar.current
@@ -58,12 +76,8 @@ final class IntervencionesService {
 
         let baseQuery = client
             .from("rondines_estructuras")
-            .select("""
-                *,
-                estructuras(id, numero, parques(id, nombre)),
-                rondines(id, perfiles(id, nombre, rol))
-            """)
-            .eq("accion", value: "cambio_coroplast")
+            .select(selectFields)
+            .in("accion", values: acciones)
 
         switch filtro {
         case .semana:

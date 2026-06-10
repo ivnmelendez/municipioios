@@ -2,14 +2,14 @@ import SwiftUI
 
 struct ContentView: View {
     let authVM: AuthViewModel
-    @State private var intervencionesVM = IntervencionesViewModel()
+    @State private var campoBadge = 0
 
     var body: some View {
         if authVM.rol == "campo" {
             CampoRootView(authVM: authVM)
         } else {
             TabView {
-                Tab("Dashboard", systemImage: "chart.bar.fill") {
+                Tab("Inicio", systemImage: "house.fill") {
                     DashboardView()
                 }
 
@@ -17,22 +17,14 @@ struct ContentView: View {
                     MapaView()
                 }
 
-                Tab("Estructuras", systemImage: "square.stack.fill") {
-                    EstructurasListView()
+                Tab("Campo", systemImage: "person.2.fill") {
+                    CampoAdminView(badge: $campoBadge)
                 }
-
-                Tab("Cambios", systemImage: "arrow.triangle.2.circlepath") {
-                    IntervencionesView()
-                }
-                .badge(intervencionesVM.badgeCount > 0 ? intervencionesVM.badgeCount : 0)
-
-                Tab("Historial", systemImage: "calendar.badge.clock") {
-                    HistorialCampoView()
-                }
+                .badge(campoBadge > 0 ? campoBadge : 0)
             }
             .tint(Color("MunicipioCyan"))
             .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
-                intervencionesVM.badgeCount += 1
+                campoBadge += 1
             }
         }
     }

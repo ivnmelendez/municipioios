@@ -7,7 +7,6 @@ final class IntervencionesViewModel {
     var filtro: FiltroFecha = .mes
     var errorMessage: String?
     var isLoading = false
-    var badgeCount: Int = 0
 
     func cargar() async {
         guard !isLoading else { return }
@@ -25,9 +24,5 @@ final class IntervencionesViewModel {
     func aplicarFiltro(_ nuevoFiltro: FiltroFecha) async {
         filtro = nuevoFiltro
         await cargar()
-    }
-
-    func limpiarBadge() {
-        badgeCount = 0
     }
 }

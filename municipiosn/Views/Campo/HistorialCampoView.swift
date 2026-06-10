@@ -10,43 +10,45 @@ struct HistorialCampoView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker("Periodo", selection: $periodo) {
-                    ForEach(Periodo.allCases, id: \.self) { Text($0.rawValue) }
-                }
-                .pickerStyle(.segmented)
-                .padding()
-
-                if vm.cargando {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Group {
+            if vm.cargando {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                let dias = periodo == .semana ? vm.diasSemana : vm.diasMes
+                if dias.isEmpty {
+                    ContentUnavailableView(
+                        "Sin visitas",
+                        systemImage: "calendar.badge.exclamationmark",
+                        description: Text("No hay estructuras visitadas \(periodo == .semana ? "esta semana" : "este mes").")
+                    )
                 } else {
-                    let dias = periodo == .semana ? vm.diasSemana : vm.diasMes
-                    if dias.isEmpty {
-                        ContentUnavailableView(
-                            "Sin visitas",
-                            systemImage: "calendar.badge.exclamationmark",
-                            description: Text("No hay estructuras visitadas \(periodo == .semana ? "esta semana" : "este mes").")
-                        )
-                    } else {
-                        List {
-                            if periodo == .mes {
-                                resumenMesSection(dias: dias)
-                            }
-                            ForEach(dias) { dia in
-                                diaSection(dia: dia)
-                            }
+                    List {
+                        if periodo == .mes {
+                            resumenMesSection(dias: dias)
                         }
-                        .listStyle(.insetGrouped)
+                        ForEach(dias) { dia in
+                            diaSection(dia: dia)
+                        }
                     }
+                    .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Historial Campo")
-            .navigationBarTitleDisplayMode(.large)
-            .task { await vm.cargar() }
-            .refreshable { await vm.cargar() }
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    ForEach(Periodo.allCases, id: \.self) { p in
+                        Button(p.rawValue) { periodo = p }
+                    }
+                } label: {
+                    Label(periodo.rawValue, systemImage: "calendar")
+                        .symbolVariant(.fill)
+                }
+            }
+        }
+        .task { await vm.cargar() }
+        .refreshable { await vm.cargar() }
     }
 
     private func diaSection(dia: DiaVisita) -> some View {
