@@ -13,6 +13,7 @@ final class RealtimeService {
     private var channel: RealtimeChannelV2?
     private var subIntervencion: RealtimeSubscription?
     private var subDano: RealtimeSubscription?
+    private var isSubscribing = false
     private let client = SupabaseService.shared.client
 
     private var notificacionesHabilitadas: Bool {
@@ -22,7 +23,9 @@ final class RealtimeService {
     private init() {}
 
     func subscribir() async {
-        guard channel == nil else { return }
+        guard channel == nil, !isSubscribing else { return }
+        isSubscribing = true
+        defer { isSubscribing = false }
         await client.realtimeV2.removeAllChannels()
         let channel = client.realtimeV2.channel("campo_actividad")
 
