@@ -216,7 +216,7 @@ struct MapaView: View {
                         Button {
                             mostrarRutas.toggle()
                         } label: {
-                            Image(systemName: mostrarRutas ? "map.fill" : "map")
+                            Image(systemName: "map")
                         }
                         .buttonStyle(.glass(.regular))
                         .controlSize(.large)
