@@ -8,6 +8,7 @@ struct KPIData {
     var inactivas: Int = 0
     var campanasActivas: Int = 0
     var cambiosRotoplasEsteMes: Int = 0
+    var necesitanCoroplast: Int = 0
 
     var isLoaded: Bool = false
 }

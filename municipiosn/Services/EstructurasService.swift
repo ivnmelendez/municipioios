@@ -151,8 +151,10 @@ final class EstructurasService {
             .execute()
             .value
         async let rotoplas: [Intervencion] = fetchCambiosRotoplasEsteMes()
+        async let coroplastCount = fetchNecesitanCoroplast()
 
         let (e, c, r) = try await (estructuras, campanas, rotoplas)
+        let nc = (try? await coroplastCount) ?? 0
 
         var kpi = KPIData()
         kpi.totalEstructuras = e.count
@@ -162,8 +164,24 @@ final class EstructurasService {
         kpi.inactivas = e.filter { $0.estado == .inactiva }.count
         kpi.campanasActivas = c.count
         kpi.cambiosRotoplasEsteMes = r.count
+        kpi.necesitanCoroplast = nc
         kpi.isLoaded = true
         return kpi
+    }
+
+    private func fetchNecesitanCoroplast() async throws -> Int {
+        struct Row: Codable { let estructuraId: UUID
+            enum CodingKeys: String, CodingKey { case estructuraId = "estructura_id" }
+        }
+        let rows: [Row] = try await client
+            .from("rondines_estructuras")
+            .select("estructura_id, estructuras!inner(estado)")
+            .eq("accion", value: "reporte_dano")
+            .in("tipo_dano", values: ["coroplast_roto", "sin_coroplast"])
+            .eq("estructuras.estado", value: "dañada")
+            .execute()
+            .value
+        return Set(rows.map { $0.estructuraId }).count
     }
 
     func fetchCaras(estructuraId: UUID) async throws -> [Cara] {
