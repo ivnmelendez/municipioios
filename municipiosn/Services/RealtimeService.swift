@@ -22,6 +22,7 @@ final class RealtimeService {
     private init() {}
 
     func subscribir() async {
+        guard channel == nil else { return }
         let channel = client.realtimeV2.channel("campo_actividad")
 
         subIntervencion = channel.onPostgresChange(

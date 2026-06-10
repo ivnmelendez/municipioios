@@ -302,9 +302,12 @@ struct MapaView: View {
         .onTapGesture {
             searchFocused = false
         }
+        .task(id: userId) {
+            if let uid = userId { await vm.cargarVisitadas(userId: uid) }
+        }
         .task {
             guard coloniasPolygons.isEmpty else { return }
-            await vm.cargar(userId: userId)
+            await vm.cargar()
             coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
             municipioPolygons = loadGeoPolygons(named: "san_nicolas")
             coloniasConEstructuras = computarColoniasConEstructuras(
