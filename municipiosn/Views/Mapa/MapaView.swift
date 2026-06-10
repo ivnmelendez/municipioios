@@ -492,8 +492,8 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 let cvegeo = polygon.title ?? ""
                 if let hexColor = coloniaSemanaColors[cvegeo],
                    let color = UIColor(hex: hexColor) {
-                    renderer.fillColor = color.withAlphaComponent(0.40)
-                    renderer.strokeColor = color.withAlphaComponent(0.85)
+                    renderer.fillColor = color.withAlphaComponent(0.20)
+                    renderer.strokeColor = color.withAlphaComponent(0.60)
                     renderer.lineWidth = 1.5
                 } else {
                     let tieneEstructuras = coloniasConEstructuras.contains(cvegeo)
