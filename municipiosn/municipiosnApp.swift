@@ -55,7 +55,7 @@ struct municipiosnApp: App {
                         .environment(authVM)
                         .task { await RealtimeService.shared.subscribir() }
                         .task {
-                            try? await UNUserNotificationCenter.current().requestAuthorization(
+                            _ = try? await UNUserNotificationCenter.current().requestAuthorization(
                                 options: [.alert, .sound, .badge]
                             )
                         }
