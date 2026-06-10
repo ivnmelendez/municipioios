@@ -119,7 +119,12 @@ struct KPICardPrincipal: View {
     var porcentajeOperativas: Double? = nil
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 0) {
+        ZStack(alignment: .bottomTrailing) {
+            Image(systemName: icono)
+                .font(.system(size: 96, weight: .light))
+                .foregroundStyle(Color("Navy").opacity(0.07))
+                .offset(x: 20, y: 20)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(titulo)
                     .font(.subheadline.weight(.medium))
@@ -142,13 +147,7 @@ struct KPICardPrincipal: View {
                     .padding(.top, 2)
                 }
             }
-
-            Spacer()
-
-            Image(systemName: icono)
-                .font(.system(size: 52, weight: .light))
-                .foregroundStyle(Color("Navy").opacity(0.12))
-                .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)
