@@ -10,7 +10,6 @@ struct EstructuraAnnotation: Identifiable {
     let estado: EstadoEstructura
     let numero: String
     let estructura: EstructuraConParque
-    var semanaColor: String? = nil
 }
 
 // MARK: - Helpers
@@ -40,6 +39,25 @@ private func computarColoniasConEstructuras(
     return result
 }
 
+private func computarColoniasConSemana(
+    polygons: [GeoPolygon],
+    estructuras: [EstructuraConParque],
+    semanaMap: [UUID: RutaSemana]
+) -> [String: String] {
+    var result: [String: String] = [:]
+    for e in estructuras {
+        guard let lat = e.lat, let lng = e.lng,
+              let semana = semanaMap[e.id] else { continue }
+        let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        for polygon in polygons where !polygon.cvegeo.isEmpty && result[polygon.cvegeo] == nil {
+            if pointInPolygon(coord, polygon.coordinates) {
+                result[polygon.cvegeo] = semana.color
+            }
+        }
+    }
+    return result
+}
+
 // MARK: - Map command bridge
 
 private enum MapCommand {
@@ -54,13 +72,11 @@ private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
     let coordinate: CLLocationCoordinate2D
     let estructura: EstructuraConParque
     let estado: EstadoEstructura
-    let semanaColor: String?
 
     init(from a: EstructuraAnnotation) {
         self.coordinate = a.coordinate
         self.estructura = a.estructura
         self.estado = a.estado
-        self.semanaColor = a.semanaColor
     }
 }
 
@@ -81,6 +97,7 @@ struct MapaView: View {
     @FocusState private var searchFocused: Bool
 
     @State private var estructuraSemanaMap: [UUID: RutaSemana] = [:]
+    @State private var coloniaSemanaColors: [String: String] = [:]
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
 
@@ -92,8 +109,7 @@ struct MapaView: View {
                 coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
                 estado: e.estado,
                 numero: e.numero,
-                estructura: e,
-                semanaColor: estructuraSemanaMap[e.id]?.color
+                estructura: e
             )
         }
     }
@@ -117,6 +133,7 @@ struct MapaView: View {
                 coloniasPolygons: coloniasPolygons,
                 municipioPolygons: municipioPolygons,
                 coloniasConEstructuras: coloniasConEstructuras,
+                coloniaSemanaColors: coloniaSemanaColors,
                 anotaciones: anotacionesFiltradas,
                 semanaMapVersion: estructuraSemanaMap.count,
                 pendingCommand: $pendingCommand,
@@ -218,6 +235,11 @@ struct MapaView: View {
                 estructuras: vm.estructuras
             )
             estructuraSemanaMap = (try? await RutasService.shared.fetchEstructuraSemanaMap()) ?? [:]
+            coloniaSemanaColors = computarColoniasConSemana(
+                polygons: coloniasPolygons,
+                estructuras: vm.estructuras,
+                semanaMap: estructuraSemanaMap
+            )
         }
         .sheet(isPresented: $vm.mostrarDetalle) {
             if let estructura = vm.estructuraSeleccionada {
@@ -280,6 +302,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let coloniasPolygons: [GeoPolygon]
     let municipioPolygons: [GeoPolygon]
     let coloniasConEstructuras: Set<String>
+    let coloniaSemanaColors: [String: String]
     let anotaciones: [EstructuraAnnotation]
     let semanaMapVersion: Int
     @Binding var pendingCommand: MapCommand?
@@ -323,13 +346,16 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         context.coordinator.coloniasConEstructuras = coloniasConEstructuras
+        context.coordinator.coloniaSemanaColors = coloniaSemanaColors
 
         let needsOverlayReload = context.coordinator.loadedPolygonCount != coloniasPolygons.count
             || context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
+            || context.coordinator.loadedSemanaColorCount != coloniaSemanaColors.count
 
         if needsOverlayReload {
             context.coordinator.loadedPolygonCount = coloniasPolygons.count
             context.coordinator.loadedHighlightCount = coloniasConEstructuras.count
+            context.coordinator.loadedSemanaColorCount = coloniaSemanaColors.count
             mapView.removeOverlays(mapView.overlays)
 
             for poly in coloniasPolygons {
@@ -367,9 +393,11 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
         let onSelect: (EstructuraConParque) -> Void
         var coloniasConEstructuras: Set<String> = []
+        var coloniaSemanaColors: [String: String] = [:]
         var loadedPolygonCount = 0
         var loadedHighlightCount = 0
         var loadedSemanaVersion = -1
+        var loadedSemanaColorCount = 0
         var isFirstLoad = true
         var initialRegionSet = false
         private var markerCache: [String: UIImage] = [:]
@@ -428,21 +456,29 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 renderer.lineWidth = 2.5
                 renderer.fillColor = .clear
             } else {
-                let tieneEstructuras = coloniasConEstructuras.contains(polygon.title ?? "")
-                renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.18 : 0.04)
-                renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.55 : 0.3)
-                renderer.lineWidth = 1
+                let cvegeo = polygon.title ?? ""
+                if let hexColor = coloniaSemanaColors[cvegeo],
+                   let color = UIColor(hex: hexColor) {
+                    renderer.fillColor = color.withAlphaComponent(0.25)
+                    renderer.strokeColor = color.withAlphaComponent(0.75)
+                    renderer.lineWidth = 1.5
+                } else {
+                    let tieneEstructuras = coloniasConEstructuras.contains(cvegeo)
+                    renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.10 : 0.03)
+                    renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tieneEstructuras ? 0.35 : 0.2)
+                    renderer.lineWidth = 1
+                }
             }
             return renderer
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            guard let ann = annotation as? EstructuraMKAnnotation else { return nil }
+            guard annotation is EstructuraMKAnnotation else { return nil }
             let id = "estructura"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                 ?? MKAnnotationView(annotation: annotation, reuseIdentifier: id)
             view.annotation = annotation
-            view.image = markerImage(colorHex: ann.semanaColor)
+            view.image = markerImage(colorHex: nil)
             return view
         }
 
