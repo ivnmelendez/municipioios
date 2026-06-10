@@ -287,8 +287,6 @@ struct MapaView: View {
             .padding(.trailing, 16)
             .padding(.bottom, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-            .allowsHitTesting(true)
-            .transaction { $0.animation = nil }
 
             if vm.isLoading {
                 HStack {
