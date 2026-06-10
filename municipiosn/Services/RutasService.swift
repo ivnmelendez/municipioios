@@ -114,7 +114,7 @@ final class RutasService {
         return result
     }
 
-    func marcarRevision(estructuraId: UUID, rutaSemanaId: UUID, userId: UUID) async throws {
+    func marcarRevision(estructuraId: UUID, rutaSemanaId: UUID? = nil, userId: UUID) async throws {
         try await CoroplastService.shared.registrarRevision(
             estructuraId: estructuraId,
             rutaSemanaId: rutaSemanaId,

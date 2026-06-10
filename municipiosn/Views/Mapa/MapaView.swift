@@ -325,12 +325,12 @@ struct MapaView: View {
                     estructura: estructura,
                     caras: vm.carasDetalle,
                     mostrarCampanas: mostrarCampanas,
-                    onOk: (userId != nil && semana != nil) ? {
-                        guard let uid = userId, let s = semana else { return }
+                    onOk: userId != nil ? {
+                        guard let uid = userId else { return }
                         Task {
                             try? await RutasService.shared.marcarRevision(
                                 estructuraId: estructura.id,
-                                rutaSemanaId: s.id,
+                                rutaSemanaId: semana?.id,
                                 userId: uid
                             )
                         }

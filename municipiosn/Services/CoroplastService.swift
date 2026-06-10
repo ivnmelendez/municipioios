@@ -263,7 +263,7 @@ final class CoroplastService {
             .absoluteString
     }
 
-    func registrarRevision(estructuraId: UUID, rutaSemanaId: UUID, userId: UUID) async throws {
+    func registrarRevision(estructuraId: UUID, rutaSemanaId: UUID? = nil, userId: UUID) async throws {
         let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
             .from("rondines_estructuras")
