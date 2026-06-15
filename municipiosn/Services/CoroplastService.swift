@@ -201,7 +201,6 @@ final class CoroplastService {
         estructuraId: UUID,
         userId: UUID,
         rutaSemanaId: UUID? = nil,
-        tipoDano: TipoDano,
         fotoUrl: String?,
         notas: String?
     ) async throws {
@@ -212,7 +211,7 @@ final class CoroplastService {
                 rondin_id: rondinId.uuidString,
                 estructura_id: estructuraId.uuidString,
                 accion: "reporte_dano",
-                tipo_dano: tipoDano.rawValue,
+                tipo_dano: nil,
                 foto_antes_url: fotoUrl,
                 foto_despues_url: nil,
                 notas: notas
@@ -220,7 +219,7 @@ final class CoroplastService {
             .execute()
         try await client
             .from("estructuras")
-            .update(EstadoUpdate(estado: tipoDano.estadoResultante.rawValue))
+            .update(EstadoUpdate(estado: "dañada"))
             .eq("id", value: estructuraId.uuidString)
             .execute()
     }

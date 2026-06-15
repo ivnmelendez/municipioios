@@ -1,7 +1,7 @@
 import SwiftUI
 import PhotosUI
 
-private enum Paso { case seleccion, foto, confirmar }
+private enum Paso { case foto, confirmar }
 
 struct ReportarDanoView: View {
     let estructura: EstructuraConParque
@@ -10,8 +10,7 @@ struct ReportarDanoView: View {
     var onCompletion: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
-    @State private var paso: Paso = .seleccion
-    @State private var tipoDano: TipoDano? = nil
+    @State private var paso: Paso = .foto
     @State private var notas: String = ""
     @State private var fotoItem: PhotosPickerItem?
     @State private var fotoUI: UIImage?
@@ -22,9 +21,8 @@ struct ReportarDanoView: View {
 
     private var pasoNumero: Int {
         switch paso {
-        case .seleccion: return 1
-        case .foto:      return 2
-        case .confirmar: return 3
+        case .foto:      return 1
+        case .confirmar: return 2
         }
     }
 
@@ -39,7 +37,6 @@ struct ReportarDanoView: View {
                     .padding(.vertical, 20)
 
                 ZStack {
-                    if paso == .seleccion { pasoSeleccion.transition(transicion) }
                     if paso == .foto      { pasoFoto.transition(transicion) }
                     if paso == .confirmar { pasoConfirmar.transition(transicion) }
                 }
@@ -51,7 +48,7 @@ struct ReportarDanoView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    if paso == .seleccion {
+                    if paso == .foto {
                         Button("Cancelar") { dismiss() }
                     } else {
                         Button(action: retroceder) {
@@ -103,7 +100,7 @@ struct ReportarDanoView: View {
 
     private var progresoIndicador: some View {
         HStack(spacing: 8) {
-            ForEach(1...3, id: \.self) { n in
+            ForEach(1...2, id: \.self) { n in
                 Capsule()
                     .fill(n <= pasoNumero ? Color.orange : Color.secondary.opacity(0.3))
                     .frame(width: n == pasoNumero ? 28 : 10, height: 8)
@@ -112,60 +109,7 @@ struct ReportarDanoView: View {
         }
     }
 
-    // MARK: - Paso 1: Selección de daño
-
-    private var pasoSeleccion: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 8) {
-                Text("¿Qué daño tiene?")
-                    .font(.title2.bold())
-                    .multilineTextAlignment(.center)
-                Text("Paso 1 de 3")
-                    .font(.caption).foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 24)
-
-            VStack(spacing: 12) {
-                opcionButton(
-                    icono: "exclamationmark.triangle.fill",
-                    color: .orange,
-                    titulo: "Coroplast roto",
-                    subtitulo: "El coroplast está puesto pero en mal estado",
-                    destacado: true
-                ) {
-                    tipoDano = .coroplast_roto
-                    avanzar(a: .foto)
-                }
-
-                opcionButton(
-                    icono: "minus.circle.fill",
-                    color: .orange,
-                    titulo: "Sin coroplast",
-                    subtitulo: "No tiene coroplast puesto",
-                    destacado: true
-                ) {
-                    tipoDano = .sin_coroplast
-                    avanzar(a: .foto)
-                }
-
-                Divider().padding(.vertical, 4)
-
-                opcionButton(
-                    icono: "xmark.octagon.fill",
-                    color: .secondary,
-                    titulo: "Estructura destruida",
-                    subtitulo: "Fue derribada o está irreparable",
-                    destacado: false
-                ) {
-                    tipoDano = .destruida
-                    avanzar(a: .foto)
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-    }
-
-    // MARK: - Paso 2: Foto
+    // MARK: - Paso 1: Foto
 
     private var pasoFoto: some View {
         VStack(spacing: 24) {
@@ -177,7 +121,7 @@ struct ReportarDanoView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
-                Text("Paso 2 de 3")
+                Text("Paso 1 de 2")
                     .font(.caption).foregroundStyle(.tertiary)
             }
 
@@ -227,13 +171,14 @@ struct ReportarDanoView: View {
             .padding(.horizontal, 20)
 
             continuar(habilitado: fotoUI != nil) {
-                avanzar(a: .confirmar)
+                avanzando = true
+                withAnimation { paso = .confirmar }
             }
             .padding(.horizontal, 20)
         }
     }
 
-    // MARK: - Paso 3: Confirmar
+    // MARK: - Paso 2: Confirmar
 
     private var pasoConfirmar: some View {
         ScrollView {
@@ -241,7 +186,7 @@ struct ReportarDanoView: View {
                 VStack(spacing: 8) {
                     Text("¿Alguna nota antes de enviar?")
                         .font(.title2.bold())
-                    Text("Paso 3 de 3")
+                    Text("Paso 2 de 2")
                         .font(.caption).foregroundStyle(.tertiary)
                 }
 
@@ -267,10 +212,7 @@ struct ReportarDanoView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(
-                        tipoDano == .destruida ? Color.red : Color.orange,
-                        in: RoundedRectangle(cornerRadius: 14)
-                    )
+                    .background(Color.orange, in: RoundedRectangle(cornerRadius: 14))
                 }
                 .disabled(isLoading)
                 .opacity(isLoading ? 0.6 : 1)
@@ -292,12 +234,10 @@ struct ReportarDanoView: View {
                 Text("¡Reporte enviado!")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
-                if let tipo = tipoDano {
-                    Text("La estructura fue marcada como \(tipo.estadoResultante.rawValue).")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .multilineTextAlignment(.center)
-                }
+                Text("La estructura fue marcada como dañada.")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
             }
             .padding(40)
         }
@@ -310,37 +250,6 @@ struct ReportarDanoView: View {
     }
 
     // MARK: - Helpers
-
-    private func opcionButton(icono: String, color: Color, titulo: String, subtitulo: String, destacado: Bool, accion: @escaping () -> Void) -> some View {
-        Button(action: accion) {
-            HStack(spacing: 16) {
-                Image(systemName: icono)
-                    .font(destacado ? .title : .title2)
-                    .foregroundStyle(color)
-                    .frame(width: 44)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(titulo)
-                        .font(destacado ? .headline : .subheadline)
-                        .foregroundStyle(destacado ? .primary : .secondary)
-                        .multilineTextAlignment(.leading)
-                    Text(subtitulo)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.subheadline.bold()).foregroundStyle(.tertiary)
-            }
-            .padding(destacado ? 18 : 14)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(color.opacity(destacado ? 0.25 : 0.1), lineWidth: destacado ? 1.5 : 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
 
     private func continuar(habilitado: Bool, accion: @escaping () -> Void) -> some View {
         Button(action: accion) {
@@ -360,24 +269,18 @@ struct ReportarDanoView: View {
         .disabled(!habilitado)
     }
 
-    private func avanzar(a nuevoPaso: Paso) {
-        avanzando = true
-        withAnimation { paso = nuevoPaso }
-    }
-
     private func retroceder() {
         avanzando = false
         withAnimation {
             switch paso {
-            case .seleccion: break
-            case .foto:      paso = .seleccion
+            case .foto:      break
             case .confirmar: paso = .foto
             }
         }
     }
 
     private func enviar() {
-        guard let userId, let tipoDano else { return }
+        guard let userId else { return }
         Task {
             isLoading = true
             defer { isLoading = false }
@@ -391,7 +294,6 @@ struct ReportarDanoView: View {
                     estructuraId: estructura.id,
                     userId: userId,
                     rutaSemanaId: rutaSemanaId,
-                    tipoDano: tipoDano,
                     fotoUrl: fotoUrl,
                     notas: notas.isEmpty ? nil : notas
                 )
