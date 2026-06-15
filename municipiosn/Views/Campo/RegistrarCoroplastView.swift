@@ -23,6 +23,7 @@ struct RegistrarCoroplastView: View {
     @State private var cargandoCaras = false
     @State private var errorMessage: String?
     @State private var exito = false
+    @State private var exitoOffline = false
 
     private var esCambio: Bool { tipoSeleccionado == .cambio }
     private var totalPasos: Int { esCambio ? 5 : 4 }
@@ -85,6 +86,7 @@ struct RegistrarCoroplastView: View {
             }
             .overlay {
                 if exito { exitoOverlay }
+                if exitoOffline { exitoOfflineOverlay }
             }
         }
     }
@@ -298,23 +300,42 @@ struct RegistrarCoroplastView: View {
     // MARK: - Éxito
 
     private var exitoOverlay: some View {
+        exitoView(
+            icono: "checkmark.circle.fill",
+            color: .green,
+            mensaje: esCambio ? "Cambio de coroplast registrado." : "Reparación registrada.",
+            delay: 1.5
+        )
+    }
+
+    private var exitoOfflineOverlay: some View {
+        exitoView(
+            icono: "wifi.slash",
+            color: .orange,
+            mensaje: "Se enviará automáticamente cuando haya señal.",
+            delay: 2.2
+        )
+    }
+
+    private func exitoView(icono: String, color: Color, mensaje: String, delay: Double) -> some View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 16) {
-                Image(systemName: "checkmark.circle.fill")
+                Image(systemName: icono)
                     .font(.system(size: 60))
-                    .foregroundStyle(.green)
-                Text("¡Registrado!")
+                    .foregroundStyle(color)
+                Text(icono == "wifi.slash" ? "Guardado sin internet" : "¡Registrado!")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
-                Text(esCambio ? "Cambio de coroplast registrado." : "Reparación registrada.")
+                Text(mensaje)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
             }
             .padding(40)
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 onCompletion?()
                 dismiss()
             }
@@ -401,13 +422,49 @@ struct RegistrarCoroplastView: View {
 
     private func enviar() {
         guard let tipo = tipoSeleccionado, let userId else { return }
+        let antesData = fotoAntesUI?.jpegData(compressionQuality: 0.85)
+        let despuesData = fotoDespuesUI?.jpegData(compressionQuality: 0.85)
+        let notasVal = notas.isEmpty ? nil : notas
+
+        guard OfflineQueueService.shared.isConnected else {
+            switch tipo {
+            case .reparacion:
+                OfflineQueueService.shared.encolar(AccionPendiente(
+                    tipo: .reparacionCoroplast,
+                    estructuraId: estructura.id,
+                    rutaSemanaId: rutaSemanaId,
+                    userId: userId,
+                    fotoAntesData: antesData,
+                    fotoDespuesData: despuesData,
+                    notas: notasVal
+                ))
+            case .cambio:
+                let carasPendientes = caras.compactMap { cara -> AccionPendiente.CaraPendiente? in
+                    guard let campana = cara.nuevaCampana else { return nil }
+                    return AccionPendiente.CaraPendiente(caraId: cara.id, campanaId: campana.id)
+                }
+                OfflineQueueService.shared.encolar(AccionPendiente(
+                    tipo: .cambioCoroplast,
+                    estructuraId: estructura.id,
+                    rutaSemanaId: rutaSemanaId,
+                    userId: userId,
+                    estadoEstructura: estructura.estado.rawValue,
+                    caras: carasPendientes,
+                    fotoAntesData: antesData,
+                    fotoDespuesData: despuesData,
+                    notas: notasVal
+                ))
+            }
+            withAnimation { exitoOffline = true }
+            return
+        }
+
         Task {
             isLoading = true
             defer { isLoading = false }
             do {
-                let antesUrl = try await subirFoto(fotoAntesUI, nombre: "antes", userId: userId)
-                let despuesUrl = try await subirFoto(fotoDespuesUI, nombre: "despues", userId: userId)
-                let notasVal = notas.isEmpty ? nil : notas
+                let antesUrl = try await subirFoto(antesData, sufijo: "antes", userId: userId)
+                let despuesUrl = try await subirFoto(despuesData, sufijo: "despues", userId: userId)
 
                 switch tipo {
                 case .reparacion:
@@ -435,7 +492,6 @@ struct RegistrarCoroplastView: View {
                         notas: notasVal
                     )
                 }
-
                 withAnimation { exito = true }
             } catch {
                 errorMessage = error.localizedDescription
@@ -443,9 +499,9 @@ struct RegistrarCoroplastView: View {
         }
     }
 
-    private func subirFoto(_ image: UIImage?, nombre: String, userId: UUID) async throws -> String? {
-        guard let image, let data = image.jpegData(compressionQuality: 0.85) else { return nil }
-        let path = "\(userId.uuidString)/\(UUID().uuidString)_\(nombre).jpg"
+    private func subirFoto(_ data: Data?, sufijo: String, userId: UUID) async throws -> String? {
+        guard let data else { return nil }
+        let path = "\(userId.uuidString)/\(UUID().uuidString)_\(sufijo).jpg"
         return try? await CoroplastService.shared.uploadFoto(data: data, path: path)
     }
 }

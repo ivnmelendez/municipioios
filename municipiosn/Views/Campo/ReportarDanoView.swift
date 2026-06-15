@@ -15,6 +15,7 @@ struct ReportarDanoView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var exito = false
+    @State private var exitoOffline = false
 
     var body: some View {
         NavigationStack {
@@ -61,6 +62,7 @@ struct ReportarDanoView: View {
             }
             .overlay {
                 if exito { exitoOverlay }
+                if exitoOffline { exitoOfflineOverlay }
             }
         }
     }
@@ -176,16 +178,36 @@ struct ReportarDanoView: View {
     // MARK: - Éxito
 
     private var exitoOverlay: some View {
+        exitoView(
+            icono: "checkmark.circle.fill",
+            color: .green,
+            titulo: "Reporte enviado",
+            detalle: "La estructura fue marcada como dañada.",
+            delay: 1.8
+        )
+    }
+
+    private var exitoOfflineOverlay: some View {
+        exitoView(
+            icono: "wifi.slash",
+            color: .orange,
+            titulo: "Guardado sin internet",
+            detalle: "Se enviará automáticamente cuando haya señal.",
+            delay: 2.2
+        )
+    }
+
+    private func exitoView(icono: String, color: Color, titulo: String, detalle: String, delay: Double) -> some View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             VStack(spacing: 16) {
-                Image(systemName: "checkmark.circle.fill")
+                Image(systemName: icono)
                     .font(.system(size: 60))
-                    .foregroundStyle(.green)
-                Text("Reporte enviado")
+                    .foregroundStyle(color)
+                Text(titulo)
                     .font(.title2.bold())
                     .foregroundStyle(.white)
-                Text("La estructura fue marcada como dañada.")
+                Text(detalle)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
                     .multilineTextAlignment(.center)
@@ -193,7 +215,7 @@ struct ReportarDanoView: View {
             .padding(40)
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 onCompletion?()
                 dismiss()
             }
@@ -230,12 +252,29 @@ struct ReportarDanoView: View {
 
     private func enviar() {
         guard let userId else { return }
+        let fotoData = fotoUI?.jpegData(compressionQuality: 0.85)
+        let notasVal = notas.isEmpty ? nil : notas
+
+        guard OfflineQueueService.shared.isConnected else {
+            let accion = AccionPendiente(
+                tipo: .reporteDano,
+                estructuraId: estructura.id,
+                rutaSemanaId: rutaSemanaId,
+                userId: userId,
+                fotoAntesData: fotoData,
+                notas: notasVal
+            )
+            OfflineQueueService.shared.encolar(accion)
+            withAnimation { exitoOffline = true }
+            return
+        }
+
         Task {
             isLoading = true
             defer { isLoading = false }
             do {
                 var fotoUrl: String? = nil
-                if let img = fotoUI, let data = img.jpegData(compressionQuality: 0.85) {
+                if let data = fotoData {
                     let path = "\(userId.uuidString)/\(UUID().uuidString)_dano.jpg"
                     fotoUrl = try? await CoroplastService.shared.uploadFoto(data: data, path: path)
                 }
@@ -244,7 +283,7 @@ struct ReportarDanoView: View {
                     userId: userId,
                     rutaSemanaId: rutaSemanaId,
                     fotoUrl: fotoUrl,
-                    notas: notas.isEmpty ? nil : notas
+                    notas: notasVal
                 )
                 withAnimation { exito = true }
             } catch {

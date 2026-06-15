@@ -355,6 +355,15 @@ struct MapaView: View {
                         vm.visitadasHoy.insert(estructura.id)
                         vm.mostrarDetalle = false
                         Task {
+                            guard OfflineQueueService.shared.isConnected else {
+                                OfflineQueueService.shared.encolar(AccionPendiente(
+                                    tipo: .revision,
+                                    estructuraId: estructura.id,
+                                    rutaSemanaId: semana?.id,
+                                    userId: uid
+                                ))
+                                return
+                            }
                             do {
                                 try await RutasService.shared.marcarRevision(
                                     estructuraId: estructura.id,
@@ -363,7 +372,6 @@ struct MapaView: View {
                                 )
                             } catch {
                                 vm.errorAccion = error.localizedDescription
-                                print("❌ marcarRevision: \(error)")
                             }
                         }
                     } : nil,
