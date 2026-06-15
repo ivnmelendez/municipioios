@@ -103,7 +103,7 @@ private struct ColoniasListaCompleta: View {
                                 if let d = detColonia, !d.campanas.isEmpty {
                                     Text("\(d.campanas.count) campaña\(d.campanas.count == 1 ? "" : "s")")
                                         .font(.caption)
-                                        .foregroundStyle(Color("MunicipioCyan"))
+                                        .foregroundStyle(Color("Navy"))
                                 }
                             }
                             Spacer()
@@ -168,7 +168,7 @@ private struct ColoniaDetalleView: View {
                                 Spacer()
                                 Image(systemName: campana.fotoUrl != nil ? "photo" : "megaphone.fill")
                                     .font(.caption)
-                                    .foregroundStyle(Color("MunicipioCyan"))
+                                    .foregroundStyle(Color("Navy"))
                             }
                             .padding(.vertical, 2)
                         }

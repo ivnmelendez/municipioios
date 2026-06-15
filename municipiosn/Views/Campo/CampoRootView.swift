@@ -18,7 +18,7 @@ struct CampoRootView: View {
                 configTab
             }
         }
-        .tint(Color("MunicipioCyan"))
+        .tint(Color("Navy"))
     }
 
     private var configTab: some View {
@@ -28,7 +28,7 @@ struct CampoRootView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(Color("MunicipioCyan"))
+                                .fill(Color("Navy"))
                                 .frame(width: 56, height: 56)
                             Text(authVM.initiales)
                                 .font(.title2.bold())

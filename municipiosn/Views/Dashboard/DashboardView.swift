@@ -159,7 +159,7 @@ struct DashboardView: View {
                             titulo: "Campañas activas",
                             valor: vm.kpi.campanasActivas,
                             icono: "megaphone.fill",
-                            color: Color("MunicipioCyan")
+                            color: Color("Navy")
                         )
                     }
                     .padding(.horizontal, 20)
@@ -254,7 +254,7 @@ private struct ActividadSemanaCard: View {
             Divider().padding(.leading, 44)
             fila(
                 icono: "arrow.triangle.2.circlepath",
-                color: Color("MunicipioCyan"),
+                color: Color("Navy"),
                 titulo: "Cambios realizados",
                 valor: kpi.cambiosSemana
             )

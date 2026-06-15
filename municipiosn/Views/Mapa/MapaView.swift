@@ -271,7 +271,7 @@ struct MapaView: View {
                     mapController.centerOnUser()
                 } label: {
                     Image(systemName: "location.fill")
-                        .foregroundStyle(Color("MunicipioCyan"))
+                        .foregroundStyle(Color("Navy"))
                 }
                 .buttonStyle(.glass(.regular))
                 .controlSize(.large)
@@ -947,7 +947,7 @@ struct EstructuraDetalleSheet: View {
                             .padding(.vertical, 4)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color("MunicipioCyan"))
+                    .tint(Color("Navy"))
                     .controlSize(.large)
                 }
                 if let reportar = onReportarDano {
@@ -1069,7 +1069,7 @@ struct CampanaRow: View {
                     Spacer()
                     Text(campana.nombre)
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(Color("MunicipioCyan"))
+                        .foregroundStyle(Color("Navy"))
                         .multilineTextAlignment(.trailing)
                 }
 

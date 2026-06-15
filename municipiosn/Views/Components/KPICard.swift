@@ -85,7 +85,7 @@ struct CoberturaColoniasCard: View {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color("Navy"), Color("MunicipioCyan")],
+                                    colors: [Color("Navy"), Color("Navy")],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )

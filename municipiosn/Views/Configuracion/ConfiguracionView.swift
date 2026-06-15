@@ -39,7 +39,7 @@ struct ConfiguracionView: View {
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .padding(6)
-                                .background(Color("MunicipioCyan"), in: Circle())
+                                .background(Color("Navy"), in: Circle())
                                 .offset(x: 2, y: 2)
                         }
                     }
@@ -82,10 +82,10 @@ struct ConfiguracionView: View {
                                 }
                             } icon: {
                                 Image(systemName: "bell.badge.fill")
-                                    .foregroundStyle(Color("MunicipioCyan"))
+                                    .foregroundStyle(Color("Navy"))
                             }
                         }
-                        .tint(Color("MunicipioCyan"))
+                        .tint(Color("Navy"))
                         .onChange(of: notificaciones) { _, habilitadas in
                             if habilitadas {
                                 Task { await pedirPermisoNotificaciones() }

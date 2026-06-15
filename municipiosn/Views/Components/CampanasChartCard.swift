@@ -11,7 +11,7 @@ struct CampanasChartCard: View {
             HStack {
                 Label("Campañas en uso", systemImage: "megaphone.fill")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color("MunicipioCyan"))
+                    .foregroundStyle(Color("Navy"))
                 Spacer()
                 if datos.count > 5 {
                     Button {
@@ -22,7 +22,7 @@ struct CampanasChartCard: View {
                             Image(systemName: "chevron.right")
                         }
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(Color("MunicipioCyan"))
+                        .foregroundStyle(Color("Navy"))
                     }
                 }
             }
@@ -47,7 +47,7 @@ struct CampanasChartCard: View {
                             Spacer()
                             Text("\(item.totalCaras) caras")
                                 .font(.body.weight(.semibold))
-                                .foregroundStyle(Color("MunicipioCyan"))
+                                .foregroundStyle(Color("Navy"))
                                 .monospacedDigit()
                         }
                         .padding(.vertical, 11)
@@ -89,7 +89,7 @@ private struct CampanasListaCompleta: View {
                         Spacer()
                         Text("\(item.totalCaras) caras")
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(Color("MunicipioCyan"))
+                            .foregroundStyle(Color("Navy"))
                             .monospacedDigit()
                     }
                     .padding(.vertical, 4)
