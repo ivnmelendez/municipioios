@@ -61,29 +61,28 @@ private struct DanoRow: View {
                     if let nombre = dano.rondines?.perfiles?.nombre {
                         Text(nombre)
                             .font(.caption2)
-                            .foregroundStyle(Color("MunicipioCyan"))
+                            .foregroundStyle(Color("Navy"))
                     }
                 }
             }
 
             HStack(spacing: 8) {
-                if let tipo = dano.tipoDano {
-                    Label(tipo.label, systemImage: tipoDanoIcon(tipo))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(tipoDanoColor(tipo))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(tipoDanoColor(tipo).opacity(0.12), in: Capsule())
-                }
+                tipoBadge(dano.tipoDano)
 
                 if let estado = dano.estructuras?.estado {
                     let resuelta = estado == .activa
-                    Label(resuelta ? "Resuelta" : "Pendiente", systemImage: resuelta ? "checkmark.circle.fill" : "clock.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(resuelta ? Color(hex: "#16a34a") : Color(hex: "#dc2626"))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background((resuelta ? Color(hex: "#16a34a") : Color(hex: "#dc2626")).opacity(0.12), in: Capsule())
+                    Label(
+                        resuelta ? "Resuelta" : "Pendiente",
+                        systemImage: resuelta ? "checkmark.circle.fill" : "clock.fill"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(resuelta ? Color(hex: "#16a34a") : Color(hex: "#dc2626"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        (resuelta ? Color(hex: "#16a34a") : Color(hex: "#dc2626")).opacity(0.12),
+                        in: Capsule()
+                    )
                 }
             }
 
@@ -102,19 +101,26 @@ private struct DanoRow: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private func tipoDanoIcon(_ tipo: TipoDano) -> String {
-        switch tipo {
-        case .coroplast_roto: "exclamationmark.triangle.fill"
-        case .sin_coroplast: "minus.square.fill"
-        case .destruida: "xmark.octagon.fill"
-        }
-    }
+    @ViewBuilder
+    private func tipoBadge(_ tipo: TipoDano?) -> some View {
+        let (label, icono, color): (String, String, Color) = {
+            switch tipo {
+            case .coroplast_roto:
+                return ("Coroplast roto", "exclamationmark.triangle.fill", Color(hex: "#f59e0b"))
+            case .sin_coroplast:
+                return ("Sin coroplast", "minus.square.fill", Color(hex: "#f59e0b"))
+            case .destruida:
+                return ("Destruida", "xmark.octagon.fill", Color(hex: "#dc2626"))
+            case nil:
+                return ("Daño estructural", "wrench.and.screwdriver.fill", Color(hex: "#dc2626"))
+            }
+        }()
 
-    private func tipoDanoColor(_ tipo: TipoDano) -> Color {
-        switch tipo {
-        case .coroplast_roto: Color(hex: "#f59e0b")
-        case .sin_coroplast: Color(hex: "#f59e0b")
-        case .destruida: Color(hex: "#dc2626")
-        }
+        Label(label, systemImage: icono)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.12), in: Capsule())
     }
 }

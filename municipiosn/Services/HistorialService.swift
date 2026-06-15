@@ -1,14 +1,14 @@
 import Foundation
 import Supabase
 
-struct EstructuraVisitada: Identifiable {
+struct EstructuraVisitada: Identifiable, Codable {
     let id: UUID
     let numero: String
     let parque: String?
     let colonia: String?
 }
 
-struct DiaVisita: Identifiable {
+struct DiaVisita: Identifiable, Codable {
     let id: String
     let fecha: Date
     let estructuras: [EstructuraVisitada]

@@ -8,6 +8,12 @@ struct IntervencionesView: View {
             if vm.isLoading && vm.intervenciones.isEmpty {
                 ProgressView("Cargando intervenciones…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let error = vm.errorMessage, vm.intervenciones.isEmpty {
+                ContentUnavailableView(
+                    "Error al cargar",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error)
+                )
             } else if vm.intervenciones.isEmpty {
                 ContentUnavailableView(
                     "Sin intervenciones",
@@ -37,12 +43,6 @@ struct IntervencionesView: View {
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
             Task { await vm.cargar() }
         }
-
-        if let error = vm.errorMessage {
-            Text(error)
-                .foregroundStyle(.red)
-                .padding()
-        }
     }
 }
 
@@ -58,6 +58,7 @@ struct FiltroMenu: View {
         } label: {
             Label(etiquetaFiltro, systemImage: "line.3.horizontal.decrease.circle")
                 .symbolVariant(filtroActual != .todo ? .fill : .none)
+                .foregroundStyle(Color("Navy"))
         }
     }
 
@@ -94,7 +95,7 @@ struct IntervencionRow: View {
                     if let nombre = intervencion.rondines?.perfiles?.nombre {
                         Text(nombre)
                             .font(.caption2)
-                            .foregroundStyle(Color("MunicipioCyan"))
+                            .foregroundStyle(Color("Navy"))
                     }
                 }
             }
@@ -107,7 +108,7 @@ struct IntervencionRow: View {
                         .foregroundStyle(Color("TextMuted"))
                 }
                 Image(systemName: "arrow.right")
-                    .foregroundStyle(Color("MunicipioCyan"))
+                    .foregroundStyle(Color("Navy"))
                 VStack(spacing: 4) {
                     FotoAsyncImage(url: intervencion.fotoDespuesUrl, aspectRatio: 1, cornerRadius: 10)
                     Text("Después")

@@ -23,7 +23,7 @@ struct ContentView: View {
                 }
                 .badge(campoBadge > 0 ? campoBadge : 0)
             }
-            .tint(Color("MunicipioCyan"))
+            .tint(Color("Navy"))
             .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
                 campoBadge += 1
             }

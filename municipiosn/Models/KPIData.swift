@@ -1,6 +1,6 @@
 import Foundation
 
-struct KPIData {
+struct KPIData: Codable {
     var totalEstructuras: Int = 0
     var activas: Int = 0
     var dañadas: Int = 0

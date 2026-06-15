@@ -16,6 +16,11 @@ final class DashboardViewModel {
 
     func cargar() async {
         guard !isLoading else { return }
+
+        if !kpi.isLoaded, let cached = LocalDataCache.shared.cargar(KPIData.self, clave: "dashboard_kpi") {
+            kpi = cached
+        }
+
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -27,7 +32,9 @@ final class DashboardViewModel {
             async let estructurasTask = EstructurasService.shared.fetchEstructuras()
             async let coloniasDetalleTask = EstructurasService.shared.fetchColoniasConCampanas()
 
-            kpi = try await kpiTask
+            let nuevoKpi = try await kpiTask
+            kpi = nuevoKpi
+            LocalDataCache.shared.guardar(nuevoKpi, clave: "dashboard_kpi")
             usoCampanas = (try? await campanasTask) ?? []
             usoColonias = (try? await coloniasTask) ?? []
             let estructuras = (try? await estructurasTask) ?? []
@@ -35,9 +42,8 @@ final class DashboardViewModel {
 
             computarCobertura(estructuras: estructuras)
         } catch is CancellationError {
-            // View disappeared before load completed — normal, ignore
         } catch {
-            errorMessage = error.localizedDescription
+            if !kpi.isLoaded { errorMessage = error.localizedDescription }
         }
     }
 

@@ -87,7 +87,7 @@ struct HistorialCampoView: View {
                     Spacer()
                     Text("\(semana.total) estructuras")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color("MunicipioCyan"))
+                        .foregroundStyle(Color("Navy"))
                 }
             }
         }

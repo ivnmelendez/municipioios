@@ -172,7 +172,7 @@ final class EstructurasService {
         return kpi
     }
 
-    private func fetchResumenSemana() async throws -> (visitas: Int, cambios: Int, danos: Int) {
+    func fetchResumenSemana() async throws -> (visitas: Int, cambios: Int, danos: Int) {
         let calendar = Calendar.current
         let hoy = Date()
         let inicioSemana = calendar.dateInterval(of: .weekOfYear, for: hoy)?.start ?? hoy
