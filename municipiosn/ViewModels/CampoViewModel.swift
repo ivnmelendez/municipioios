@@ -22,15 +22,29 @@ final class CampoViewModel {
     }
 
     func cargar() async {
+        // Serve cached data immediately — UI usable even offline
+        if campanas.isEmpty, let cached = LocalDataCache.shared.cargar([CampanaBasica].self, clave: "campanas") {
+            campanas = cached
+        }
+        if estructuras.isEmpty, let cached = LocalDataCache.shared.cargar([EstructuraConParque].self, clave: "estructuras_campo") {
+            estructuras = cached
+        }
+
         isLoading = true
-        errorMessage = nil
         defer { isLoading = false }
+
         do {
             async let e = EstructurasService.shared.fetchEstructuras()
             async let c = CoroplastService.shared.fetchCampanasActivas()
-            (estructuras, campanas) = try await (e, c)
+            let (nuevasE, nuevasC) = try await (e, c)
+            estructuras = nuevasE
+            campanas = nuevasC
+            LocalDataCache.shared.guardar(nuevasE, clave: "estructuras_campo")
+            LocalDataCache.shared.guardar(nuevasC, clave: "campanas")
         } catch {
-            errorMessage = error.localizedDescription
+            if estructuras.isEmpty && campanas.isEmpty {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

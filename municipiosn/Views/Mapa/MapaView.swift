@@ -160,6 +160,7 @@ struct MapaView: View {
     @State private var mostrarRutas: Bool = false
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
+    @State private var visitadasVersion: Int = 0
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -197,6 +198,8 @@ struct MapaView: View {
                 mostrarRutas: mostrarRutas,
                 anotaciones: anotacionesFiltradas,
                 semanaMapVersion: estructuraSemanaMap.count,
+                visitadasHoy: vm.visitadasHoy,
+                visitadasVersion: visitadasVersion,
                 mapController: mapController,
                 onSelect: { estructura in
                     Task { await vm.seleccionar(estructura) }
@@ -288,7 +291,7 @@ struct MapaView: View {
             .padding(.bottom, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 
-            if vm.isLoading {
+            if vm.isLoading && vm.estructuras.isEmpty {
                 HStack {
                     ProgressView()
                     Text("Cargando estructuras…")
@@ -298,12 +301,30 @@ struct MapaView: View {
                 .background(.regularMaterial, in: Capsule())
                 .padding(.bottom, 100)
             }
+
+            if userId != nil && !vm.visitadasHoy.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text("\(vm.visitadasHoy.count) revisadas hoy")
+                        .font(.subheadline.weight(.medium))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(.regularMaterial, in: Capsule())
+                .padding(.bottom, 100)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                .animation(.spring(duration: 0.3), value: vm.visitadasHoy.count)
+            }
         }
         .onTapGesture {
             searchFocused = false
         }
         .task(id: userId) {
             if let uid = userId { await vm.cargarVisitadas(userId: uid) }
+        }
+        .onChange(of: vm.visitadasHoy) { _, _ in
+            visitadasVersion += 1
         }
         .task {
             guard coloniasPolygons.isEmpty else { return }
@@ -401,6 +422,8 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let mostrarRutas: Bool
     let anotaciones: [EstructuraAnnotation]
     let semanaMapVersion: Int
+    let visitadasHoy: Set<UUID>
+    let visitadasVersion: Int
     let mapController: MapController
     let onSelect: (EstructuraConParque) -> Void
 
@@ -463,11 +486,15 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
         }
 
+        context.coordinator.visitadasHoy = visitadasHoy
+
         let currentIds = Set(mapView.annotations.compactMap { ($0 as? EstructuraMKAnnotation)?.estructura.id })
         let newIds = Set(anotaciones.map { $0.id })
         let semanaVersionChanged = context.coordinator.loadedSemanaVersion != semanaMapVersion
-        if currentIds != newIds || semanaVersionChanged {
+        let visitadasVersionChanged = context.coordinator.loadedVisitadasVersion != visitadasVersion
+        if currentIds != newIds || semanaVersionChanged || visitadasVersionChanged {
             context.coordinator.loadedSemanaVersion = semanaMapVersion
+            context.coordinator.loadedVisitadasVersion = visitadasVersion
             mapView.removeAnnotations(mapView.annotations.filter { $0 is EstructuraMKAnnotation })
             mapView.addAnnotations(anotaciones.map { EstructuraMKAnnotation(from: $0) })
         }
@@ -480,10 +507,12 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var coloniasConEstructuras: Set<String> = []
         var coloniaSemanaColors: [String: String] = [:]
         var mostrarRutas: Bool = false
+        var visitadasHoy: Set<UUID> = []
         var loadedPolygonCount = 0
         var loadedHighlightCount = 0
         var loadedSemanaVersion = -1
         var loadedSemanaColorCount = 0
+        var loadedVisitadasVersion = -1
         var isFirstLoad = true
         var initialRegionSet = false
         private var markerCache: [String: UIImage] = [:]
@@ -492,35 +521,44 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             self.onSelect = onSelect
         }
 
-        func markerImage(colorHex: String?) -> UIImage {
-            let key = colorHex ?? "default"
-            if let cached = markerCache[key] { return cached }
-            let fillColor: UIColor
-            if let hex = colorHex, let c = UIColor(hex: hex) {
-                fillColor = c
-            } else {
-                fillColor = UIColor(named: "Navy") ?? .systemBlue
+        func markerColor(for annotation: EstructuraMKAnnotation) -> UIColor {
+            if visitadasHoy.contains(annotation.estructura.id) {
+                return UIColor.systemGray3
             }
-            let image = Self.renderMarker(color: fillColor)
+            switch annotation.estado {
+            case .dañada:       return UIColor.systemRed
+            case .destruida:    return UIColor.systemGray
+            case .en_reparacion: return UIColor(named: "Navy")?.withAlphaComponent(0.5) ?? .systemOrange
+            case .inactiva:     return UIColor.systemGray4
+            case .activa:       return UIColor(named: "Navy") ?? .systemBlue
+            }
+        }
+
+        func markerImage(for annotation: EstructuraMKAnnotation) -> UIImage {
+            let visitada = visitadasHoy.contains(annotation.estructura.id)
+            let key = "\(annotation.estado.rawValue)_\(visitada)"
+            if let cached = markerCache[key] { return cached }
+            let image = Self.renderMarker(color: markerColor(for: annotation), visitada: visitada)
             markerCache[key] = image
             return image
         }
 
-        private static func renderMarker(color: UIColor) -> UIImage {
-            let size: CGFloat = 20
+        private static func renderMarker(color: UIColor, visitada: Bool) -> UIImage {
+            let size: CGFloat = visitada ? 14 : 20
             let canvas = CGSize(width: size + 3, height: size + 3)
             return UIGraphicsImageRenderer(size: canvas).image { ctx in
                 let rect = CGRect(x: 1.5, y: 1.5, width: size, height: size)
                 ctx.cgContext.setShadow(
-                    offset: CGSize(width: 0, height: 2), blur: 3,
-                    color: UIColor.black.withAlphaComponent(0.3).cgColor
+                    offset: CGSize(width: 0, height: 1), blur: visitada ? 1 : 3,
+                    color: UIColor.black.withAlphaComponent(visitada ? 0.15 : 0.3).cgColor
                 )
                 color.setFill()
                 ctx.cgContext.fillEllipse(in: rect)
                 ctx.cgContext.setShadow(offset: .zero, blur: 0, color: nil)
-                UIColor.white.setStroke()
-                ctx.cgContext.setLineWidth(2.5)
-                ctx.cgContext.strokeEllipse(in: rect.insetBy(dx: 1.25, dy: 1.25))
+                UIColor.white.withAlphaComponent(visitada ? 0.7 : 1).setStroke()
+                ctx.cgContext.setLineWidth(visitada ? 1.5 : 2.5)
+                ctx.cgContext.strokeEllipse(in: rect.insetBy(dx: visitada ? 0.75 : 1.25,
+                                                              dy: visitada ? 0.75 : 1.25))
             }
         }
 
@@ -563,12 +601,13 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            guard annotation is EstructuraMKAnnotation else { return nil }
+            guard let ann = annotation as? EstructuraMKAnnotation else { return nil }
             let id = "estructura"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                 ?? MKAnnotationView(annotation: annotation, reuseIdentifier: id)
             view.annotation = annotation
-            view.image = markerImage(colorHex: nil)
+            view.image = markerImage(for: ann)
+            view.zPriority = ann.estado == .dañada ? .max : .defaultUnselected
             return view
         }
 

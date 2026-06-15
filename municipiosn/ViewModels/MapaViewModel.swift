@@ -24,14 +24,21 @@ final class MapaViewModel {
 
     func cargar(userId: UUID? = nil) async {
         guard !isLoading else { return }
+
+        if estructuras.isEmpty, let cached = LocalDataCache.shared.cargar([EstructuraConParque].self, clave: "estructuras_mapa") {
+            estructuras = cached
+        }
+
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
         do {
-            estructuras = try await EstructurasService.shared.fetchEstructuras()
+            let nuevas = try await EstructurasService.shared.fetchEstructuras()
+            estructuras = nuevas
+            LocalDataCache.shared.guardar(nuevas, clave: "estructuras_mapa")
         } catch {
-            errorMessage = error.localizedDescription
+            if estructuras.isEmpty { errorMessage = error.localizedDescription }
         }
     }
 
