@@ -150,9 +150,9 @@ struct DashboardView: View {
                             color: Color(hex: "#dc2626")
                         )
                         KPICard(
-                            titulo: "Necesitan coroplast",
-                            valor: vm.kpi.necesitanCoroplast,
-                            icono: "printer.fill",
+                            titulo: "Coroplast del mes",
+                            valor: vm.kpi.coroplastMes,
+                            icono: "arrow.2.squarepath",
                             color: Color(hex: "#f59e0b")
                         )
                         KPICard(

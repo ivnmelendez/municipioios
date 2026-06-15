@@ -150,11 +150,11 @@ final class EstructurasService {
             .eq("activa", value: true)
             .execute()
             .value
-        async let coroplastCount = fetchNecesitanCoroplast()
+        async let coroplastCount = fetchCoroplastMes()
         async let semana = fetchResumenSemana()
 
         let (e, c) = try await (estructuras, campanas)
-        let nc = (try? await coroplastCount) ?? 0
+        let cm = (try? await coroplastCount) ?? 0
         let (visitas, cambios, danos) = (try? await semana) ?? (0, 0, 0)
 
         var kpi = KPIData()
@@ -164,7 +164,7 @@ final class EstructurasService {
         kpi.enReparacion = e.filter { $0.estado == .en_reparacion }.count
         kpi.inactivas = e.filter { $0.estado == .inactiva }.count
         kpi.campanasActivas = c.count
-        kpi.necesitanCoroplast = nc
+        kpi.coroplastMes = cm
         kpi.visitasSemana = visitas
         kpi.cambiosSemana = cambios
         kpi.danosSemana = danos
@@ -212,19 +212,24 @@ final class EstructurasService {
         return (visitasUnicas, cambios, danos)
     }
 
-    private func fetchNecesitanCoroplast() async throws -> Int {
-        struct Row: Codable { let estructuraId: UUID
-            enum CodingKeys: String, CodingKey { case estructuraId = "estructura_id" }
-        }
+    private func fetchCoroplastMes() async throws -> Int {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Monterrey")!
+        let hoy = Date()
+        let inicioMes = cal.dateInterval(of: .month, for: hoy)?.start ?? hoy
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withFullDate]
+
+        struct Row: Codable { let id: UUID }
         let rows: [Row] = try await client
             .from("rondines_estructuras")
-            .select("estructura_id, estructuras!inner(estado)")
-            .eq("accion", value: "reporte_dano")
-            .in("tipo_dano", values: ["coroplast_roto", "sin_coroplast"])
-            .eq("estructuras.estado", value: "dañada")
+            .select("id, rondines!inner(fecha)")
+            .eq("accion", value: "cambio_coroplast")
+            .gte("rondines.fecha", value: fmt.string(from: inicioMes))
+            .lte("rondines.fecha", value: fmt.string(from: hoy))
             .execute()
             .value
-        return Set(rows.map { $0.estructuraId }).count
+        return rows.count
     }
 
     func fetchCaras(estructuraId: UUID) async throws -> [Cara] {

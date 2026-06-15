@@ -7,7 +7,7 @@ struct KPIData {
     var enReparacion: Int = 0
     var inactivas: Int = 0
     var campanasActivas: Int = 0
-    var necesitanCoroplast: Int = 0
+    var coroplastMes: Int = 0
     var visitasSemana: Int = 0
     var cambiosSemana: Int = 0
     var danosSemana: Int = 0
