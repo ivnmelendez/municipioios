@@ -14,7 +14,6 @@ struct RegistrarCoroplastView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var paso: Paso = .accion
-    @State private var avanzando = true
     @State private var tipoSeleccionado: TipoAccionCoroplast?
     @State private var caras: [CaraParaCambio] = []
     @State private var notas: String = ""
@@ -50,13 +49,13 @@ struct RegistrarCoroplastView: View {
                     .padding(.bottom, 24)
 
                 ZStack {
-                    if paso == .accion      { pasoAccion.transition(transicion) }
-                    if paso == .campanas    { pasoCampanas.transition(transicion) }
-                    if paso == .fotoAntes   { pasoFoto(esAntes: true).transition(transicion) }
-                    if paso == .fotoDespues { pasoFoto(esAntes: false).transition(transicion) }
-                    if paso == .confirmar   { pasoConfirmar.transition(transicion) }
+                    if paso == .accion      { pasoAccion.transition(.opacity) }
+                    if paso == .campanas    { pasoCampanas.transition(.opacity) }
+                    if paso == .fotoAntes   { pasoFoto(esAntes: true).transition(.opacity) }
+                    if paso == .fotoDespues { pasoFoto(esAntes: false).transition(.opacity) }
+                    if paso == .confirmar   { pasoConfirmar.transition(.opacity) }
                 }
-                .animation(.easeInOut(duration: 0.28), value: paso)
+                .animation(.easeInOut(duration: 0.2), value: paso)
 
                 Spacer()
             }
@@ -88,12 +87,6 @@ struct RegistrarCoroplastView: View {
                 if exito { exitoOverlay }
             }
         }
-    }
-
-    private var transicion: AnyTransition {
-        avanzando
-            ? .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
-            : .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing))
     }
 
     // MARK: - Header
@@ -164,11 +157,8 @@ struct RegistrarCoroplastView: View {
                     titulo: "Reparar el coroplast",
                     subtitulo: "El coroplast está dañado pero no se cambia completo"
                 ) {
-                    withAnimation(.easeInOut(duration: 0.28)) {
-                        avanzando = true
-                        tipoSeleccionado = .reparacion
-                        paso = .fotoAntes
-                    }
+                    tipoSeleccionado = .reparacion
+                    withAnimation(.easeInOut(duration: 0.2)) { paso = .fotoAntes }
                 }
                 opcionButton(
                     icono: "arrow.2.squarepath",
@@ -176,11 +166,8 @@ struct RegistrarCoroplastView: View {
                     subtitulo: "Se instala coroplast nuevo con diseño diferente"
                 ) {
                     if caras.isEmpty { Task { await cargarCaras() } }
-                    withAnimation(.easeInOut(duration: 0.28)) {
-                        avanzando = true
-                        tipoSeleccionado = .cambio
-                        paso = .campanas
-                    }
+                    tipoSeleccionado = .cambio
+                    withAnimation(.easeInOut(duration: 0.2)) { paso = .campanas }
                 }
             }
             .padding(.horizontal, 20)
@@ -225,10 +212,7 @@ struct RegistrarCoroplastView: View {
                 }
 
                 botonContinuar(habilitado: todasCarasAsignadas) {
-                    withAnimation(.easeInOut(duration: 0.28)) {
-                        avanzando = true
-                        paso = .fotoAntes
-                    }
+                    withAnimation(.easeInOut(duration: 0.2)) { paso = .fotoAntes }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
@@ -263,10 +247,7 @@ struct RegistrarCoroplastView: View {
                 .padding(.horizontal, 20)
 
             botonContinuar(habilitado: tieneFoto) {
-                withAnimation(.easeInOut(duration: 0.28)) {
-                    avanzando = true
-                    paso = siguientePaso
-                }
+                withAnimation(.easeInOut(duration: 0.2)) { paso = siguientePaso }
             }
             .padding(.horizontal, 20)
         }
@@ -397,8 +378,7 @@ struct RegistrarCoroplastView: View {
     }
 
     private func retroceder() {
-        withAnimation(.easeInOut(duration: 0.28)) {
-            avanzando = false
+        withAnimation(.easeInOut(duration: 0.2)) {
             switch paso {
             case .accion:      break
             case .campanas:    paso = .accion

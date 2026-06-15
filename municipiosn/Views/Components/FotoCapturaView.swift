@@ -1,65 +1,65 @@
 import SwiftUI
 import PhotosUI
 
-// MARK: - Shared photo capture component (camera + library, pre-compressed)
-
 struct FotoCapturaView: View {
     @Binding var imagen: UIImage?
-    var altura: CGFloat = 240
-    var tint: Color = Color("Navy")
+    var altura: CGFloat = 220
 
-    @State private var mostrarOpciones = false
     @State private var mostrarCamara = false
     @State private var mostrarFototeca = false
     @State private var fotoItem: PhotosPickerItem?
 
     var body: some View {
-        Button { mostrarOpciones = true } label: {
-            ZStack {
-                if let img = imagen {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: altura)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(alignment: .bottomTrailing) {
-                            Label("Cambiar", systemImage: "camera.fill")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.black.opacity(0.45), in: Capsule())
-                                .padding(12)
-                        }
-                } else {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.secondarySystemGroupedBackground))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: altura)
-                        .overlay {
-                            VStack(spacing: 12) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 38))
-                                    .foregroundStyle(tint)
-                                Text("Agregar foto")
-                                    .font(.headline)
-                                    .foregroundStyle(tint)
-                                Text("Cámara o carrete")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                }
+        VStack(spacing: 12) {
+            // Preview
+            if let img = imagen {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: altura)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            } else {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: altura)
+                    .overlay {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color("Navy").opacity(0.3))
+                    }
             }
-        }
-        .buttonStyle(.plain)
-        .confirmationDialog("Agregar foto", isPresented: $mostrarOpciones, titleVisibility: .visible) {
-            Button("Tomar foto con cámara") { mostrarCamara = true }
-            Button("Elegir del carrete") { mostrarFototeca = true }
-            if imagen != nil {
-                Button("Eliminar foto", role: .destructive) { imagen = nil }
+
+            // Buttons
+            HStack(spacing: 10) {
+                fotoButton(
+                    icono: "camera.fill",
+                    titulo: imagen == nil ? "Cámara" : "Repetir con cámara"
+                ) {
+                    mostrarCamara = true
+                }
+
+                fotoButton(
+                    icono: "photo.on.rectangle",
+                    titulo: imagen == nil ? "Carrete" : "Cambiar del carrete"
+                ) {
+                    mostrarFototeca = true
+                }
+
+                if imagen != nil {
+                    Button {
+                        imagen = nil
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.red)
+                            .frame(width: 48, height: 48)
+                            .background(Color(.secondarySystemGroupedBackground),
+                                        in: RoundedRectangle(cornerRadius: 10))
+                    }
+                }
             }
         }
         .photosPicker(isPresented: $mostrarFototeca, selection: $fotoItem, matching: .images)
@@ -79,9 +79,25 @@ struct FotoCapturaView: View {
             .ignoresSafeArea()
         }
     }
+
+    private func fotoButton(icono: String, titulo: String, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            HStack(spacing: 8) {
+                Image(systemName: icono)
+                    .font(.body.weight(.medium))
+                Text(titulo)
+                    .font(.subheadline.weight(.medium))
+            }
+            .foregroundStyle(Color("Navy"))
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(Color(.secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 10))
+        }
+    }
 }
 
-// MARK: - Camera UIViewControllerRepresentable
+// MARK: - Camera picker
 
 private struct CameraPickerView: UIViewControllerRepresentable {
     let onCaptura: (UIImage) -> Void
@@ -104,9 +120,7 @@ private struct CameraPickerView: UIViewControllerRepresentable {
 
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let img = info[.originalImage] as? UIImage {
-                parent.onCaptura(img)
-            }
+            if let img = info[.originalImage] as? UIImage { parent.onCaptura(img) }
             parent.dismiss()
         }
 
@@ -116,25 +130,23 @@ private struct CameraPickerView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - UIImage compression
+// MARK: - Compression
 
 extension UIImage {
-    /// Resize to max 1600px on longest side, then encode at 0.75 quality.
-    /// Keeps field photos ~200–400 KB without visible quality loss.
     func preparadaParaSubir(maxDimension: CGFloat = 1600) -> UIImage {
         let escala = maxDimension / max(size.width, size.height)
         let base: UIImage
         if escala < 1 {
-            let nuevoTamaño = CGSize(width: (size.width * escala).rounded(),
-                                    height: (size.height * escala).rounded())
-            base = UIGraphicsImageRenderer(size: nuevoTamaño).image { _ in
-                draw(in: CGRect(origin: .zero, size: nuevoTamaño))
+            let s = CGSize(width: (size.width * escala).rounded(),
+                           height: (size.height * escala).rounded())
+            base = UIGraphicsImageRenderer(size: s).image { _ in
+                draw(in: CGRect(origin: .zero, size: s))
             }
         } else {
             base = self
         }
         guard let data = base.jpegData(compressionQuality: 0.75),
-              let resultado = UIImage(data: data) else { return base }
-        return resultado
+              let result = UIImage(data: data) else { return base }
+        return result
     }
 }

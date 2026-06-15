@@ -10,7 +10,6 @@ struct ReportarDanoView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var paso: Paso = .foto
-    @State private var avanzando = true
     @State private var notas: String = ""
     @State private var fotoUI: UIImage?
     @State private var isLoading = false
@@ -29,10 +28,10 @@ struct ReportarDanoView: View {
                     .padding(.bottom, 24)
 
                 ZStack {
-                    if paso == .foto      { pasoFoto.transition(transicion) }
-                    if paso == .confirmar { pasoConfirmar.transition(transicion) }
+                    if paso == .foto      { pasoFoto.transition(.opacity) }
+                    if paso == .confirmar { pasoConfirmar.transition(.opacity) }
                 }
-                .animation(.easeInOut(duration: 0.28), value: paso)
+                .animation(.easeInOut(duration: 0.2), value: paso)
 
                 Spacer()
             }
@@ -64,12 +63,6 @@ struct ReportarDanoView: View {
                 if exito { exitoOverlay }
             }
         }
-    }
-
-    private var transicion: AnyTransition {
-        avanzando
-            ? .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
-            : .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing))
     }
 
     // MARK: - Header
@@ -228,17 +221,11 @@ struct ReportarDanoView: View {
     }
 
     private func avanzarAConfirmar() {
-        withAnimation(.easeInOut(duration: 0.28)) {
-            avanzando = true
-            paso = .confirmar
-        }
+        withAnimation(.easeInOut(duration: 0.2)) { paso = .confirmar }
     }
 
     private func retroceder() {
-        withAnimation(.easeInOut(duration: 0.28)) {
-            avanzando = false
-            paso = .foto
-        }
+        withAnimation(.easeInOut(duration: 0.2)) { paso = .foto }
     }
 
     private func enviar() {
