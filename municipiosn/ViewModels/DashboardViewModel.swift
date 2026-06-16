@@ -31,8 +31,12 @@ final class DashboardViewModel {
             async let coloniasTask = EstructurasService.shared.fetchUsoColonias()
             async let estructurasTask = EstructurasService.shared.fetchEstructuras()
             async let coloniasDetalleTask = EstructurasService.shared.fetchColoniasConCampanas()
+            async let resumenMesTask = EstructurasService.shared.fetchResumenMes()
 
-            let nuevoKpi = try await kpiTask
+            var nuevoKpi = try await kpiTask
+            let (visitasMes, _, danosMes) = (try? await resumenMesTask) ?? (0, 0, 0)
+            nuevoKpi.visitasMes = visitasMes
+            nuevoKpi.danosMes = danosMes
             kpi = nuevoKpi
             LocalDataCache.shared.guardar(nuevoKpi, clave: "dashboard_kpi")
             usoCampanas = (try? await campanasTask) ?? []

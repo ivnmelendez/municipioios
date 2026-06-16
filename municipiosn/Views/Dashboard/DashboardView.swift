@@ -77,10 +77,15 @@ struct DashboardView: View {
                                 .intro(aparecer, delay: 0.04)
                         }
 
+                        // MARK: Cobertura mensual — hero ring
+                        CoberturaRingCard(kpi: vm.kpi)
+                            .padding(.horizontal, 20)
+                            .intro(aparecer, delay: 0.08)
+
                         // MARK: Esta semana
                         SemanaCard(kpi: vm.kpi)
                             .padding(.horizontal, 20)
-                            .intro(aparecer, delay: 0.10)
+                            .intro(aparecer, delay: 0.16)
 
                         // MARK: Inventario
                         InventarioCard(
@@ -508,6 +513,116 @@ private struct InventarioCard: View {
             )
         } else {
             return AnyView(contenido)
+        }
+    }
+}
+
+// MARK: - Cobertura Ring Card
+
+private struct CoberturaRingCard: View {
+    let kpi: KPIData
+    @State private var progreso: Double = 0
+    @State private var pulsando = false
+
+    private var pct: Double {
+        guard kpi.totalEstructuras > 0 else { return 0 }
+        return min(Double(kpi.visitasMes) / Double(kpi.totalEstructuras), 1.0)
+    }
+
+    private var pctInt: Int { Int(pct * 100) }
+
+    private var sinIncidentesMes: Bool { kpi.danosMes == 0 && kpi.isLoaded }
+
+    private var mensaje: String {
+        switch pct {
+        case 1.0:        return "¡Cobertura completa este mes!"
+        case 0.8..<1.0:  return "Excelente gestión este mes"
+        case 0.6..<0.8:  return "Buen ritmo del equipo"
+        case 0.4..<0.6:  return "El equipo está avanzando"
+        default:         return "Quedan estructuras por revisar"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // Ring + center
+            ZStack {
+                // Track
+                Circle()
+                    .stroke(Color("Navy").opacity(0.1), lineWidth: 18)
+                    .frame(width: 160, height: 160)
+
+                // Fill
+                Circle()
+                    .trim(from: 0, to: progreso)
+                    .stroke(
+                        pct >= 1.0
+                            ? LinearGradient(colors: [Color(hex: "#16a34a"), Color(hex: "#16a34a").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(colors: [Color("Navy"), Color("Navy").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        style: StrokeStyle(lineWidth: 18, lineCap: .round)
+                    )
+                    .frame(width: 160, height: 160)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(duration: 1.4, bounce: 0.1), value: progreso)
+
+                // Center content
+                VStack(spacing: 4) {
+                    Text("\(pctInt)%")
+                        .font(.system(size: 38, weight: .bold, design: .rounded))
+                        .foregroundStyle(pct >= 1.0 ? Color(hex: "#16a34a") : Color("Navy"))
+                        .contentTransition(.numericText())
+                        .scaleEffect(pulsando ? 1.06 : 1.0)
+                    Text("cobertura")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color("TextMuted"))
+                }
+            }
+
+            // Label + stats
+            VStack(spacing: 10) {
+                Text(mensaje)
+                    .font(.headline)
+                    .foregroundStyle(Color("Navy"))
+                    .multilineTextAlignment(.center)
+
+                Text("\(kpi.visitasMes) de \(kpi.totalEstructuras) estructuras revisadas este mes")
+                    .font(.subheadline)
+                    .foregroundStyle(Color("TextMuted"))
+                    .multilineTextAlignment(.center)
+
+                if sinIncidentesMes {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(Color(hex: "#16a34a"))
+                        Text("Mes sin incidentes")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color(hex: "#16a34a"))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color(hex: "#16a34a").opacity(0.1),
+                                in: Capsule())
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 20)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .onAppear {
+            progreso = pct
+            if pct >= 1.0 {
+                withAnimation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true).delay(1.5)) {
+                    pulsando = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    pulsando = false
+                }
+            }
+        }
+        .onChange(of: kpi.visitasMes) { _, _ in
+            withAnimation(.spring(duration: 1.2)) { progreso = pct }
         }
     }
 }
