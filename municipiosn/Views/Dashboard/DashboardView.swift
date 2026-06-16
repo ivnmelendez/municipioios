@@ -58,11 +58,6 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
         ScrollView {
-            // NavigationLink invisible para KPI drill-down
-            NavigationLink(destination: EstructurasListView(filtroInicial: filtroNavegacion)
-                .navigationDestination(for: EstructuraConParque.self) { e in
-                    EstructuraDetalleView(estructura: e)
-                }, isActive: $navegarEstructuras) { EmptyView() }
             VStack(alignment: .leading, spacing: 0) {
 
                 // MARK: Header
@@ -251,6 +246,12 @@ struct DashboardView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $navegarEstructuras) {
+            EstructurasListView(filtroInicial: filtroNavegacion)
+                .navigationDestination(for: EstructuraConParque.self) { e in
+                    EstructuraDetalleView(estructura: e)
+                }
+        }
         }
     }
 }
