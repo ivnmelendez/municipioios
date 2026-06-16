@@ -39,7 +39,7 @@ struct DashboardView: View {
         fmt.locale = Locale(identifier: "es_MX")
         fmt.timeZone = Self.monterrey
         fmt.dateFormat = "h:mm a"
-        return "Actualizado \(fmt.string(from: fecha))"
+        return fmt.string(from: fecha)
     }
 
     private var porcentajeOperativas: Double {
@@ -58,161 +58,65 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 24) {
 
                 // MARK: Header
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(saludo)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(Color("TextMuted"))
-                        Text(auth.displayName.isEmpty ? "Bienvenido" : auth.displayName.components(separatedBy: " ").first ?? auth.displayName)
-                            .font(.largeTitle.bold())
-                            .foregroundStyle(Color("Navy"))
-                        if !horaActualizacion.isEmpty {
-                            Text(horaActualizacion)
-                                .font(.caption)
-                                .foregroundStyle(Color("TextMuted").opacity(0.7))
-                                .padding(.top, 1)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button {
-                        mostrarConfiguracion = true
-                    } label: {
-                        Group {
-                            if let foto = fotoPerfil {
-                                foto
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(Circle())
-                            } else {
-                                Text(auth.initiales.isEmpty ? "?" : auth.initiales)
-                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Color("Navy"))
-                                    .frame(width: 40, height: 40)
-                            }
-                        }
-                    }
-                    .buttonStyle(.glass(.regular))
-                    .buttonBorderShape(.circle)
-                    .controlSize(.regular)
-                    .padding(.top, 4)
-                    .onAppear { cargarFotoPerfil() }
-                    .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                        cargarFotoPerfil()
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 24)
+                header
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
 
                 if vm.isLoading && !vm.kpi.isLoaded {
                     ProgressView()
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 80)
+                        .padding(.vertical, 60)
                 } else {
+                    VStack(alignment: .leading, spacing: 16) {
 
-                    // MARK: Inventario principal
-                    KPICardPrincipal(
-                        titulo: "Total de estructuras",
-                        valor: vm.kpi.totalEstructuras,
-                        icono: "square.stack.fill",
-                        porcentajeOperativas: vm.kpi.isLoaded ? porcentajeOperativas : nil
-                    )
-                    .padding(.horizontal, 20)
-                    .opacity(aparecer ? 1 : 0)
-                    .offset(y: aparecer ? 0 : 14)
-                    .animation(.spring(duration: 0.5, bounce: 0.15).delay(0.05), value: aparecer)
-
-                    // MARK: Estado
-                    DashboardSectionHeader(titulo: "Estado del inventario")
-                        .padding(.top, 20)
-                        .opacity(aparecer ? 1 : 0)
-                        .offset(y: aparecer ? 0 : 10)
-                        .animation(.spring(duration: 0.45).delay(0.15), value: aparecer)
-
-                    LazyVGrid(
-                        columns: [GridItem(.flexible()), GridItem(.flexible())],
-                        spacing: 10
-                    ) {
-                        KPICard(
-                            titulo: "Activas",
-                            valor: vm.kpi.activas,
-                            icono: "checkmark.circle.fill",
-                            color: Color(hex: "#16a34a"),
-                            accion: {
-                                filtroNavegacion = .activa
-                                navegarEstructuras = true
-                            }
-                        )
-                        KPICard(
-                            titulo: "Dañadas",
-                            valor: vm.kpi.dañadas,
-                            icono: "exclamationmark.triangle.fill",
-                            color: Color(hex: "#dc2626"),
-                            accion: {
-                                filtroNavegacion = .dañada
-                                navegarEstructuras = true
-                            }
-                        )
-                        KPICard(
-                            titulo: "Coroplast del mes",
-                            valor: vm.kpi.coroplastMes,
-                            icono: "arrow.2.squarepath",
-                            color: Color(hex: "#f59e0b")
-                        )
-                        KPICard(
-                            titulo: "Campañas activas",
-                            valor: vm.kpi.campanasActivas,
-                            icono: "megaphone.fill",
-                            color: Color("Navy")
-                        )
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    .opacity(aparecer ? 1 : 0)
-                    .offset(y: aparecer ? 0 : 14)
-                    .animation(.spring(duration: 0.5, bounce: 0.12).delay(0.22), value: aparecer)
-
-                    // MARK: Esta semana
-                    if vm.kpi.isLoaded {
-                        DashboardSectionHeader(titulo: "Esta semana")
-                            .padding(.top, 24)
-                            .opacity(aparecer ? 1 : 0)
-                            .offset(y: aparecer ? 0 : 10)
-                            .animation(.spring(duration: 0.45).delay(0.32), value: aparecer)
-
-                        ActividadSemanaCard(kpi: vm.kpi)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 10)
-                            .opacity(aparecer ? 1 : 0)
-                            .offset(y: aparecer ? 0 : 14)
-                            .animation(.spring(duration: 0.5, bounce: 0.12).delay(0.36), value: aparecer)
-                    }
-
-                    // MARK: Estadísticas
-                    if !vm.usoCampanas.isEmpty || vm.kpi.isLoaded {
-                        DashboardSectionHeader(titulo: "Estadísticas")
-                            .padding(.top, 24)
-                            .opacity(aparecer ? 1 : 0)
-                            .offset(y: aparecer ? 0 : 10)
-                            .animation(.spring(duration: 0.45).delay(0.40), value: aparecer)
-
-                        VStack(spacing: 10) {
-                            CampanasChartCard(datos: vm.usoCampanas)
-                            if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
-                                ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
-                            }
+                        // MARK: Alerta dañadas
+                        if vm.kpi.dañadas > 0 {
+                            alertaDañadas
+                                .padding(.horizontal, 20)
+                                .intro(aparecer, delay: 0.05)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                        .opacity(aparecer ? 1 : 0)
-                        .offset(y: aparecer ? 0 : 18)
-                        .animation(.spring(duration: 0.55, bounce: 0.1).delay(0.46), value: aparecer)
+
+                        // MARK: Esta semana (hero)
+                        VStack(alignment: .leading, spacing: 10) {
+                            label("Esta semana")
+                                .padding(.horizontal, 20)
+                            ActividadSemanaCard(kpi: vm.kpi)
+                                .padding(.horizontal, 20)
+                        }
+                        .intro(aparecer, delay: 0.1)
+
+                        // MARK: Estado del inventario (compact strip)
+                        VStack(alignment: .leading, spacing: 10) {
+                            label("Inventario")
+                                .padding(.horizontal, 20)
+                            estadoStrip
+                                .padding(.horizontal, 20)
+                        }
+                        .intro(aparecer, delay: 0.2)
+
+                        // MARK: Coroplast del mes
+                        coroplastMes
+                            .padding(.horizontal, 20)
+                            .intro(aparecer, delay: 0.28)
+
+                        // MARK: Estadísticas
+                        if !vm.usoCampanas.isEmpty || vm.kpi.isLoaded {
+                            VStack(alignment: .leading, spacing: 10) {
+                                label("Estadísticas")
+                                    .padding(.horizontal, 20)
+                                VStack(spacing: 10) {
+                                    CampanasChartCard(datos: vm.usoCampanas)
+                                    if !vm.usoColonias.isEmpty {
+                                        ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                            }
+                            .intro(aparecer, delay: 0.36)
+                        }
                     }
                 }
 
@@ -222,7 +126,7 @@ struct DashboardView: View {
                         systemImage: "exclamationmark.triangle",
                         description: Text(error)
                     )
-                    .padding(.top, 40)
+                    .padding(.horizontal, 20)
                 }
 
                 Spacer(minLength: 32)
@@ -254,53 +158,232 @@ struct DashboardView: View {
         }
         }
     }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(saludo)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color("TextMuted"))
+                Text(auth.displayName.isEmpty ? "Bienvenido" : auth.displayName.components(separatedBy: " ").first ?? auth.displayName)
+                    .font(.title.bold())
+                    .foregroundStyle(Color("Navy"))
+                Text(fechaFormateada)
+                    .font(.caption)
+                    .foregroundStyle(Color("TextMuted").opacity(0.8))
+                    .padding(.top, 1)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 6) {
+                Button { mostrarConfiguracion = true } label: {
+                    Group {
+                        if let foto = fotoPerfil {
+                            foto.resizable().scaledToFill()
+                                .frame(width: 40, height: 40).clipShape(Circle())
+                        } else {
+                            Text(auth.initiales.isEmpty ? "?" : auth.initiales)
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color("Navy"))
+                                .frame(width: 40, height: 40)
+                        }
+                    }
+                }
+                .buttonStyle(.glass(.regular))
+                .buttonBorderShape(.circle)
+                .controlSize(.regular)
+                .onAppear { cargarFotoPerfil() }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in cargarFotoPerfil() }
+
+                if !horaActualizacion.isEmpty {
+                    Text("↻ \(horaActualizacion)")
+                        .font(.caption2)
+                        .foregroundStyle(Color("TextMuted").opacity(0.6))
+                }
+            }
+        }
+    }
+
+    // MARK: - Alerta dañadas
+
+    private var alertaDañadas: some View {
+        Button {
+            filtroNavegacion = .dañada
+            navegarEstructuras = true
+            HapticService.impacto(.medium)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color(hex: "#dc2626"))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(vm.kpi.dañadas) estructura\(vm.kpi.dañadas == 1 ? "" : "s") dañada\(vm.kpi.dañadas == 1 ? "" : "s")")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color(hex: "#dc2626"))
+                    Text("Requieren atención")
+                        .font(.caption)
+                        .foregroundStyle(Color(hex: "#dc2626").opacity(0.7))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(hex: "#dc2626").opacity(0.5))
+            }
+            .padding(16)
+            .background(Color(hex: "#dc2626").opacity(0.08),
+                        in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(hex: "#dc2626").opacity(0.2), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Estado strip
+
+    private var estadoStrip: some View {
+        HStack(spacing: 10) {
+            estadoChip(
+                valor: vm.kpi.activas,
+                label: "Activas",
+                color: Color(hex: "#16a34a"),
+                accion: { filtroNavegacion = .activa; navegarEstructuras = true }
+            )
+            estadoChip(
+                valor: vm.kpi.dañadas,
+                label: "Dañadas",
+                color: Color(hex: "#dc2626"),
+                accion: { filtroNavegacion = .dañada; navegarEstructuras = true }
+            )
+            estadoChip(
+                valor: vm.kpi.campanasActivas,
+                label: "Campañas",
+                color: Color("Navy"),
+                accion: nil
+            )
+        }
+    }
+
+    private func estadoChip(valor: Int, label: String, color: Color, accion: (() -> Void)?) -> some View {
+        let content = VStack(spacing: 4) {
+            Text("\(valor)")
+                .font(.title2.bold())
+                .foregroundStyle(Color("Navy"))
+                .contentTransition(.numericText())
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+        if let accion {
+            return AnyView(
+                Button { accion(); HapticService.seleccion() } label: { content }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(label): \(valor). Toca para ver lista.")
+            )
+        } else {
+            return AnyView(content)
+        }
+    }
+
+    // MARK: - Coroplast del mes
+
+    private var coroplastMes: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "arrow.2.squarepath")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color("Navy"))
+                .padding(10)
+                .background(Color("Navy").opacity(0.1),
+                            in: RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Coroplast cambiados")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                Text("Este mes")
+                    .font(.caption)
+                    .foregroundStyle(Color("TextMuted"))
+            }
+            Spacer()
+            Text("\(vm.kpi.coroplastMes)")
+                .font(.title.bold())
+                .foregroundStyle(Color("Navy"))
+                .contentTransition(.numericText())
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    // MARK: - Helpers
+
+    private func label(_ texto: String) -> some View {
+        Text(texto)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color("TextMuted"))
+    }
 }
+
+// MARK: - Animación helper
+
+private extension View {
+    func intro(_ aparecer: Bool, delay: Double) -> some View {
+        self
+            .opacity(aparecer ? 1 : 0)
+            .offset(y: aparecer ? 0 : 12)
+            .animation(.spring(duration: 0.45, bounce: 0.1).delay(delay), value: aparecer)
+    }
+}
+
+// MARK: - Esta semana card
 
 private struct ActividadSemanaCard: View {
     let kpi: KPIData
 
     var body: some View {
-        VStack(spacing: 0) {
-            fila(
+        HStack(spacing: 0) {
+            statCol(
                 icono: "checkmark.circle.fill",
                 color: Color(hex: "#16a34a"),
-                titulo: "Estructuras revisadas",
-                valor: kpi.visitasSemana
+                valor: kpi.visitasSemana,
+                label: "Revisadas"
             )
-            Divider().padding(.leading, 44)
-            fila(
-                icono: "arrow.triangle.2.circlepath",
+            Divider().frame(maxHeight: 56)
+            statCol(
+                icono: "arrow.2.squarepath",
                 color: Color("Navy"),
-                titulo: "Cambios realizados",
-                valor: kpi.cambiosSemana
+                valor: kpi.cambiosSemana,
+                label: "Coroplast"
             )
-            Divider().padding(.leading, 44)
-            fila(
+            Divider().frame(maxHeight: 56)
+            statCol(
                 icono: "exclamationmark.triangle.fill",
                 color: Color(hex: "#dc2626"),
-                titulo: "Daños reportados",
-                valor: kpi.danosSemana
+                valor: kpi.danosSemana,
+                label: "Daños"
             )
         }
-        .padding(20)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.vertical, 20)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
-    private func fila(icono: String, color: Color, titulo: String, valor: Int) -> some View {
-        HStack(spacing: 12) {
+    private func statCol(icono: String, color: Color, valor: Int, label: String) -> some View {
+        VStack(spacing: 6) {
             Image(systemName: icono)
-                .font(.title3)
+                .font(.body.weight(.semibold))
                 .foregroundStyle(color)
-                .frame(width: 32)
-            Text(titulo)
-                .font(.body)
-                .foregroundStyle(.primary)
-            Spacer()
             Text("\(valor)")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(color)
-                .monospacedDigit()
+                .font(.title.bold())
+                .foregroundStyle(Color("Navy"))
+                .contentTransition(.numericText())
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
         }
-        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
     }
 }
