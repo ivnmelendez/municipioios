@@ -4,6 +4,8 @@ struct CampoAdminView: View {
     @Binding var badge: Int
     @State private var seccion: Seccion = .visitas
     @State private var resumen = CampoAdminViewModel()
+    @State private var reporteTexto: String? = nil
+    @State private var generandoReporte = false
 
     enum Seccion: String, CaseIterable {
         case visitas    = "Visitas"
@@ -46,13 +48,89 @@ struct CampoAdminView: View {
             .navigationTitle("Campo")
             .navigationBarTitleDisplayMode(.large)
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await generarReporte() }
+                } label: {
+                    if generandoReporte {
+                        ProgressView().scaleEffect(0.75)
+                    } else {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+                .disabled(generandoReporte)
+            }
+        }
+        .sheet(isPresented: Binding(get: { reporteTexto != nil }, set: { if !$0 { reporteTexto = nil } })) {
+            if let texto = reporteTexto {
+                ShareLink(item: texto) {
+                    Label("Compartir reporte", systemImage: "square.and.arrow.up")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                }
+                .presentationDetents([.height(140)])
+            }
+        }
         .onChange(of: seccion) { _, new in
             if new == .coroplast { badge = 0 }
+            HapticService.seleccion()
         }
         .onReceive(NotificationCenter.default.publisher(for: .abrirRondines)) { _ in
             seccion = .visitas
         }
         .task { await resumen.cargar() }
+    }
+
+    // MARK: - Reporte
+
+    private func generarReporte() async {
+        generandoReporte = true
+        defer { generandoReporte = false }
+
+        let (visitas, cambios, danos) = (try? await EstructurasService.shared.fetchResumenMes()) ?? (0, 0, 0)
+        let pendientes = (try? await IntervencionesService.shared.fetchDanos(filtro: .mes))?.filter {
+            $0.estructuras?.estado == .dañada
+        } ?? []
+
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "es_MX")
+        fmt.dateFormat = "MMMM yyyy"
+        let mes = fmt.string(from: Date()).capitalized
+
+        let fmtHora = DateFormatter()
+        fmtHora.locale = Locale(identifier: "es_MX")
+        fmtHora.dateFormat = "d 'de' MMMM 'de' yyyy, h:mm a"
+
+        var lineas = [
+            "MUNICIPIO DE SAN NICOLÁS DE LOS GARZA",
+            "Reporte de campo — \(mes)",
+            "Generado: \(fmtHora.string(from: Date()))",
+            "",
+            "────────────────────────────────",
+            "ACTIVIDAD DEL MES",
+            "  • Estructuras revisadas: \(visitas)",
+            "  • Coroplast cambiados:   \(cambios)",
+            "  • Daños reportados:      \(danos)",
+        ]
+
+        if !pendientes.isEmpty {
+            lineas += ["", "────────────────────────────────",
+                       "ESTRUCTURAS DAÑADAS PENDIENTES (\(pendientes.count))"]
+            for d in pendientes {
+                let num    = d.estructuras?.numero ?? "—"
+                let parque = d.estructuras?.parques?.nombre ?? ""
+                let fecha  = d.createdAt.formatted(date: .abbreviated, time: .omitted)
+                lineas.append("  • \(num) — \(parque) (\(fecha))")
+            }
+        }
+
+        lineas += ["", "────────────────────────────────",
+                   "San Nicolás de los Garza, NL"]
+
+        reporteTexto = lineas.joined(separator: "\n")
+        HapticService.impacto(.light)
     }
 
     // MARK: - Stats bar

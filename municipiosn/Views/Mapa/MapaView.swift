@@ -352,6 +352,7 @@ struct MapaView: View {
                     yaVisitada: vm.visitadasHoy.contains(estructura.id),
                     onOk: userId != nil ? {
                         guard let uid = userId else { return }
+                        HapticService.impacto(.medium)
                         vm.visitadasHoy.insert(estructura.id)
                         vm.mostrarDetalle = false
                         Task {

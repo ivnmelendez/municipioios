@@ -64,6 +64,11 @@ struct HistorialCampoView: View {
                     }
                 }
                 .padding(.vertical, 2)
+                .scrollTransition(.animated.threshold(.visible(0.1))) { content, phase in
+                    content
+                        .opacity(phase.isIdentity ? 1 : 0)
+                        .offset(y: phase.isIdentity ? 0 : 6)
+                }
             }
         } header: {
             HStack {

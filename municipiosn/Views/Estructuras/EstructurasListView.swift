@@ -435,6 +435,11 @@ struct EstructuraDetalleView: View {
 
                             ForEach(historial) { item in
                                 HistorialRow(item: item)
+                                    .scrollTransition(.animated.threshold(.visible(0.1))) { content, phase in
+                                        content
+                                            .opacity(phase.isIdentity ? 1 : 0)
+                                            .offset(y: phase.isIdentity ? 0 : 8)
+                                    }
                                 if item.id != historial.last?.id {
                                     Divider().padding(.leading, 52)
                                 }

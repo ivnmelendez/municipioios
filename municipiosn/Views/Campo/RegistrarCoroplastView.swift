@@ -335,6 +335,7 @@ struct RegistrarCoroplastView: View {
             .padding(40)
         }
         .onAppear {
+            if icono == "wifi.slash" { HapticService.advertencia() } else { HapticService.exito() }
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 onCompletion?()
                 dismiss()
