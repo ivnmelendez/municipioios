@@ -527,6 +527,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var isFirstLoad = true
         var initialRegionSet = false
         private var markerCache: [String: UIImage] = [:]
+        private var deberiaAgrupar = true
 
         init(onSelect: @escaping (EstructuraConParque) -> Void) {
             self.onSelect = onSelect
@@ -628,7 +629,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 ?? MKAnnotationView(annotation: annotation, reuseIdentifier: id)
             view.annotation = annotation
             view.image = markerImage(for: ann)
-            view.clusteringIdentifier = "estructura"
+            view.clusteringIdentifier = deberiaAgrupar ? "estructura" : nil
             view.zPriority = ann.estado == .dañada ? .max : .defaultUnselected
             return view
         }
@@ -641,6 +642,17 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     view.alpha = 1
                 }
             }
+        }
+
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            // Disable clustering when zoomed in to street level (~200m span)
+            let nuevaAgrupacion = mapView.region.span.latitudeDelta > 0.008
+            guard nuevaAgrupacion != deberiaAgrupar else { return }
+            deberiaAgrupar = nuevaAgrupacion
+            markerCache.removeAll()
+            let pins = mapView.annotations.filter { !($0 is MKUserLocation) }
+            mapView.removeAnnotations(pins)
+            mapView.addAnnotations(pins)
         }
 
         func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
