@@ -68,6 +68,17 @@ final class IntervencionesService {
         return try await fetchIntervenciones(acciones: ["reporte_dano"], filtro: filtro)
     }
 
+    func fetchHistorial(estructuraId: UUID, limit: Int = 8) async throws -> [IntervencionCompleta] {
+        try await client
+            .from("rondines_estructuras")
+            .select(selectFields)
+            .eq("estructura_id", value: estructuraId.uuidString)
+            .order("created_at", ascending: false)
+            .limit(limit)
+            .execute()
+            .value
+    }
+
     private func fetchIntervenciones(acciones: [String], filtro: FiltroFecha) async throws -> [IntervencionCompleta] {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]

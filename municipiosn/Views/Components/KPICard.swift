@@ -6,16 +6,23 @@ struct KPICard: View {
     let icono: String
     let color: Color
     var subtitulo: String? = nil
+    var accion: (() -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
+        let card = VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
                 Image(systemName: icono)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(color)
                     .padding(9)
                     .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 Spacer()
+                if accion != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color("TextMuted").opacity(0.5))
+                        .padding(.top, 4)
+                }
             }
 
             Spacer(minLength: 14)
@@ -41,6 +48,13 @@ struct KPICard: View {
         .frame(maxWidth: .infinity, minHeight: 148, alignment: .leading)
         .padding(16)
         .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+        if let accion {
+            Button(action: accion) { card }
+                .buttonStyle(.plain)
+        } else {
+            card
+        }
     }
 }
 

@@ -8,6 +8,8 @@ struct DashboardView: View {
     @State private var aparecer = false
     @State private var ultimaActualizacion: Date? = nil
     @State private var fotoPerfil: Image? = nil
+    @State private var filtroNavegacion: EstadoEstructura? = nil
+    @State private var navegarEstructuras = false
 
     private static let monterrey = TimeZone(identifier: "America/Monterrey")!
 
@@ -56,6 +58,11 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
         ScrollView {
+            // NavigationLink invisible para KPI drill-down
+            NavigationLink(destination: EstructurasListView(filtroInicial: filtroNavegacion)
+                .navigationDestination(for: EstructuraConParque.self) { e in
+                    EstructuraDetalleView(estructura: e)
+                }, isActive: $navegarEstructuras) { EmptyView() }
             VStack(alignment: .leading, spacing: 0) {
 
                 // MARK: Header
@@ -141,13 +148,21 @@ struct DashboardView: View {
                             titulo: "Activas",
                             valor: vm.kpi.activas,
                             icono: "checkmark.circle.fill",
-                            color: Color(hex: "#16a34a")
+                            color: Color(hex: "#16a34a"),
+                            accion: {
+                                filtroNavegacion = .activa
+                                navegarEstructuras = true
+                            }
                         )
                         KPICard(
                             titulo: "Dañadas",
                             valor: vm.kpi.dañadas,
                             icono: "exclamationmark.triangle.fill",
-                            color: Color(hex: "#dc2626")
+                            color: Color(hex: "#dc2626"),
+                            accion: {
+                                filtroNavegacion = .dañada
+                                navegarEstructuras = true
+                            }
                         )
                         KPICard(
                             titulo: "Coroplast del mes",

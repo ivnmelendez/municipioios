@@ -18,6 +18,15 @@ struct ContentView: View {
                     MapaView()
                 }
 
+                Tab("Estructuras", systemImage: "square.stack.fill", value: "estructuras") {
+                    NavigationStack {
+                        EstructurasListView()
+                            .navigationDestination(for: EstructuraConParque.self) { e in
+                                EstructuraDetalleView(estructura: e)
+                            }
+                    }
+                }
+
                 Tab("Campo", systemImage: "person.2.fill", value: "campo") {
                     CampoAdminView(badge: $campoBadge)
                 }
