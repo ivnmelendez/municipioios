@@ -476,37 +476,30 @@ struct EstructuraDetalleView: View {
 private struct HistorialRow: View {
     let item: IntervencionCompleta
 
-    private var (icono, label, color): (String, String, Color) {
+    private var accionInfo: (icono: String, label: String, color: Color) {
         switch item.accion {
-        case .revision:
-            return ("checkmark.circle.fill", "Revisión", Color(hex: "#16a34a"))
-        case .cambio_coroplast:
-            return ("arrow.2.squarepath", "Cambio de coroplast", Color("Navy"))
-        case .reparacion_coroplast:
-            return ("wrench.and.screwdriver.fill", "Reparación de coroplast", Color("Navy"))
-        case .reporte_dano:
-            return ("exclamationmark.triangle.fill", "Daño reportado", Color(hex: "#dc2626"))
-        case .reactivacion:
-            return ("arrow.clockwise", "Reactivación", Color(hex: "#16a34a"))
-        case .instalacion:
-            return ("plus.circle.fill", "Instalación", Color("Navy"))
-        case .cambio_campana:
-            return ("megaphone.fill", "Cambio de campaña", Color("Navy"))
-        case .reparacion:
-            return ("hammer.fill", "Reparación", Color("Navy"))
+        case .revision:         return ("checkmark.circle.fill",       "Revisión",              Color(hex: "#16a34a"))
+        case .cambio_coroplast: return ("arrow.2.squarepath",          "Cambio de coroplast",   Color("Navy"))
+        case .reparacion_coroplast: return ("wrench.and.screwdriver.fill", "Reparación de coroplast", Color("Navy"))
+        case .reporte_dano:     return ("exclamationmark.triangle.fill","Daño reportado",        Color(hex: "#dc2626"))
+        case .reactivacion:     return ("arrow.clockwise",             "Reactivación",          Color(hex: "#16a34a"))
+        case .instalacion:      return ("plus.circle.fill",            "Instalación",           Color("Navy"))
+        case .cambio_campana:   return ("megaphone.fill",              "Cambio de campaña",     Color("Navy"))
+        case .reparacion:       return ("hammer.fill",                 "Reparación",            Color("Navy"))
         }
     }
 
     var body: some View {
+        let info = accionInfo
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icono)
+            Image(systemName: info.icono)
                 .font(.title3)
-                .foregroundStyle(color)
+                .foregroundStyle(info.color)
                 .frame(width: 36)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(label)
+                Text(info.label)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
 
