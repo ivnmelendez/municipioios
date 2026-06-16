@@ -87,6 +87,22 @@ struct DashboardView: View {
                             .padding(.horizontal, 20)
                             .intro(aparecer, delay: 0.16)
 
+                        // MARK: Datos del municipio
+                        if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
+                            seccion("Datos del municipio") {
+                                VStack(spacing: 12) {
+                                    ResumenMunicipalCard(
+                                        kpi: vm.kpi,
+                                        coloniasConEstructuras: vm.coloniasConEstructuras
+                                    )
+                                    if !vm.usoColonias.isEmpty {
+                                        TopColoniasCard(colonias: vm.usoColonias)
+                                    }
+                                }
+                            }
+                            .intro(aparecer, delay: 0.22)
+                        }
+
                         // MARK: Inventario
                         InventarioCard(
                             kpi: vm.kpi,
@@ -514,6 +530,171 @@ private struct InventarioCard: View {
         } else {
             return AnyView(contenido)
         }
+    }
+}
+
+// MARK: - Resumen Municipal Card
+
+private struct ResumenMunicipalCard: View {
+    let kpi: KPIData
+    let coloniasConEstructuras: Int
+
+    private var pctOperativas: Int {
+        guard kpi.totalEstructuras > 0 else { return 0 }
+        return Int(Double(kpi.activas) / Double(kpi.totalEstructuras) * 100)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                celda(
+                    valor: "\(kpi.totalEstructuras)",
+                    label: "Estructuras",
+                    icono: "square.stack.fill",
+                    color: Color("Navy"),
+                    borde: [.trailing, .bottom]
+                )
+                celda(
+                    valor: "\(kpi.campanasActivas)",
+                    label: "Campañas activas",
+                    icono: "megaphone.fill",
+                    color: Color("Navy"),
+                    borde: [.bottom]
+                )
+            }
+            HStack(spacing: 0) {
+                celda(
+                    valor: "\(coloniasConEstructuras)",
+                    label: "Colonias cubiertas",
+                    icono: "map.fill",
+                    color: Color("Navy"),
+                    borde: [.trailing]
+                )
+                celda(
+                    valor: "\(pctOperativas)%",
+                    label: "Operativas",
+                    icono: "checkmark.circle.fill",
+                    color: Color(hex: "#16a34a"),
+                    borde: []
+                )
+            }
+        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private func celda(valor: String, label: String, icono: String, color: Color, borde: Edge.Set) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Image(systemName: icono)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(color.opacity(0.7))
+            Text(valor)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundStyle(Color("Navy"))
+                .contentTransition(.numericText())
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .overlay(alignment: .trailing) {
+            if borde.contains(.trailing) {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.07))
+                    .frame(width: 1)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if borde.contains(.bottom) {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.07))
+                    .frame(height: 1)
+            }
+        }
+    }
+}
+
+// MARK: - Top Colonias Card
+
+private struct TopColoniasCard: View {
+    let colonias: [UsoColonia]
+    @State private var animado = false
+
+    private var top5: [UsoColonia] {
+        Array(colonias.sorted { $0.totalEstructuras > $1.totalEstructuras }.prefix(5))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Estructuras por colonia")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Spacer()
+                Text("Top 5")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color("Navy").opacity(0.5))
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color("Navy").opacity(0.07), in: Capsule())
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            let maxVal = top5.first?.totalEstructuras ?? 1
+
+            ForEach(Array(top5.enumerated()), id: \.element.id) { index, colonia in
+                fila(colonia: colonia, max: maxVal, posicion: index + 1)
+                if colonia.id != top5.last?.id {
+                    Divider().padding(.leading, 20)
+                }
+            }
+
+            Spacer().frame(height: 8)
+        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onAppear { withAnimation(.spring(duration: 0.9, bounce: 0.05).delay(0.3)) { animado = true } }
+    }
+
+    private func fila(colonia: UsoColonia, max: Int, posicion: Int) -> some View {
+        HStack(spacing: 12) {
+            Text("\(posicion)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(posicion == 1 ? Color(hex: "#f59e0b") : Color("TextMuted").opacity(0.5))
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(colonia.nombre)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Spacer()
+                    Text("\(colonia.totalEstructuras)")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color("Navy"))
+                        .monospacedDigit()
+                }
+
+                GeometryReader { geo in
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color("Navy").opacity(0.08))
+                        .overlay(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    posicion == 1
+                                    ? LinearGradient(colors: [Color("Navy"), Color("Navy").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+                                    : LinearGradient(colors: [Color("Navy").opacity(0.6), Color("Navy").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
+                                )
+                                .frame(width: animado ? geo.size.width * (Double(colonia.totalEstructuras) / Double(max)) : 0)
+                        }
+                }
+                .frame(height: 6)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
     }
 }
 
