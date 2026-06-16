@@ -89,15 +89,17 @@ struct DashboardView: View {
 
                         // MARK: Datos del municipio
                         if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
-                            seccion("Datos del municipio") {
-                                VStack(spacing: 12) {
-                                    ResumenMunicipalCard(
-                                        kpi: vm.kpi,
-                                        coloniasConEstructuras: vm.coloniasConEstructuras
-                                    )
-                                    if !vm.usoColonias.isEmpty {
-                                        TopColoniasCard(colonias: vm.usoColonias)
-                                    }
+                            VStack(alignment: .leading, spacing: 12) {
+                                sectionLabel("Datos del municipio")
+                                    .padding(.horizontal, 20)
+                                ResumenMunicipalCard(
+                                    kpi: vm.kpi,
+                                    coloniasConEstructuras: vm.coloniasConEstructuras
+                                )
+                                .padding(.horizontal, 20)
+                                if !vm.usoColonias.isEmpty {
+                                    TopColoniasCard(colonias: vm.usoColonias)
+                                        .padding(.horizontal, 20)
                                 }
                             }
                             .intro(aparecer, delay: 0.22)
