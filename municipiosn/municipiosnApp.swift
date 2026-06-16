@@ -40,6 +40,7 @@ struct municipiosnApp: App {
             directory: nil
         )
         UNUserNotificationCenter.current().delegate = NotificacionDelegate.shared
+        BackgroundRefreshService.shared.registrar()
     }
 
     var body: some Scene {
@@ -55,6 +56,10 @@ struct municipiosnApp: App {
                         .environment(authVM)
                         .task { await RealtimeService.shared.subscribir() }
                         .task { await OfflineQueueService.shared.procesarQueue() }
+                        .task { BackgroundRefreshService.shared.programar() }
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                            BackgroundRefreshService.shared.programar()
+                        }
                         .task {
                             _ = try? await UNUserNotificationCenter.current().requestAuthorization(
                                 options: [.alert, .sound, .badge]
