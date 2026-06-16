@@ -45,6 +45,18 @@ struct CampoRootView: View {
                     .padding(.vertical, 6)
                 }
 
+                let pendientes = OfflineQueueService.shared.pendientes.count
+                if pendientes > 0 {
+                    Section("Sin sincronizar") {
+                        Label {
+                            Text("\(pendientes) \(pendientes == 1 ? "acción pendiente" : "acciones pendientes")")
+                        } icon: {
+                            Image(systemName: "wifi.slash")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+
                 Section {
                     Button(role: .destructive) {
                         Task { await authVM.signOut() }

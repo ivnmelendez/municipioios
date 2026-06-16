@@ -135,5 +135,8 @@ struct LoginView: View {
         }
         .onAppear { appeared = true }
         .animation(.default, value: vm.errorMessage)
+        .onChange(of: vm.errorMessage) { _, error in
+            if error != nil { HapticService.error() }
+        }
     }
 }

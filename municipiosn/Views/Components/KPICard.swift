@@ -8,6 +8,8 @@ struct KPICard: View {
     var subtitulo: String? = nil
     var accion: (() -> Void)? = nil
 
+    @ScaledMetric(relativeTo: .largeTitle) private var valorSize: CGFloat = 46
+
     var body: some View {
         let card = VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
@@ -28,7 +30,7 @@ struct KPICard: View {
             Spacer(minLength: 14)
 
             Text("\(valor)")
-                .font(.system(size: 46, weight: .bold, design: .rounded))
+                .font(.system(size: valorSize, weight: .bold, design: .rounded))
                 .foregroundStyle(Color("Navy"))
                 .contentTransition(.numericText())
 
@@ -52,8 +54,10 @@ struct KPICard: View {
         if let accion {
             Button(action: accion) { card }
                 .buttonStyle(.plain)
+                .accessibilityLabel("\(titulo): \(valor). Toca para ver lista.")
         } else {
             card
+                .accessibilityLabel("\(titulo): \(valor)")
         }
     }
 }
@@ -132,6 +136,8 @@ struct KPICardPrincipal: View {
     let icono: String
     var porcentajeOperativas: Double? = nil
 
+    @ScaledMetric(relativeTo: .largeTitle) private var valorSize: CGFloat = 72
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Image(systemName: icono)
@@ -145,7 +151,7 @@ struct KPICardPrincipal: View {
                     .foregroundStyle(Color("TextMuted"))
 
                 Text("\(valor)")
-                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .font(.system(size: valorSize, weight: .bold, design: .rounded))
                     .foregroundStyle(Color("Navy"))
                     .contentTransition(.numericText())
 
