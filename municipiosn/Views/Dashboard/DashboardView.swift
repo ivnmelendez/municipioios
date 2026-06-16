@@ -105,22 +105,6 @@ struct DashboardView: View {
                             .intro(aparecer, delay: 0.22)
                         }
 
-                        // MARK: Inventario
-                        InventarioCard(
-                            kpi: vm.kpi,
-                            onActivas: {
-                                HapticService.seleccion()
-                                filtroNavegacion = .activa
-                                navegarEstructuras = true
-                            },
-                            onDañadas: {
-                                HapticService.seleccion()
-                                filtroNavegacion = .dañada
-                                navegarEstructuras = true
-                            }
-                        )
-                        .padding(.horizontal, 20)
-                        .intro(aparecer, delay: 0.18)
 
                         // MARK: Coroplast del mes
                         coroplastMes
