@@ -444,8 +444,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         mapView.showsUserLocation = true
         mapView.showsCompass = false
         mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .realistic)
-        mapView.register(MKMarkerAnnotationView.self,
-                         forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
         mapController.mapView = mapView
         return mapView
     }
@@ -527,7 +525,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var isFirstLoad = true
         var initialRegionSet = false
         private var markerCache: [String: UIImage] = [:]
-        private var deberiaAgrupar = true
 
         init(onSelect: @escaping (EstructuraConParque) -> Void) {
             self.onSelect = onSelect
@@ -613,23 +610,12 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            if let cluster = annotation as? MKClusterAnnotation {
-                let view = mapView.dequeueReusableAnnotationView(
-                    withIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier,
-                    for: cluster
-                ) as? MKMarkerAnnotationView
-                view?.markerTintColor = UIColor(named: "Navy")
-                view?.glyphText = "\(cluster.memberAnnotations.count)"
-                return view
-            }
-
             guard let ann = annotation as? EstructuraMKAnnotation else { return nil }
             let id = "estructura"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                 ?? MKAnnotationView(annotation: annotation, reuseIdentifier: id)
             view.annotation = annotation
             view.image = markerImage(for: ann)
-            view.clusteringIdentifier = deberiaAgrupar ? "estructura" : nil
             view.zPriority = ann.estado == .dañada ? .max : .defaultUnselected
             return view
         }
@@ -644,27 +630,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
         }
 
-        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            // Disable clustering when zoomed in to street level (~200m span)
-            let nuevaAgrupacion = mapView.region.span.latitudeDelta > 0.008
-            guard nuevaAgrupacion != deberiaAgrupar else { return }
-            deberiaAgrupar = nuevaAgrupacion
-            markerCache.removeAll()
-            let pins = mapView.annotations.filter { !($0 is MKUserLocation) }
-            mapView.removeAnnotations(pins)
-            mapView.addAnnotations(pins)
-        }
-
         func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
-            if let cluster = annotation as? MKClusterAnnotation {
-                let rects = cluster.memberAnnotations.map {
-                    MKMapRect(origin: MKMapPoint($0.coordinate), size: MKMapSize(width: 1, height: 1))
-                }
-                let union = rects.dropFirst().reduce(rects[0]) { $0.union($1) }
-                mapView.setVisibleMapRect(union.insetBy(dx: -5000, dy: -5000), animated: true)
-                mapView.deselectAnnotation(cluster, animated: true)
-                return
-            }
             mapView.deselectAnnotation(annotation, animated: false)
             guard let ann = annotation as? EstructuraMKAnnotation else { return }
             onSelect(ann.estructura)
