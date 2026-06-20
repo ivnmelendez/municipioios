@@ -44,9 +44,22 @@
 		9E9150FE2FD3C4A9001F4543 /* municipiosnUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = municipiosnUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9EDD23642FE0EA7400C721AE /* Exceptions for "municipiosn" folder in "municipiosn" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9E9150E62FD3C4A8001F4543 /* municipiosn */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9E9150E92FD3C4A8001F4543 /* municipiosn */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9EDD23642FE0EA7400C721AE /* Exceptions for "municipiosn" folder in "municipiosn" target */,
+			);
 			path = municipiosn;
 			sourceTree = "<group>";
 		};
@@ -439,6 +452,7 @@
 				DEVELOPMENT_TEAM = V3A25SS88L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = municipiosn/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Para tomar fotos del coroplast en el campo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Para mostrar tu posición en el mapa del municipio.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Para guardar fotos del coroplast.";
@@ -480,6 +494,7 @@
 				DEVELOPMENT_TEAM = V3A25SS88L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = municipiosn/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Para tomar fotos del coroplast en el campo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Para mostrar tu posición en el mapa del municipio.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Para guardar fotos del coroplast.";

@@ -610,6 +610,10 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            if annotation is MKUserLocation {
+                return mapView.dequeueReusableAnnotationView(withIdentifier: UserLocationAnnotationView.reuseID)
+                    ?? UserLocationAnnotationView(annotation: annotation, reuseIdentifier: UserLocationAnnotationView.reuseID)
+            }
             guard let ann = annotation as? EstructuraMKAnnotation else { return nil }
             let id = "estructura"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
@@ -635,6 +639,75 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             guard let ann = annotation as? EstructuraMKAnnotation else { return }
             onSelect(ann.estructura)
         }
+    }
+}
+
+// MARK: - User location annotation
+
+private final class UserLocationAnnotationView: MKAnnotationView {
+    static let reuseID = "userLocation"
+
+    private let dotSize: CGFloat = 20
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        setup()
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func setup() {
+        frame = CGRect(x: 0, y: 0, width: dotSize, height: dotSize)
+        centerOffset = .zero
+        isEnabled = false
+
+        // Pulse ring — starts at dot size and expands outward
+        let pulseSize = dotSize * 2.8
+        let pulseLayer = CAShapeLayer()
+        pulseLayer.frame = CGRect(
+            x: (dotSize - pulseSize) / 2,
+            y: (dotSize - pulseSize) / 2,
+            width: pulseSize,
+            height: pulseSize
+        )
+        pulseLayer.path = UIBezierPath(ovalIn: pulseLayer.bounds).cgPath
+        pulseLayer.fillColor = UIColor.systemBlue.withAlphaComponent(0.18).cgColor
+        pulseLayer.strokeColor = UIColor.systemBlue.withAlphaComponent(0.45).cgColor
+        pulseLayer.lineWidth = 1.5
+
+        let scaleAnim = CABasicAnimation(keyPath: "transform.scale")
+        scaleAnim.fromValue = 0.35
+        scaleAnim.toValue = 1.0
+        let opacityAnim = CABasicAnimation(keyPath: "opacity")
+        opacityAnim.fromValue = 1.0
+        opacityAnim.toValue = 0.0
+        let group = CAAnimationGroup()
+        group.animations = [scaleAnim, opacityAnim]
+        group.duration = 2.0
+        group.repeatCount = .infinity
+        group.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        pulseLayer.add(group, forKey: "pulse")
+        layer.addSublayer(pulseLayer)
+
+        // Accuracy ring (static, faint)
+        let ringLayer = CAShapeLayer()
+        ringLayer.frame = bounds
+        ringLayer.path = UIBezierPath(ovalIn: bounds.insetBy(dx: 1, dy: 1)).cgPath
+        ringLayer.fillColor = UIColor.systemBlue.withAlphaComponent(0.15).cgColor
+        ringLayer.strokeColor = UIColor.white.cgColor
+        ringLayer.lineWidth = 2
+        layer.addSublayer(ringLayer)
+
+        // Center dot
+        let dotLayer = CAShapeLayer()
+        dotLayer.frame = bounds
+        dotLayer.path = UIBezierPath(ovalIn: bounds.insetBy(dx: 4, dy: 4)).cgPath
+        dotLayer.fillColor = UIColor.systemBlue.cgColor
+        dotLayer.shadowColor = UIColor.systemBlue.cgColor
+        dotLayer.shadowOpacity = 0.5
+        dotLayer.shadowRadius = 4
+        dotLayer.shadowOffset = .zero
+        layer.addSublayer(dotLayer)
     }
 }
 
