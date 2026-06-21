@@ -30,6 +30,33 @@ struct ParqueConColonia: Codable, Identifiable, Hashable {
     let colonias: Colonia?
 }
 
+struct ParqueParaCrear: Codable, Identifiable {
+    let id: UUID
+    let nombre: String
+    let lat: Double?
+    let lng: Double?
+    let colonias: ColoniaSimple?
+
+    struct ColoniaSimple: Codable {
+        let nombre: String
+    }
+
+    var etiqueta: String {
+        [nombre, colonias?.nombre].compactMap { $0 }.joined(separator: " — ")
+    }
+}
+
+struct EstructuraCreada: Decodable {
+    let id: UUID
+    let numero: String
+}
+
+struct CarasCreadas {
+    let caraAId: UUID
+    let caraBId: UUID
+}
+
+
 struct CaraDetalle: Identifiable {
     let id: UUID
     let tipo: String
@@ -373,6 +400,102 @@ final class EstructurasService {
         return counts.map { id, val in
             UsoCampana(id: id, nombre: val.nombre, totalCaras: val.count)
         }.sorted { $0.totalCaras > $1.totalCaras }
+    }
+
+    // MARK: - Creación
+
+    func fetchParquesParaCrear() async throws -> [ParqueParaCrear] {
+        try await client
+            .from("parques")
+            .select("id, nombre, lat, lng, colonias(nombre)")
+            .eq("activo", value: true)
+            .order("nombre")
+            .execute()
+            .value
+    }
+
+    func crearEstructura(
+        parqueId: UUID?,
+        lat: Double,
+        lng: Double,
+        estado: EstadoEstructura,
+        fechaInstalacion: Date?,
+        fotoUrl: String? = nil
+    ) async throws -> EstructuraCreada {
+        struct Insert: Encodable {
+            let parque_id: String?
+            let lat: Double
+            let lng: Double
+            let estado: String
+            let fecha_instalacion: String?
+            let foto_url: String?
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let insert = Insert(
+            parque_id: parqueId?.uuidString,
+            lat: lat,
+            lng: lng,
+            estado: estado.rawValue,
+            fecha_instalacion: fechaInstalacion.map { formatter.string(from: $0) },
+            foto_url: fotoUrl
+        )
+        return try await client
+            .from("estructuras")
+            .insert(insert)
+            .select("id, numero")
+            .single()
+            .execute()
+            .value
+    }
+
+    func crearCaras(estructuraId: UUID) async throws -> CarasCreadas {
+        struct CaraInsert: Encodable {
+            let estructura_id: String
+            let tipo: String
+            let estado: String
+        }
+        struct CaraRespuesta: Decodable {
+            let id: UUID
+            let tipo: String
+        }
+        let result: [CaraRespuesta] = try await client
+            .from("caras")
+            .insert([
+                CaraInsert(estructura_id: estructuraId.uuidString, tipo: "A", estado: "buena"),
+                CaraInsert(estructura_id: estructuraId.uuidString, tipo: "B", estado: "buena")
+            ])
+            .select("id, tipo")
+            .execute()
+            .value
+        guard let a = result.first(where: { $0.tipo == "A" })?.id,
+              let b = result.first(where: { $0.tipo == "B" })?.id else {
+            throw NSError(domain: "NuevaEstructura", code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Error creando caras"])
+        }
+        return CarasCreadas(caraAId: a, caraBId: b)
+    }
+
+    func asignarCampana(caraId: UUID, campanaId: UUID) async throws {
+        struct Asignacion: Encodable {
+            let cara_id: String
+            let campana_id: String
+            let activa: Bool
+        }
+        try await client
+            .from("caras_campanas")
+            .insert(Asignacion(cara_id: caraId.uuidString, campana_id: campanaId.uuidString, activa: true))
+            .execute()
+    }
+
+    func fetchCampanasActivas() async throws -> [CampanaBasica] {
+        try await client
+            .from("campanas")
+            .select("id, nombre, foto_url")
+            .eq("activa", value: true)
+            .order("nombre")
+            .execute()
+            .value
     }
 
 }

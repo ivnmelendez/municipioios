@@ -145,6 +145,7 @@ struct MapaView: View {
     var mostrarCampanas: Bool = true
     var userId: UUID? = nil
     var campanas: [CampanaBasica] = []
+    var puedeCrearEstructuras: Bool = false
 
     @State private var vm = MapaViewModel()
     @State private var coloniasPolygons: [GeoPolygon] = []
@@ -161,6 +162,7 @@ struct MapaView: View {
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
     @State private var visitadasVersion: Int = 0
+    @State private var mostrarNuevaEstructura = false
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -178,11 +180,11 @@ struct MapaView: View {
     private var anotacionesFiltradas: [EstructuraAnnotation] {
         let q = busqueda.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return anotaciones }
-        let ql = q.lowercased()
+        let opts: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
         return anotaciones.filter { a in
-            a.numero.lowercased().contains(ql) ||
-            a.estructura.parques?.nombre.lowercased().contains(ql) == true ||
-            a.estructura.parques?.colonias?.nombre.lowercased().contains(ql) == true
+            a.numero.range(of: q, options: opts) != nil ||
+            a.estructura.parques?.nombre.range(of: q, options: opts) != nil ||
+            a.estructura.parques?.colonias?.nombre.range(of: q, options: opts) != nil
         }
     }
 
@@ -249,6 +251,17 @@ struct MapaView: View {
                 .padding(.horizontal, 16)
             }
             VStack(spacing: 8) {
+                if puedeCrearEstructuras {
+                    Button {
+                        mostrarNuevaEstructura = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .foregroundStyle(Color("Navy"))
+                    }
+                    .buttonStyle(.glass(.regular))
+                    .controlSize(.large)
+                    .buttonBorderShape(.circle)
+                }
                 if !coloniaSemanaColors.isEmpty {
                     Button {
                         let newValue = !mostrarRutas
@@ -405,6 +418,11 @@ struct MapaView: View {
                 userId: userId,
                 rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
             )
+        }
+        .sheet(isPresented: $mostrarNuevaEstructura) {
+            NuevaEstructuraView { _ in
+                Task { await vm.cargar() }
+            }
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

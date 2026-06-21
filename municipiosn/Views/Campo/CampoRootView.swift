@@ -10,7 +10,8 @@ struct CampoRootView: View {
                 MapaView(
                     mostrarCampanas: false,
                     userId: authVM.perfilId,
-                    campanas: vm.campanas
+                    campanas: vm.campanas,
+                    puedeCrearEstructuras: true
                 )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }

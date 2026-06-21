@@ -573,7 +573,7 @@ private struct CaraCampanaRow: View {
 
 // MARK: - CampanaThumbnail
 
-private struct CampanaThumbnail: View {
+struct CampanaThumbnail: View {
     let campana: CampanaBasica
     let size: CGFloat
 
@@ -604,7 +604,7 @@ private struct CampanaThumbnail: View {
 
 // MARK: - CampanaPickerSheet
 
-private struct CampanaPickerSheet: View {
+struct CampanaPickerSheet: View {
     let campanas: [CampanaBasica]
     @Binding var seleccionada: CampanaBasica?
     @Environment(\.dismiss) private var dismiss
