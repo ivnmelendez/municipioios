@@ -174,7 +174,7 @@ struct ConfiguracionView: View {
             }
             .onAppear { cargarFoto() }
         }
-        .confirmationDialog("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion, titleVisibility: .visible) {
+        .alert("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion) {
             Button("Cerrar sesión", role: .destructive) {
                 Task { await auth.signOut() }
             }
