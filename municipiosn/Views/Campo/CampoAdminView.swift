@@ -25,12 +25,6 @@ struct CampoAdminView: View {
         NavigationStack {
             VStack(spacing: 0) {
 
-                // MARK: Stats
-                statsBar
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 12)
-
                 // MARK: Pagos card
                 NavigationLink(destination: PagosView()) {
                     HStack(spacing: 16) {
@@ -56,6 +50,7 @@ struct CampoAdminView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 20)
+                .padding(.top, 16)
                 .padding(.bottom, 12)
 
                 // MARK: Tab chips
