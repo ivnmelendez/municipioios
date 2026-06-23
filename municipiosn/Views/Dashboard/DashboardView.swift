@@ -367,14 +367,32 @@ private extension View {
 
 private struct SemanaCard: View {
     let kpi: KPIData
+    @AppStorage("semanaCard_periodo") private var esMes = false
+
+    private var visitas: Int  { esMes ? kpi.visitasMes   : kpi.visitasSemana }
+    private var cambios: Int  { esMes ? kpi.coroplastMes : kpi.cambiosSemana }
+    private var danos: Int    { esMes ? kpi.danosMes     : kpi.danosSemana }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Esta semana")
+                Text(esMes ? "Este mes" : "Esta semana")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color("TextMuted"))
+                    .contentTransition(.identity)
                 Spacer()
+                Button {
+                    withAnimation(.spring(duration: 0.3, bounce: 0.1)) { esMes.toggle() }
+                    HapticService.seleccion()
+                } label: {
+                    Text(esMes ? "Ver semana" : "Ver mes")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color("Navy"))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color("Navy").opacity(0.08), in: Capsule())
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -384,7 +402,7 @@ private struct SemanaCard: View {
 
             HStack(spacing: 0) {
                 columna(
-                    valor: kpi.visitasSemana,
+                    valor: visitas,
                     label: "Revisadas",
                     icono: "checkmark.circle.fill",
                     color: Color(hex: "#16a34a")
@@ -393,7 +411,7 @@ private struct SemanaCard: View {
                     .fill(Color.primary.opacity(0.08))
                     .frame(width: 1, height: 72)
                 columna(
-                    valor: kpi.cambiosSemana,
+                    valor: cambios,
                     label: "Coroplast",
                     icono: "arrow.2.squarepath",
                     color: Color("Navy")
@@ -402,13 +420,14 @@ private struct SemanaCard: View {
                     .fill(Color.primary.opacity(0.08))
                     .frame(width: 1, height: 72)
                 columna(
-                    valor: kpi.danosSemana,
+                    valor: danos,
                     label: "Daños",
                     icono: "exclamationmark.triangle.fill",
                     color: Color(hex: "#dc2626")
                 )
             }
             .padding(.vertical, 20)
+            .animation(.spring(duration: 0.3), value: esMes)
         }
         .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
