@@ -372,7 +372,7 @@ struct EstructuraDetalleView: View {
     var esCampo: Bool = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var isLandscape = UIScreen.main.bounds.width > UIScreen.main.bounds.height
+    @State private var isLandscape = false
     @State private var caras: [CaraDetalle] = []
     @State private var historial: [IntervencionCompleta] = []
     @State private var isLoading = true
@@ -391,9 +391,13 @@ struct EstructuraDetalleView: View {
                 iPhoneLayout        // iPhone: layout actual
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
-            isLandscape = UIScreen.main.bounds.width > UIScreen.main.bounds.height
-        }
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { isLandscape = geo.size.width > geo.size.height }
+                    .onChange(of: geo.size) { _, size in isLandscape = size.width > size.height }
+            }
+        )
         .background {
             Color(.systemGray6).ignoresSafeArea()
             if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
@@ -480,7 +484,7 @@ struct EstructuraDetalleView: View {
     // MARK: - iPad portrait (columna única, hero más alto)
     private var iPadPortraitLayout: some View {
         VStack(spacing: 0) {
-            heroImage(height: 620)
+            heroImage(height: 700)
             ScrollView {
                 contentCards
             }
