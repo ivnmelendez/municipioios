@@ -1107,31 +1107,31 @@ struct FotoFullscreenView: View {
     let url: URL
     let titulo: String
     @Environment(\.dismiss) private var dismiss
-    @State private var loadedImage: Image?
+    @State private var uiImage: UIImage? = nil
+    @State private var guardando = false
+    @State private var guardada = false
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .onAppear { loadedImage = image }
-                    case .failure:
-                        VStack(spacing: 12) {
-                            Image(systemName: "photo.slash")
-                                .font(.largeTitle)
-                            Text("No se pudo cargar la imagen")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.white.opacity(0.5))
-                    default:
-                        ProgressView().tint(.white)
-                    }
+                if let img = uiImage {
+                    Image(uiImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ProgressView().tint(.white)
+                }
+
+                if guardada {
+                    Label("Guardada", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .transition(.opacity.animation(.easeOut(duration: 0.3)))
                 }
             }
             .navigationTitle(titulo)
@@ -1146,13 +1146,40 @@ struct FotoFullscreenView: View {
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    ShareLink(item: url) {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(.white.opacity(0.8))
-                            .font(.title3)
+                    HStack(spacing: 16) {
+                        Button {
+                            guardarEnFotos()
+                        } label: {
+                            Image(systemName: "arrow.down.to.line")
+                                .foregroundStyle(.white.opacity(uiImage != nil ? 0.9 : 0.4))
+                                .font(.title3)
+                        }
+                        .disabled(uiImage == nil || guardando)
+
+                        ShareLink(item: url) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(.white.opacity(0.8))
+                                .font(.title3)
+                        }
                     }
                 }
             }
+            .task {
+                guard let (data, _) = try? await URLSession.shared.data(from: url) else { return }
+                uiImage = UIImage(data: data)
+            }
+        }
+    }
+
+    private func guardarEnFotos() {
+        guard let img = uiImage else { return }
+        guardando = true
+        UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation { guardada = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation { guardada = false }
+            guardando = false
         }
     }
 }
