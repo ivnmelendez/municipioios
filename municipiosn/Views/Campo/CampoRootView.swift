@@ -3,10 +3,11 @@ import SwiftUI
 struct CampoRootView: View {
     let authVM: AuthViewModel
     @State private var vm = CampoViewModel()
+    @State private var tabSeleccionada = "mapa"
 
     var body: some View {
-        TabView {
-            Tab("Mapa", systemImage: "map.fill") {
+        TabView(selection: $tabSeleccionada) {
+            Tab("Mapa", systemImage: "map.fill", value: "mapa") {
                 MapaView(
                     mostrarCampanas: false,
                     userId: authVM.perfilId,
@@ -15,7 +16,7 @@ struct CampoRootView: View {
                 )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }
-            Tab("Estructuras", systemImage: "square.stack.fill") {
+            Tab("Estructuras", systemImage: "square.stack.fill", value: "estructuras") {
                 NavigationStack {
                     EstructurasListView()
                         .navigationDestination(for: EstructuraConParque.self) { e in
@@ -23,11 +24,14 @@ struct CampoRootView: View {
                         }
                 }
             }
-            Tab("Configuración", systemImage: "gearshape.fill") {
+            Tab("Configuración", systemImage: "gearshape.fill", value: "config") {
                 configTab
             }
         }
         .tint(Color("Navy"))
+        .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { _ in
+            tabSeleccionada = "mapa"
+        }
     }
 
     private var configTab: some View {
