@@ -11,12 +11,14 @@ struct CampoAdminView: View {
         case visitas    = "Visitas"
         case coroplast  = "Coroplast"
         case danos      = "Daños"
+        case pagos      = "Pagos"
 
         var icono: String {
             switch self {
             case .visitas:   "checkmark.circle.fill"
             case .coroplast: "arrow.2.squarepath"
             case .danos:     "exclamationmark.triangle.fill"
+            case .pagos:     "banknote.fill"
             }
         }
     }
@@ -41,6 +43,7 @@ struct CampoAdminView: View {
                     if seccion == .visitas    { HistorialCampoView().transition(.opacity) }
                     if seccion == .coroplast  { IntervencionesView().transition(.opacity) }
                     if seccion == .danos      { DañosView().transition(.opacity) }
+                    if seccion == .pagos      { PagosView().transition(.opacity) }
                 }
                 .animation(.easeInOut(duration: 0.2), value: seccion)
             }
