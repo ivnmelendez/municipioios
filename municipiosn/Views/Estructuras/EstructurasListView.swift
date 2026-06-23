@@ -379,25 +379,28 @@ struct EstructuraDetalleView: View {
         VStack(spacing: 0) {
             // Foto fuera del ScrollView — extiende bajo el navbar sin scroll edge
             if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        Button {
-                            fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
-                        } label: {
-                            image.resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
-                                .clipped()
-                                .contentShape(Rectangle())
+                ZStack {
+                    Color(.systemGray5)
+                        .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
+
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            Button {
+                                fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
+                            } label: {
+                                image.resizable()
+                                    .scaledToFill()
+                                    .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
+                                    .clipped()
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .transition(.opacity.animation(.easeOut(duration: 0.5)))
+                        } else if case .failure = phase {
+                            EmptyView()
+                        } else {
+                            ProgressView().tint(.secondary)
                         }
-                        .buttonStyle(.plain)
-                        .transition(.opacity.animation(.easeOut(duration: 0.5)))
-                    case .failure: EmptyView()
-                    default:
-                        Color(.systemGray5)
-                            .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
-                            .overlay { ProgressView().tint(.secondary) }
                     }
                 }
                 .frame(maxWidth: .infinity)
