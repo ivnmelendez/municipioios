@@ -74,12 +74,15 @@ struct CampanaCelda: View {
         .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
         .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
         .frame(maxWidth: .infinity)
-        .onLongPressGesture(minimumDuration: 0.4) {
-            if let cambiar = onCambiarCampana {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                cambiar()
-            }
-        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.5)
+                .onEnded { _ in
+                    if let cambiar = onCambiarCampana {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        cambiar()
+                    }
+                }
+        )
     }
 
     @ViewBuilder
