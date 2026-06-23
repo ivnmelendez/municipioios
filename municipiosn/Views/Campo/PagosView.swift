@@ -4,13 +4,36 @@ struct PagosView: View {
     @Environment(AuthViewModel.self) private var auth
     @State private var vm = PagosViewModel()
     @State private var mostrarNuevoPago = false
+    @State private var periodo: Periodo = .mes
 
-    private var mesActual: String {
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "es_MX")
-        fmt.dateFormat = "MMMM yyyy"
-        let s = fmt.string(from: Date())
-        return s.prefix(1).uppercased() + s.dropFirst()
+    enum Periodo: String, CaseIterable {
+        case semana = "Esta semana"
+        case mes    = "Este mes"
+        case todo   = "Todo"
+    }
+
+    private var pagosFiltrados: [PagoManoObra] {
+        let cal = Calendar.current
+        switch periodo {
+        case .semana:
+            return vm.pagos.filter { cal.isDate($0.fechaDate, equalTo: Date(), toGranularity: .weekOfYear) }
+        case .mes:
+            return vm.pagos.filter { cal.isDate($0.fechaDate, equalTo: Date(), toGranularity: .month) }
+        case .todo:
+            return vm.pagos
+        }
+    }
+
+    private var totalFiltrado: Double {
+        pagosFiltrados.reduce(0) { $0 + $1.monto }
+    }
+
+    private var trabajadoresFiltrados: [String] {
+        Array(Set(pagosFiltrados.map { $0.trabajador })).sorted()
+    }
+
+    private func totalPorTrabajador(_ trabajador: String) -> Double {
+        pagosFiltrados.filter { $0.trabajador == trabajador }.reduce(0) { $0 + $1.monto }
     }
 
     var body: some View {
@@ -19,22 +42,24 @@ struct PagosView: View {
                 if vm.isLoading && vm.pagos.isEmpty {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if vm.pagos.isEmpty {
+                } else if pagosFiltrados.isEmpty {
                     ContentUnavailableView(
-                        "Sin pagos registrados",
+                        "Sin pagos",
                         systemImage: "banknote",
-                        description: Text("Toca + para registrar un pago de mano de obra.")
+                        description: Text(vm.pagos.isEmpty
+                            ? "Toca + para registrar un pago de mano de obra."
+                            : "No hay pagos en \(periodo.rawValue.lowercased()).")
                     )
                 } else {
                     List {
-                        // Resumen del mes
+                        // Resumen del periodo
                         Section {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Total \(mesActual)")
+                                    Text("Total · \(periodo.rawValue)")
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color("TextMuted"))
-                                    Text(formatMonto(vm.totalMes))
+                                    Text(formatMonto(totalFiltrado))
                                         .font(.system(size: 34, weight: .bold, design: .rounded))
                                         .foregroundStyle(Color("Navy"))
                                         .contentTransition(.numericText())
@@ -43,37 +68,34 @@ struct PagosView: View {
                             }
                             .padding(.vertical, 4)
 
-                            if !vm.trabajadores.isEmpty {
-                                ForEach(vm.trabajadores, id: \.self) { trabajador in
-                                    let total = vm.totalMesPor(trabajador: trabajador)
-                                    if total > 0 {
-                                        HStack {
-                                            Label(trabajador, systemImage: "person.fill")
-                                                .font(.subheadline)
-                                                .foregroundStyle(.primary)
-                                            Spacer()
-                                            Text(formatMonto(total))
-                                                .font(.subheadline.weight(.semibold))
-                                                .foregroundStyle(Color("Navy"))
-                                        }
-                                    }
+                            ForEach(trabajadoresFiltrados, id: \.self) { trabajador in
+                                HStack {
+                                    Label(trabajador, systemImage: "person.fill")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text(formatMonto(totalPorTrabajador(trabajador)))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color("Navy"))
                                 }
                             }
                         }
 
                         // Historial
                         Section("Historial") {
-                            ForEach(vm.pagos) { pago in
+                            ForEach(pagosFiltrados) { pago in
                                 PagoRow(pago: pago)
                             }
                             .onDelete { indexSet in
-                                for i in indexSet {
-                                    Task { await vm.eliminar(vm.pagos[i]) }
+                                let targets = indexSet.map { pagosFiltrados[$0] }
+                                for pago in targets {
+                                    Task { await vm.eliminar(pago) }
                                 }
                             }
                         }
                     }
                     .refreshable { await vm.cargar() }
+                    .animation(.easeInOut(duration: 0.2), value: periodo)
                 }
             }
 
@@ -90,6 +112,29 @@ struct PagosView: View {
             }
             .padding(.trailing, 20)
             .padding(.bottom, 24)
+        }
+        .navigationTitle("Pagos")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    ForEach(Periodo.allCases, id: \.self) { p in
+                        Button {
+                            withAnimation { periodo = p }
+                        } label: {
+                            if periodo == p {
+                                Label(p.rawValue, systemImage: "checkmark")
+                            } else {
+                                Text(p.rawValue)
+                            }
+                        }
+                    }
+                } label: {
+                    Label(periodo.rawValue, systemImage: "calendar")
+                        .symbolVariant(.fill)
+                }
+                .tint(Color("Navy"))
+            }
         }
         .task { await vm.cargar() }
         .sheet(isPresented: $mostrarNuevoPago) {
