@@ -8,22 +8,16 @@ struct ColoniasChartCard: View {
     private var top: [UsoColonia] { Array(datos.prefix(5)) }
 
     var body: some View {
+        Button { mostrarTodo = true } label: {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Label("Estructuras por colonia", systemImage: "map.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color("Navy"))
                 Spacer()
-                Button {
-                    mostrarTodo = true
-                } label: {
-                    HStack(spacing: 3) {
-                        Text("Ver todas")
-                        Image(systemName: "chevron.right")
-                    }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color("Navy"))
-                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color("Navy").opacity(0.4))
             }
 
             if top.isEmpty {
@@ -58,7 +52,9 @@ struct ColoniasChartCard: View {
             }
         }
         .padding(20)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 24))
         .sheet(isPresented: $mostrarTodo) {
             ColoniasListaCompleta(datos: datos, detalle: detalle)
         }
