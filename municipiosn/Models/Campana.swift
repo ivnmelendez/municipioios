@@ -4,6 +4,7 @@ struct UsoCampana: Identifiable {
     let id: UUID
     let nombre: String
     let totalCaras: Int
+    let fotoUrl: String?
 }
 
 struct Campana: Codable, Identifiable {

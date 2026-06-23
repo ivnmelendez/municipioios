@@ -147,6 +147,12 @@ private struct CaraCampanaItem: Codable {
     struct CampanaResumen: Codable {
         let id: UUID
         let nombre: String
+        let fotoUrl: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id, nombre
+            case fotoUrl = "foto_url"
+        }
     }
 
     enum CodingKeys: String, CodingKey {
@@ -390,19 +396,19 @@ final class EstructurasService {
     func fetchUsoCampanas() async throws -> [UsoCampana] {
         let items: [CaraCampanaItem] = try await client
             .from("caras_campanas")
-            .select("campana_id, campanas(id, nombre)")
+            .select("campana_id, campanas(id, nombre, foto_url)")
             .eq("activa", value: true)
             .execute()
             .value
 
-        var counts: [UUID: (nombre: String, count: Int)] = [:]
+        var counts: [UUID: (nombre: String, count: Int, fotoUrl: String?)] = [:]
         for item in items {
             let id = item.campanas.id
-            counts[id] = (item.campanas.nombre, (counts[id]?.count ?? 0) + 1)
+            counts[id] = (item.campanas.nombre, (counts[id]?.count ?? 0) + 1, item.campanas.fotoUrl)
         }
 
         return counts.map { id, val in
-            UsoCampana(id: id, nombre: val.nombre, totalCaras: val.count)
+            UsoCampana(id: id, nombre: val.nombre, totalCaras: val.count, fotoUrl: val.fotoUrl)
         }.sorted { $0.totalCaras > $1.totalCaras }
     }
 
