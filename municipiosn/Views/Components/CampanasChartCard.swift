@@ -123,16 +123,12 @@ private struct CampanasListaCompleta: View {
         NavigationStack {
             List {
                 ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
-                    HStack(spacing: 12) {
-                        Text("\(index + 1)")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(Color("TextMuted"))
-                            .frame(width: 28, alignment: .center)
+                    HStack {
                         Text(item.nombre)
                             .font(.body)
                         Spacer()
-                        Text("\(item.totalEstructuras)")
-                            .font(.body.weight(.semibold))
+                        Text("\(item.totalEstructuras) estructuras")
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color("Navy"))
                             .monospacedDigit()
                     }
