@@ -12,9 +12,9 @@ struct CampanasSideBySideView: View {
                     ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
                         CampanaCelda(
                             cara: cara,
-                            onTapFoto: onCambiarCampana == nil ? { url in
+                            onTapFoto: { url in
                                 onTapFoto?(url, "Campaña Cara \(cara.tipo)")
-                            } : nil,
+                            },
                             onCambiarCampana: onCambiarCampana != nil ? { onCambiarCampana?(cara) } : nil
                         )
                     }
@@ -38,11 +38,7 @@ struct CampanaCelda: View {
 
     var body: some View {
         Button {
-            if let cambiar = onCambiarCampana {
-                cambiar()
-            } else if let url = fotoURL {
-                onTapFoto?(url)
-            }
+            if let url = fotoURL { onTapFoto?(url) }
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 imageArea
@@ -78,6 +74,12 @@ struct CampanaCelda: View {
         .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
         .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
         .frame(maxWidth: .infinity)
+        .onLongPressGesture(minimumDuration: 0.4) {
+            if let cambiar = onCambiarCampana {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                cambiar()
+            }
+        }
     }
 
     @ViewBuilder

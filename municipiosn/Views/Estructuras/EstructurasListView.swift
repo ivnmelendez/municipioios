@@ -460,7 +460,7 @@ struct EstructuraDetalleView: View {
                         if !caras.isEmpty {
                             CampanasSideBySideView(
                                 caras: caras,
-                                onTapFoto: esCampo ? nil : { url, titulo in
+                                onTapFoto: { url, titulo in
                                     fotoFullscreen = IdentifiableURL(url: url, titulo: titulo)
                                 },
                                 onCambiarCampana: esCampo ? { cara in
