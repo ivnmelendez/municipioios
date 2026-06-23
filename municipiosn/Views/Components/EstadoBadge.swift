@@ -38,10 +38,10 @@ struct EstadoBadge: View {
     var body: some View {
         Label(estado.etiqueta, systemImage: estado.icono)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(estado.color)
+            .foregroundStyle(.white)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(estado.color.opacity(0.12), in: Capsule())
+            .glassEffect(.regular.tint(estado.color), in: Capsule())
     }
 }
 

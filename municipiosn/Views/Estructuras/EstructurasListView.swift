@@ -34,7 +34,7 @@ final class EstructurasListViewModel {
     }
 
     func filtrar() {
-        var base = estructuras
+        var base = estructuras.sorted { $0.numero.localizedStandardCompare($1.numero) == .orderedAscending }
         if let filtro = filtroEstado { base = base.filter { $0.estado == filtro } }
         guard !busqueda.isEmpty else { filtradas = base; return }
         filtradas = base.filter {
@@ -338,131 +338,215 @@ private struct EstructuraRowSkeleton: View {
     }
 }
 
+// MARK: - Navbar configurator
+
+private struct TransparentNavBar: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        return view
+    }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async {
+            var responder: UIResponder? = uiView
+            while let r = responder {
+                if let nav = r as? UINavigationController {
+                    let clear = UINavigationBarAppearance()
+                    clear.configureWithTransparentBackground()
+                    nav.navigationBar.standardAppearance = clear
+                    nav.navigationBar.scrollEdgeAppearance = clear
+                    nav.navigationBar.compactAppearance = clear
+                    nav.navigationBar.compactScrollEdgeAppearance = clear
+                    break
+                }
+                responder = r.next
+            }
+        }
+    }
+}
+
 // MARK: - Detalle
 
 struct EstructuraDetalleView: View {
     let estructura: EstructuraConParque
+    @Environment(\.dismiss) private var dismiss
     @State private var caras: [CaraDetalle] = []
     @State private var historial: [IntervencionCompleta] = []
     @State private var isLoading = true
     @State private var fotoFullscreen: IdentifiableURL?
 
     var body: some View {
-        ScrollView {
+        VStack(spacing: 0) {
+            // Foto fuera del ScrollView — extiende bajo el navbar sin scroll edge
+            if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        Button {
+                            fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
+                        } label: {
+                            image.resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
+                                .clipped()
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.opacity.animation(.easeOut(duration: 0.5)))
+                    case .failure: EmptyView()
+                    default:
+                        Color(.systemGray5)
+                            .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
+                            .overlay { ProgressView().tint(.secondary) }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+
             VStack(alignment: .leading, spacing: 0) {
 
-                // Estado + fecha instalación
-                HStack {
-                    EstadoBadge(estado: estructura.estado)
-                    Spacer()
-                    if let fecha = estructura.fechaInstalacion {
-                        Text("Instalada \(fecha.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.caption)
-                            .foregroundStyle(Color("TextMuted"))
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 16)
-
-                Divider()
-
-                // Foto estructura
-                if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            Button {
-                                fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
-                            } label: {
-                                image.resizable().aspectRatio(contentMode: .fill)
-                                    .frame(maxWidth: .infinity).frame(height: 320).clipped()
-                                    .overlay(alignment: .bottomTrailing) {
-                                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                            .font(.caption.weight(.semibold)).foregroundStyle(.white)
-                                            .padding(6).background(.black.opacity(0.4), in: Circle()).padding(10)
-                                    }
-                                    .contentShape(Rectangle())
+                    // Info card — tappable, abre Google Maps
+                    if let parque = estructura.parques {
+                        Button {
+                            if let lat = estructura.lat, let lng = estructura.lng {
+                                NotificationCenter.default.post(
+                                    name: .abrirMapaEnEstructura,
+                                    object: nil,
+                                    userInfo: ["lat": lat, "lng": lng]
+                                )
+                                dismiss()
                             }
-                            .buttonStyle(.plain)
-                        case .failure: EmptyView()
-                        default: Color.secondary.opacity(0.1).frame(height: 320).overlay { ProgressView() }
-                        }
-                    }
-                    Divider()
-                }
-
-                // Ubicación
-                if let parque = estructura.parques {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Ubicación")
-                            .font(.footnote.weight(.semibold)).foregroundStyle(Color("TextMuted"))
-                        if let colonia = parque.colonias {
-                            Label(colonia.nombre, systemImage: "map").font(.subheadline)
-                        }
-                        Label(parque.nombre, systemImage: "tree")
-                            .font(.subheadline).foregroundStyle(Color("TextMuted"))
-                    }
-                    .padding(.horizontal, 20).padding(.vertical, 16)
-                    Divider()
-                }
-
-                // Campañas
-                if isLoading {
-                    ProgressView().frame(maxWidth: .infinity).padding(.vertical, 32)
-                } else {
-                    if !caras.isEmpty {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("Campañas activas")
-                                .font(.footnote.weight(.semibold)).foregroundStyle(Color("TextMuted"))
-                                .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
-                            ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
-                                CampanaRow(cara: cara, onTapFoto: { url in
-                                    fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña Cara \(cara.tipo)")
-                                })
-                                .padding(.horizontal, 20).padding(.bottom, 16)
-                            }
-                        }
-                        Divider()
-                    }
-
-                    // Historial
-                    if !historial.isEmpty {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("Historial reciente")
-                                .font(.footnote.weight(.semibold)).foregroundStyle(Color("TextMuted"))
-                                .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
-
-                            ForEach(historial) { item in
-                                HistorialRow(item: item)
-                                    .scrollTransition(.animated.threshold(.visible(0.1))) { content, phase in
-                                        content
-                                            .opacity(phase.isIdentity ? 1 : 0)
-                                            .offset(y: phase.isIdentity ? 0 : 8)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    if let colonia = parque.colonias {
+                                        Label(colonia.nombre, systemImage: "map.fill")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(.primary)
                                     }
-                                if item.id != historial.last?.id {
-                                    Divider().padding(.leading, 52)
+                                    Label(parque.nombre, systemImage: "tree.fill")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                    if let fecha = estructura.fechaInstalacion {
+                                        Label(fecha.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
+                                Spacer()
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
+                        .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                    }
+
+                    // Campañas
+                    if isLoading {
+                        ProgressView().frame(maxWidth: .infinity).padding(.vertical, 32)
+                    } else {
+                        if !caras.isEmpty {
+                            CampanasSideBySideView(caras: caras) { url, titulo in
+                                fotoFullscreen = IdentifiableURL(url: url, titulo: titulo)
+                            }
+                            .padding(.top, 8)
+                        }
+
+                        if !historial.isEmpty {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text("Historial")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 24)
+                                    .padding(.bottom, 8)
+                                VStack(spacing: 0) {
+                                    ForEach(historial) { item in
+                                        HistorialRow(item: item)
+                                        if item.id != historial.last?.id {
+                                            Divider().padding(.leading, 52)
+                                        }
+                                    }
+                                }
+                                .background(Color(.secondarySystemGroupedBackground),
+                                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .padding(.horizontal, 16)
                             }
                         }
-                        Divider()
                     }
-                }
 
-                // Notas
-                if let notas = estructura.notas, !notas.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Notas").font(.footnote.weight(.semibold)).foregroundStyle(Color("TextMuted"))
-                        Text(notas).font(.body)
+                    if let notas = estructura.notas, !notas.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Notas")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Text(notas).font(.subheadline)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
                     }
-                    .padding(20)
-                }
+
+                Spacer().frame(height: 32)
             }
             .frame(maxWidth: .infinity)
         }
-        .background(Color("Background"))
-        .navigationTitle(estructura.numero)
-        .navigationBarTitleDisplayMode(.large)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
+        .background {
+            Color(.systemGray6).ignoresSafeArea()
+            if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .scaleEffect(1.4)
+                            .blur(radius: 60)
+                            .opacity(0.55)
+                            .ignoresSafeArea()
+                            .transition(.opacity.animation(.easeInOut(duration: 0.8)))
+                    }
+                }
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { dismiss() } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Text(estructura.numero).fontWeight(.semibold)
+                    }
+                }
+                .foregroundStyle(Color("Navy"))
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Image(systemName: estructura.estado.icono)
+                    .foregroundStyle(estructura.estado.color)
+                    .font(.footnote)
+            }
+            if let lat = estructura.lat, let lng = estructura.lng {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
+                        Image("google_logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 18, height: 18)
+                    }
+                }
+            }
+        }
         .task {
             async let carasTask = EstructurasService.shared.fetchCarasDetalle(estructuraId: estructura.id)
             async let historialTask = IntervencionesService.shared.fetchHistorial(estructuraId: estructura.id)
@@ -472,6 +556,14 @@ struct EstructuraDetalleView: View {
         }
         .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
+        }
+    }
+
+    private func abrirGoogleMaps(lat: Double, lng: Double) {
+        let gm = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")!
+        let web = URL(string: "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lng)&travelmode=driving")!
+        UIApplication.shared.open(gm) { success in
+            if !success { UIApplication.shared.open(web) }
         }
     }
 }

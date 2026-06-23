@@ -45,6 +45,7 @@ struct ContentView: View {
         .tint(Color("Navy"))
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in campoBadge += 1 }
         .onReceive(NotificationCenter.default.publisher(for: .abrirRondines)) { _ in tabSeleccionada = "campo" }
+        .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { _ in tabSeleccionada = "mapa" }
     }
 
     // MARK: - iPad
@@ -81,6 +82,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in campoBadge += 1 }
         .onReceive(NotificationCenter.default.publisher(for: .abrirRondines)) { _ in tabSeleccionada = "campo" }
+        .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { _ in tabSeleccionada = "mapa" }
     }
 
     @ViewBuilder

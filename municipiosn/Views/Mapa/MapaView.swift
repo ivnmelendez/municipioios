@@ -86,7 +86,15 @@ private final class ExteriorDimRenderer: MKOverlayRenderer {
 // MARK: - Map controller (bypasses SwiftUI state to avoid re-render flicker)
 
 private final class MapController {
-    weak var mapView: MKMapView?
+    weak var mapView: MKMapView? {
+        didSet {
+            if let pending = pendingCoord {
+                centerOn(pending)
+                pendingCoord = nil
+            }
+        }
+    }
+    private var pendingCoord: CLLocationCoordinate2D?
 
     func centerOnUser() {
         mapView?.setUserTrackingMode(.follow, animated: true)
@@ -97,7 +105,8 @@ private final class MapController {
     }
 
     func centerOn(_ coord: CLLocationCoordinate2D) {
-        mapView?.setRegion(
+        guard let mapView else { pendingCoord = coord; return }
+        mapView.setRegion(
             MKCoordinateRegion(center: coord, span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)),
             animated: true
         )
@@ -335,6 +344,11 @@ struct MapaView: View {
         }
         .task(id: userId) {
             if let uid = userId { await vm.cargarVisitadas(userId: uid) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { notif in
+            guard let lat = notif.userInfo?["lat"] as? Double,
+                  let lng = notif.userInfo?["lng"] as? Double else { return }
+            mapController.centerOn(CLLocationCoordinate2D(latitude: lat, longitude: lng))
         }
         .onChange(of: vm.visitadasHoy) { _, _ in
             visitadasVersion += 1
@@ -1063,20 +1077,8 @@ struct EstructuraDetalleSheet: View {
     }
 
     private var campanasView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Campañas activas")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color("TextMuted"))
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 12)
-            ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
-                CampanaRow(cara: cara, onTapFoto: { url in
-                    fotoFullscreen = IdentifiableURL(url: url, titulo: "Campaña Cara \(cara.tipo)")
-                })
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-            }
+        CampanasSideBySideView(caras: caras) { url, titulo in
+            fotoFullscreen = IdentifiableURL(url: url, titulo: titulo)
         }
     }
 
