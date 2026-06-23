@@ -372,6 +372,7 @@ struct EstructuraDetalleView: View {
     var esCampo: Bool = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var isLandscape = UIScreen.main.bounds.width > UIScreen.main.bounds.height
     @State private var caras: [CaraDetalle] = []
     @State private var historial: [IntervencionCompleta] = []
     @State private var isLoading = true
@@ -382,11 +383,16 @@ struct EstructuraDetalleView: View {
 
     var body: some View {
         Group {
-            if sizeClass == .regular {
-                iPadLayout
+            if sizeClass == .regular && isLandscape {
+                iPadLayout          // landscape iPad: dos columnas
+            } else if sizeClass == .regular {
+                iPadPortraitLayout  // portrait iPad: columna única ampliada
             } else {
-                iPhoneLayout
+                iPhoneLayout        // iPhone: layout actual
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            isLandscape = UIScreen.main.bounds.width > UIScreen.main.bounds.height
         }
         .background {
             Color(.systemGray6).ignoresSafeArea()
@@ -471,7 +477,22 @@ struct EstructuraDetalleView: View {
         .ignoresSafeArea(edges: .top)
     }
 
-    // MARK: - iPad layout (2 columnas)
+    // MARK: - iPad portrait (columna única, mejor aprovechamiento)
+    private var iPadPortraitLayout: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                heroImage(height: 480)
+                contentCards
+                    .frame(maxWidth: 720)
+                    .padding(.horizontal, 8)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
+    }
+
+    // MARK: - iPad landscape (2 columnas)
     private var iPadLayout: some View {
         HStack(spacing: 0) {
             // Columna izquierda — imagen fija con info superpuesta
