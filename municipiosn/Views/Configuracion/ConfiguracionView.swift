@@ -12,11 +12,12 @@ struct ConfiguracionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var auth
 
+    private var initiales: String { auth.initiales }
+    private var displayName: String { auth.displayName }
+    private var rol: String { auth.rol }
+
     var body: some View {
-        let initiales = auth.initiales
-        let displayName = auth.displayName
-        let rol = auth.rol
-        return NavigationStack {
+        NavigationStack {
         List {
 
                 // MARK: Header perfil

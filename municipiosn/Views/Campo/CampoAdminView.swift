@@ -26,19 +26,18 @@ struct CampoAdminView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                resumenBar
+
+                // MARK: Stats
+                statsBar
                     .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.top, 16)
                     .padding(.bottom, 16)
 
-                Divider()
+                // MARK: Tab chips
+                tabChips
+                    .padding(.bottom, 12)
 
-                tabPicker
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-
-                Divider()
-
+                // MARK: Contenido
                 ZStack {
                     if seccion == .visitas    { HistorialCampoView().transition(.opacity) }
                     if seccion == .coroplast  { IntervencionesView().transition(.opacity) }
@@ -50,19 +49,19 @@ struct CampoAdminView: View {
             .background(Color("Background"))
             .navigationTitle("Campo")
             .navigationBarTitleDisplayMode(.large)
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await generarReporte() }
-                } label: {
-                    if generandoReporte {
-                        ProgressView().scaleEffect(0.75)
-                    } else {
-                        Image(systemName: "square.and.arrow.up")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await generarReporte() }
+                    } label: {
+                        if generandoReporte {
+                            ProgressView().scaleEffect(0.75)
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                        }
                     }
+                    .disabled(generandoReporte)
                 }
-                .disabled(generandoReporte)
             }
         }
         .sheet(isPresented: Binding(get: { reporteTexto != nil }, set: { if !$0 { reporteTexto = nil } })) {
@@ -84,6 +83,91 @@ struct CampoAdminView: View {
             seccion = .visitas
         }
         .task { await resumen.cargar() }
+    }
+
+    // MARK: - Stats bar
+
+    private var statsBar: some View {
+        HStack(spacing: 0) {
+            statCol(
+                valor: resumen.cargado ? "\(resumen.visitas)" : "—",
+                label: "Visitas",
+                icono: "checkmark.circle.fill",
+                color: Color(hex: "#16a34a"),
+                borde: true
+            )
+            statCol(
+                valor: resumen.cargado ? "\(resumen.cambios)" : "—",
+                label: "Coroplast",
+                icono: "arrow.2.squarepath",
+                color: Color("Navy"),
+                borde: true
+            )
+            statCol(
+                valor: resumen.cargado ? "\(resumen.danos)" : "—",
+                label: "Daños",
+                icono: "exclamationmark.triangle.fill",
+                color: resumen.danos > 0 ? Color(hex: "#dc2626") : Color("TextMuted"),
+                borde: false
+            )
+        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func statCol(valor: String, label: String, icono: String, color: Color, borde: Bool) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icono)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(color)
+            Text(valor)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(Color("Navy"))
+                .contentTransition(.numericText())
+                .monospacedDigit()
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+        .overlay(alignment: .trailing) {
+            if borde {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.07))
+                    .frame(width: 1)
+            }
+        }
+    }
+
+    // MARK: - Tab chips
+
+    private var tabChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Seccion.allCases, id: \.self) { s in
+                    Button {
+                        withAnimation(.spring(duration: 0.3, bounce: 0.2)) { seccion = s }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: s.icono)
+                                .font(.subheadline.weight(.medium))
+                            Text(s.rawValue)
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(seccion == s ? .white : Color("Navy"))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .background(
+                            seccion == s ? Color("Navy") : Color("Navy").opacity(0.08),
+                            in: Capsule()
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     // MARK: - Reporte
@@ -134,78 +218,5 @@ struct CampoAdminView: View {
 
         reporteTexto = lineas.joined(separator: "\n")
         HapticService.impacto(.light)
-    }
-
-    // MARK: - Stats bar
-
-    private var resumenBar: some View {
-        HStack(spacing: 10) {
-            statPill(
-                valor: resumen.cargado ? "\(resumen.visitas)" : "—",
-                label: "visitas",
-                icono: "checkmark.circle.fill",
-                color: Color(hex: "#16a34a")
-            )
-            statPill(
-                valor: resumen.cargado ? "\(resumen.cambios)" : "—",
-                label: "coroplast",
-                icono: "arrow.2.squarepath",
-                color: Color("Navy")
-            )
-            statPill(
-                valor: resumen.cargado ? "\(resumen.danos)" : "—",
-                label: "daños",
-                icono: "exclamationmark.triangle.fill",
-                color: resumen.danos > 0 ? Color(hex: "#dc2626") : Color("TextMuted")
-            )
-        }
-    }
-
-    private func statPill(valor: String, label: String, icono: String, color: Color) -> some View {
-        VStack(spacing: 3) {
-            HStack(spacing: 5) {
-                Image(systemName: icono)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(color)
-                Text(valor)
-                    .font(.headline.bold())
-                    .foregroundStyle(Color("Navy"))
-                    .contentTransition(.numericText())
-            }
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(Color("TextMuted"))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(Color(.secondarySystemGroupedBackground),
-                    in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - Tab picker
-
-    private var tabPicker: some View {
-        HStack(spacing: 8) {
-            ForEach(Seccion.allCases, id: \.self) { s in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { seccion = s }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: s.icono)
-                            .font(.subheadline.weight(.medium))
-                        Text(s.rawValue)
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .foregroundStyle(seccion == s ? .white : Color("Navy"))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(
-                        seccion == s ? Color("Navy") : Color(.secondarySystemGroupedBackground),
-                        in: RoundedRectangle(cornerRadius: 10)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 }
