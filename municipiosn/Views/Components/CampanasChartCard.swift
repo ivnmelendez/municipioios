@@ -45,8 +45,8 @@ struct CampanasChartCard: View {
                 }
             }
         }
-        .buttonStyle(.plain)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 24))
         .onAppear {
             withAnimation(.spring(duration: 0.9, bounce: 0.05).delay(0.3)) { animado = true }
         }
