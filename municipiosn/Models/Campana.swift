@@ -3,7 +3,7 @@ import Foundation
 struct UsoCampana: Identifiable {
     let id: UUID
     let nombre: String
-    let totalCaras: Int
+    let totalEstructuras: Int
     let fotoUrl: String?
 }
 

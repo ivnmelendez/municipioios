@@ -143,6 +143,7 @@ private struct CaraCampanaColoniaRaw: Codable {
 private struct CaraCampanaItem: Codable {
     let campanaId: UUID
     let campanas: CampanaResumen
+    let caras: CaraResumen
 
     struct CampanaResumen: Codable {
         let id: UUID
@@ -155,9 +156,17 @@ private struct CaraCampanaItem: Codable {
         }
     }
 
+    struct CaraResumen: Codable {
+        let estructuraId: String
+
+        enum CodingKeys: String, CodingKey {
+            case estructuraId = "estructura_id"
+        }
+    }
+
     enum CodingKeys: String, CodingKey {
         case campanaId = "campana_id"
-        case campanas
+        case campanas, caras
     }
 }
 
@@ -396,20 +405,22 @@ final class EstructurasService {
     func fetchUsoCampanas() async throws -> [UsoCampana] {
         let items: [CaraCampanaItem] = try await client
             .from("caras_campanas")
-            .select("campana_id, campanas(id, nombre, foto_url)")
+            .select("campana_id, campanas(id, nombre, foto_url), caras(estructura_id)")
             .eq("activa", value: true)
             .execute()
             .value
 
-        var counts: [UUID: (nombre: String, count: Int, fotoUrl: String?)] = [:]
+        var data: [UUID: (nombre: String, estructuras: Set<String>, fotoUrl: String?)] = [:]
         for item in items {
             let id = item.campanas.id
-            counts[id] = (item.campanas.nombre, (counts[id]?.count ?? 0) + 1, item.campanas.fotoUrl)
+            var entry = data[id] ?? (item.campanas.nombre, Set<String>(), item.campanas.fotoUrl)
+            entry.estructuras.insert(item.caras.estructuraId)
+            data[id] = entry
         }
 
-        return counts.map { id, val in
-            UsoCampana(id: id, nombre: val.nombre, totalCaras: val.count, fotoUrl: val.fotoUrl)
-        }.sorted { $0.totalCaras > $1.totalCaras }
+        return data.map { id, val in
+            UsoCampana(id: id, nombre: val.nombre, totalEstructuras: val.estructuras.count, fotoUrl: val.fotoUrl)
+        }.sorted { $0.totalEstructuras > $1.totalEstructuras }
     }
 
     // MARK: - Creación
