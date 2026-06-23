@@ -5,7 +5,6 @@ struct DashboardView: View {
     @Environment(AuthViewModel.self) private var auth
     @State private var vm = DashboardViewModel()
     @State private var mostrarConfiguracion = false
-    @State private var mostrarEditorDashboard = false
     @State private var aparecer = false
     @State private var ultimaActualizacion: Date? = nil
     @State private var fotoPerfil: Image? = nil
@@ -110,26 +109,12 @@ struct DashboardView: View {
             aparecer = true
         }
         .sheet(isPresented: $mostrarConfiguracion) {
-            ConfiguracionView()
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $mostrarEditorDashboard) {
-            EditorDashboardSheet(vm: vm)
-                .presentationDetents([.medium, .large])
+            ConfiguracionView(vm: vm)
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { mostrarEditorDashboard = true } label: {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.body.weight(.medium))
-                }
-                .tint(Color("Navy"))
-            }
-        }
         .navigationDestination(isPresented: $navegarEstructuras) {
             EstructurasListView(filtroInicial: filtroNavegacion)
                 .navigationDestination(for: EstructuraConParque.self) { e in
@@ -316,7 +301,7 @@ struct DashboardView: View {
 
 // MARK: - Editor Dashboard Sheet
 
-private struct EditorDashboardSheet: View {
+struct EditorDashboardSheet: View {
     @Bindable var vm: DashboardViewModel
     @Environment(\.dismiss) private var dismiss
 

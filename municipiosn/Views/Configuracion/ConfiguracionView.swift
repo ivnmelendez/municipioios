@@ -3,110 +3,128 @@ import PhotosUI
 import UIKit
 
 struct ConfiguracionView: View {
+    var vm: DashboardViewModel
     @AppStorage("notificacionesHabilitadas") private var notificaciones = true
     @State private var photoItem: PhotosPickerItem?
     @State private var fotoPerfil: Image?
     @State private var confirmarCerrarSesion = false
+    @State private var mostrarEditorDashboard = false
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var auth
 
     var body: some View {
-        let initiales = auth.initiales
-        return ScrollView {
-            VStack(spacing: 0) {
+        NavigationStack {
+            List {
 
-                // MARK: Header de perfil
-                VStack(spacing: 14) {
-                    PhotosPicker(selection: $photoItem, matching: .images) {
-                        ZStack(alignment: .bottomTrailing) {
-                            Group {
-                                if let foto = fotoPerfil {
-                                    foto
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 90, height: 90)
-                                        .clipShape(Circle())
-                                } else {
-                                    Text(initiales.isEmpty ? "?" : initiales)
-                                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                                        .foregroundStyle(Color("Navy"))
-                                        .frame(width: 90, height: 90)
-                                        .background(.regularMaterial, in: Circle())
+                // MARK: Header perfil
+                Section {
+                    HStack(spacing: 16) {
+                        PhotosPicker(selection: $photoItem, matching: .images) {
+                            ZStack(alignment: .bottomTrailing) {
+                                Group {
+                                    if let foto = fotoPerfil {
+                                        foto
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 72, height: 72)
+                                            .clipShape(Circle())
+                                    } else {
+                                        Text(auth.initiales.isEmpty ? "?" : auth.initiales)
+                                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color("Navy"))
+                                            .frame(width: 72, height: 72)
+                                            .background(Color("Navy").opacity(0.1), in: Circle())
+                                    }
+                                }
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(5)
+                                    .background(Color("Navy"), in: Circle())
+                                    .offset(x: 2, y: 2)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .onChange(of: photoItem) {
+                            Task {
+                                if let data = try? await photoItem?.loadTransferable(type: Data.self),
+                                   let uiImage = UIImage(data: data) {
+                                    fotoPerfil = Image(uiImage: uiImage)
+                                    guardarFoto(data: data)
                                 }
                             }
+                        }
 
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .padding(6)
-                                .background(Color("Navy"), in: Circle())
-                                .offset(x: 2, y: 2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(auth.displayName.isEmpty ? "Usuario" : auth.displayName)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Text(auth.rol == "campo" ? "Campo" : "Administrador")
+                                .font(.subheadline)
+                                .foregroundStyle(Color("TextMuted"))
+                            Text("San Nicolás de los Garza, NL")
+                                .font(.caption)
+                                .foregroundStyle(Color("TextMuted").opacity(0.7))
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                // MARK: Preferencias
+                Section("Preferencias") {
+                    Toggle(isOn: $notificaciones) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Notificaciones")
+                                    .font(.body)
+                                Text("Intervenciones, daños y rondín")
+                                    .font(.caption)
+                                    .foregroundStyle(Color("TextMuted"))
+                            }
+                        } icon: {
+                            Image(systemName: "bell.badge.fill")
+                                .foregroundStyle(Color("Navy"))
+                        }
+                    }
+                    .tint(Color("Navy"))
+                    .onChange(of: notificaciones) { _, habilitadas in
+                        if habilitadas {
+                            Task { await pedirPermisoNotificaciones() }
+                        } else {
+                            RealtimeService.shared.cancelarNotificacionSabado()
+                        }
+                    }
+
+                    Button {
+                        mostrarEditorDashboard = true
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Personalizar inicio")
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+                                Text("Elige qué tarjetas ver y en qué orden")
+                                    .font(.caption)
+                                    .foregroundStyle(Color("TextMuted"))
+                            }
+                        } icon: {
+                            Image(systemName: "slider.horizontal.3")
+                                .foregroundStyle(Color("Navy"))
                         }
                     }
                     .buttonStyle(.plain)
-                    .onChange(of: photoItem) {
-                        Task {
-                            if let data = try? await photoItem?.loadTransferable(type: Data.self),
-                               let uiImage = UIImage(data: data) {
-                                fotoPerfil = Image(uiImage: uiImage)
-                                guardarFoto(data: data)
-                            }
-                        }
-                    }
-
-                    VStack(spacing: 3) {
-                        Text(auth.displayName.isEmpty ? "Usuario" : auth.displayName)
-                            .font(.title2.bold())
-                            .foregroundStyle(Color("Navy"))
-                        Text("San Nicolás de los Garza, NL")
-                            .font(.caption)
-                            .foregroundStyle(Color("TextMuted"))
-                    }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 32)
-                .padding(.bottom, 28)
 
-                // MARK: Sección preferencias
-                VStack(spacing: 1) {
-                    configuracionRow {
-                        Toggle(isOn: $notificaciones) {
-                            Label {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Notificaciones")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(.primary)
-                                    Text("Intervenciones, daños y rondín del sábado")
-                                        .font(.caption)
-                                        .foregroundStyle(Color("TextMuted"))
-                                }
-                            } icon: {
-                                Image(systemName: "bell.badge.fill")
-                                    .foregroundStyle(Color("Navy"))
-                            }
-                        }
-                        .tint(Color("Navy"))
-                        .onChange(of: notificaciones) { _, habilitadas in
-                            if habilitadas {
-                                Task { await pedirPermisoNotificaciones() }
-                            } else {
-                                RealtimeService.shared.cancelarNotificacionSabado()
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-
-                // MARK: Probar notificación (debug)
+                // MARK: Debug
                 #if DEBUG
-                configuracionRow {
+                Section("Desarrollo") {
                     Button {
                         probarNotificacion()
                     } label: {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Probar notificación de rondín")
-                                    .font(.body.weight(.medium))
+                                    .font(.body)
                                     .foregroundStyle(.primary)
                                 Text("Llega en 2 minutos — cierra la app para probar")
                                     .font(.caption)
@@ -119,72 +137,61 @@ struct ConfiguracionView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
                 #endif
 
-                // MARK: Cerrar sesión
-                Button {
-                    confirmarCerrarSesion = true
-                } label: {
-                    HStack {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                            .font(.body.weight(.medium))
-                        Text("Cerrar sesión")
-                            .font(.body.weight(.medium))
+                // MARK: Sesión
+                Section {
+                    Button(role: .destructive) {
+                        confirmarCerrarSesion = true
+                    } label: {
+                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
                     }
-                    .foregroundStyle(Color(red: 0.86, green: 0.2, blue: 0.2))
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
 
-                // MARK: Info de app
-                VStack(spacing: 4) {
-                    Text("Municipios SN")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color("TextMuted"))
-                    Text("Versión 1.0 · San Nicolás de los Garza, NL")
+                // MARK: Footer versión
+                Section {
+                    EmptyView()
+                } footer: {
+                    Text("Municipios SN · Versión 1.0\nSan Nicolás de los Garza, NL")
                         .font(.caption2)
-                        .foregroundStyle(Color("TextMuted").opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                 }
-                .padding(.top, 24)
-                .padding(.bottom, 24)
             }
-        }
-        .background(Color("Background"))
-        .onAppear { cargarFoto() }
-        .confirmationDialog("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion, titleVisibility: .visible) {
-            Button("Cerrar sesión", role: .destructive) {
-                Task { await auth.signOut() }
+            .navigationTitle("Mi perfil")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Listo") { dismiss() }
+                        .fontWeight(.semibold)
+                        .tint(Color("Navy"))
+                }
             }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text("Se cerrará tu sesión en este dispositivo.")
+            .sheet(isPresented: $mostrarEditorDashboard) {
+                EditorDashboardSheet(vm: vm)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+            .onAppear { cargarFoto() }
+            .confirmationDialog("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion, titleVisibility: .visible) {
+                Button("Cerrar sesión", role: .destructive) {
+                    Task { await auth.signOut() }
+                }
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text("Se cerrará tu sesión en este dispositivo.")
+            }
         }
     }
 
-    // MARK: Row helper
-    @ViewBuilder
-    private func configuracionRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
+    // MARK: Persistencia foto
 
-    // MARK: Persistencia de foto
     private func guardarFoto(data: Data) {
-        let url = fotoURL()
-        try? data.write(to: url)
+        try? data.write(to: fotoURL())
     }
 
     private func cargarFoto() {
-        let url = fotoURL()
-        guard let data = try? Data(contentsOf: url),
+        guard let data = try? Data(contentsOf: fotoURL()),
               let uiImage = UIImage(data: data) else { return }
         fotoPerfil = Image(uiImage: uiImage)
     }
