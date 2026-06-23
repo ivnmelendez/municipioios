@@ -169,7 +169,7 @@ struct ConfiguracionView: View {
             }
             .sheet(isPresented: $mostrarEditorDashboard) {
                 EditorDashboardSheet(vm: vm)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
             .onAppear { cargarFoto() }
