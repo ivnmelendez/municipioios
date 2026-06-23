@@ -113,8 +113,8 @@ struct PagosView: View {
             .padding(.trailing, 20)
             .padding(.bottom, 24)
         }
-        .navigationTitle("Pagos")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {

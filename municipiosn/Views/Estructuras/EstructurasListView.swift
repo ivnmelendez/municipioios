@@ -131,7 +131,7 @@ struct EstructurasListView: View {
         case .dañada:    return "Estructuras dañadas"
         case .activa:    return "Estructuras activas"
         case .inactiva:  return "Estructuras inactivas"
-        default:         return "Estructuras"
+        default:         return ""
         }
     }
 }
