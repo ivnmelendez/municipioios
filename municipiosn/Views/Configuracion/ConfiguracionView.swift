@@ -14,7 +14,7 @@ struct ConfiguracionView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+        List {
 
                 // MARK: Header perfil
                 Section {
@@ -173,14 +173,14 @@ struct ConfiguracionView: View {
                     .presentationDragIndicator(.visible)
             }
             .onAppear { cargarFoto() }
-            .confirmationDialog("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion, titleVisibility: .visible) {
-                Button("Cerrar sesión", role: .destructive) {
-                    Task { await auth.signOut() }
-                }
-                Button("Cancelar", role: .cancel) {}
-            } message: {
-                Text("Se cerrará tu sesión en este dispositivo.")
+        }
+        .confirmationDialog("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion, titleVisibility: .visible) {
+            Button("Cerrar sesión", role: .destructive) {
+                Task { await auth.signOut() }
             }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Se cerrará tu sesión en este dispositivo.")
         }
     }
 
