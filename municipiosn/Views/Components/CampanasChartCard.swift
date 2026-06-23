@@ -76,34 +76,52 @@ struct CampanasChartCard: View {
 
 private struct CampanaImagenSheet: View {
     let campana: UsoCampana
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text(campana.nombre)
-                .font(.headline)
-                .foregroundStyle(Color("Navy"))
-                .padding(.top, 8)
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
 
-            if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img.resizable()
-                            .scaledToFit()
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                    case .failure:
-                        Image(systemName: "photo")
-                            .font(.largeTitle)
-                            .foregroundStyle(Color("TextMuted"))
-                    default:
-                        ProgressView()
+            VStack(spacing: 16) {
+                Spacer()
+
+                if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable()
+                                .scaledToFit()
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        case .failure:
+                            Image(systemName: "photo.slash")
+                                .font(.system(size: 48))
+                                .foregroundStyle(.white.opacity(0.4))
+                        default:
+                            ProgressView().tint(.white)
+                        }
                     }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
+
+                Text(campana.nombre)
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+
+                Spacer()
             }
 
-            Spacer()
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.white)
+            }
+            .padding(20)
         }
+        .presentationBackground(Color.black)
+        .presentationCornerRadius(28)
     }
 }
 
@@ -154,7 +172,7 @@ private struct CampanasListaCompleta: View {
             }
             .sheet(item: $campanaImagen) { campana in
                 CampanaImagenSheet(campana: campana)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
         }
