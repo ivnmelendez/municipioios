@@ -153,15 +153,14 @@ private struct NuevoPagoSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var fecha = Date()
-    @State private var trabajadorSeleccionado = "Don Cruz"
+    @State private var trabajadorSeleccionado: String? = nil
     @State private var trabajadorCustom = ""
     @State private var montoTexto = ""
     @State private var concepto = ""
-
-    private let trabajadoresDefault = ["Don Cruz", "Pepín", "Otro"]
+    @State private var exito = false
 
     private var trabajadorFinal: String {
-        trabajadorSeleccionado == "Otro" ? trabajadorCustom : trabajadorSeleccionado
+        trabajadorSeleccionado == "Otro" ? trabajadorCustom : (trabajadorSeleccionado ?? "")
     }
 
     private var montoValido: Double? {
@@ -170,60 +169,180 @@ private struct NuevoPagoSheet: View {
     }
 
     private var puedeGuardar: Bool {
-        montoValido != nil && montoValido! > 0 && !trabajadorFinal.trimmingCharacters(in: .whitespaces).isEmpty
+        montoValido != nil && montoValido! > 0 &&
+        !trabajadorFinal.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Trabajador") {
-                    Picker("Trabajador", selection: $trabajadorSeleccionado) {
-                        ForEach(trabajadoresDefault, id: \.self) { Text($0) }
+            ScrollView {
+                VStack(spacing: 28) {
+
+                    // Header
+                    VStack(spacing: 6) {
+                        Text("¿A quién le pagaste?")
+                            .font(.title2.bold())
+                            .foregroundStyle(Color("Navy"))
+                        Text("Selecciona el trabajador")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
-                    .pickerStyle(.segmented)
+                    .padding(.top, 8)
 
-                    if trabajadorSeleccionado == "Otro" {
-                        TextField("Nombre del trabajador", text: $trabajadorCustom)
+                    // Opciones de trabajador
+                    VStack(spacing: 12) {
+                        trabajadorOpcion("Don Cruz", subtitulo: "Trabajador principal")
+                        trabajadorOpcion("Pepín", subtitulo: "Trabajador de campo")
+                        trabajadorOpcion("Otro", subtitulo: "Agregar otro nombre")
+
+                        if trabajadorSeleccionado == "Otro" {
+                            TextField("Nombre del trabajador", text: $trabajadorCustom)
+                                .padding(14)
+                                .background(Color(.secondarySystemGroupedBackground),
+                                            in: RoundedRectangle(cornerRadius: 12))
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
-                }
+                    .padding(.horizontal, 20)
+                    .animation(.easeInOut(duration: 0.2), value: trabajadorSeleccionado)
 
-                Section("Pago") {
-                    DatePicker("Fecha", selection: $fecha, displayedComponents: .date)
-                        .environment(\.locale, Locale(identifier: "es_MX"))
-
-                    HStack {
-                        Text("$")
+                    // Monto
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Monto pagado")
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color("TextMuted"))
-                        TextField("0.00", text: $montoTexto)
-                            .keyboardType(.decimalPad)
+                        HStack(spacing: 8) {
+                            Text("$")
+                                .font(.title2.bold())
+                                .foregroundStyle(Color("Navy"))
+                            TextField("0.00", text: $montoTexto)
+                                .font(.title2.bold())
+                                .keyboardType(.decimalPad)
+                                .foregroundStyle(Color("Navy"))
+                        }
+                        .padding(16)
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 14))
                     }
-                }
+                    .padding(.horizontal, 20)
 
-                Section("Concepto (opcional)") {
-                    TextField("Ej: Rondín del sábado, Coroplast...", text: $concepto)
+                    // Fecha
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Fecha del pago")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        DatePicker("", selection: $fecha, displayedComponents: .date)
+                            .labelsHidden()
+                            .environment(\.locale, Locale(identifier: "es_MX"))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.secondarySystemGroupedBackground),
+                                        in: RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal, 20)
+
+                    // Concepto
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Concepto (opcional)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        TextField("Ej: Rondín del sábado, cambio de coroplast...",
+                                  text: $concepto, axis: .vertical)
+                            .lineLimit(2...4)
+                            .padding(14)
+                            .background(Color(.secondarySystemGroupedBackground),
+                                        in: RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal, 20)
+
+                    // Botón guardar
+                    Button {
+                        guard let monto = montoValido else { return }
+                        let fmt = DateFormatter()
+                        fmt.dateFormat = "yyyy-MM-dd"
+                        onGuardar(fmt.string(from: fecha), trabajadorFinal, monto,
+                                  concepto.isEmpty ? nil : concepto)
+                        HapticService.exito()
+                        withAnimation { exito = true }
+                    } label: {
+                        HStack {
+                            Image(systemName: "banknote.fill")
+                            Text("Guardar pago")
+                        }
+                        .font(.headline.bold())
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            puedeGuardar ? Color("Navy") : Color.secondary.opacity(0.35),
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                    }
+                    .disabled(!puedeGuardar)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 32)
                 }
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Registrar pago")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancelar") { dismiss() }
-                        .tint(Color("TextMuted"))
+                        .foregroundStyle(Color("Navy"))
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Guardar") {
-                        guard let monto = montoValido else { return }
-                        let fmt = DateFormatter()
-                        fmt.dateFormat = "yyyy-MM-dd"
-                        onGuardar(fmt.string(from: fecha), trabajadorFinal, monto, concepto.isEmpty ? nil : concepto)
-                        HapticService.impacto(.medium)
-                        dismiss()
+            }
+            .overlay {
+                if exito {
+                    ZStack {
+                        Color.black.opacity(0.45).ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundStyle(.green)
+                            Text("Pago registrado")
+                                .font(.title2.bold())
+                                .foregroundStyle(.white)
+                        }
+                        .padding(40)
                     }
-                    .fontWeight(.semibold)
-                    .tint(Color("Navy"))
-                    .disabled(!puedeGuardar)
+                    .onAppear {
+                        HapticService.exito()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { dismiss() }
+                    }
                 }
             }
         }
+    }
+
+    private func trabajadorOpcion(_ nombre: String, subtitulo: String) -> some View {
+        let seleccionado = trabajadorSeleccionado == nombre
+        return Button {
+            withAnimation(.easeInOut(duration: 0.15)) { trabajadorSeleccionado = nombre }
+            HapticService.seleccion()
+        } label: {
+            HStack(spacing: 16) {
+                Image(systemName: seleccionado ? "checkmark.circle.fill" : "person.fill")
+                    .font(.title2)
+                    .foregroundStyle(seleccionado ? .white : Color("Navy"))
+                    .frame(width: 44)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(nombre)
+                        .font(.headline)
+                        .foregroundStyle(seleccionado ? .white : .primary)
+                    Text(subtitulo)
+                        .font(.subheadline)
+                        .foregroundStyle(seleccionado ? .white.opacity(0.8) : .secondary)
+                }
+                Spacer()
+            }
+            .padding(18)
+            .background(
+                seleccionado ? Color("Navy") : Color(.secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 16)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

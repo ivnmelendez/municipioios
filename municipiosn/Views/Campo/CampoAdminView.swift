@@ -8,17 +8,15 @@ struct CampoAdminView: View {
     @State private var generandoReporte = false
 
     enum Seccion: String, CaseIterable {
-        case visitas    = "Visitas"
-        case coroplast  = "Coroplast"
-        case danos      = "Daños"
-        case pagos      = "Pagos"
+        case visitas   = "Visitas"
+        case coroplast = "Coroplast"
+        case danos     = "Daños"
 
         var icono: String {
             switch self {
             case .visitas:   "checkmark.circle.fill"
             case .coroplast: "arrow.2.squarepath"
             case .danos:     "exclamationmark.triangle.fill"
-            case .pagos:     "banknote.fill"
             }
         }
     }
@@ -31,7 +29,34 @@ struct CampoAdminView: View {
                 statsBar
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 12)
+
+                // MARK: Pagos card
+                NavigationLink(destination: PagosView()) {
+                    HStack(spacing: 16) {
+                        Image(systemName: "banknote.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color("Navy"))
+                            .frame(width: 44)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Pagos de mano de obra")
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Text("Historial y registro de pagos")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(18)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
 
                 // MARK: Tab chips
                 tabChips
@@ -39,16 +64,15 @@ struct CampoAdminView: View {
 
                 // MARK: Contenido
                 ZStack {
-                    if seccion == .visitas    { HistorialCampoView().transition(.opacity) }
-                    if seccion == .coroplast  { IntervencionesView().transition(.opacity) }
-                    if seccion == .danos      { DañosView().transition(.opacity) }
-                    if seccion == .pagos      { PagosView().transition(.opacity) }
+                    if seccion == .visitas   { HistorialCampoView().transition(.opacity) }
+                    if seccion == .coroplast { IntervencionesView().transition(.opacity) }
+                    if seccion == .danos     { DañosView().transition(.opacity) }
                 }
                 .animation(.easeInOut(duration: 0.2), value: seccion)
             }
             .background(Color("Background"))
-            .navigationTitle("Campo")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
