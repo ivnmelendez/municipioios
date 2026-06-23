@@ -102,11 +102,11 @@ final class AuthViewModel {
 
     func signOut() async {
         try? await auth.signOut()
+        authState = .unauthenticated
         rol = "admin"
         perfilId = nil
         displayName = ""
         initiales = ""
-        authState = .unauthenticated
     }
 
     private func localizedAuthError(_ error: Error) -> String {
