@@ -112,7 +112,16 @@ struct CampoAdminView: View {
     // MARK: - Stats bar
 
     private var statsBar: some View {
-        HStack(spacing: 0) {
+        VStack(spacing: 0) {
+            Text("Esta semana")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color("TextMuted"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
+
+            HStack(spacing: 0) {
             statCol(
                 valor: resumen.cargado ? "\(resumen.visitas)" : "—",
                 label: "Visitas",
@@ -134,6 +143,7 @@ struct CampoAdminView: View {
                 color: resumen.danos > 0 ? Color(hex: "#dc2626") : Color("TextMuted"),
                 borde: false
             )
+            }
         }
         .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
