@@ -76,37 +76,30 @@ private struct CampanaImagenSheet: View {
     let campana: UsoCampana
 
     var body: some View {
-        VStack(spacing: 24) {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
             if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let img):
                         img.resizable()
                             .scaledToFit()
-                            .frame(maxWidth: .infinity, maxHeight: 320)
+                            .frame(maxWidth: .infinity, maxHeight: 480)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .padding(.horizontal, 20)
                     case .failure:
                         Image(systemName: "photo.slash")
                             .font(.system(size: 48))
-                            .foregroundStyle(Color("TextMuted"))
-                            .frame(height: 200)
+                            .foregroundStyle(.white.opacity(0.4))
                     default:
-                        ProgressView()
-                            .frame(height: 200)
+                        ProgressView().tint(.white)
                     }
                 }
-                .padding(.horizontal, 20)
             }
-
-            Text(campana.nombre)
-                .font(.title3.bold())
-                .foregroundStyle(Color("Navy"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
         }
-        .padding(.top, 12)
-        .frame(maxWidth: .infinity)
-        .presentationDetents([.fraction(0.55)])
+        .presentationBackground(Color.black)
+        .presentationDetents([.fraction(0.75)])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(28)
     }
