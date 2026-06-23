@@ -96,7 +96,7 @@ struct PagosView: View {
             NuevoPagoSheet(perfilId: auth.perfilId) { fecha, trabajador, monto, concepto in
                 Task { await vm.registrar(fecha: fecha, trabajador: trabajador, monto: monto, concepto: concepto, creadoPor: auth.perfilId ?? UUID()) }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
     }
