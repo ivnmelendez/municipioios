@@ -30,6 +30,7 @@ struct CampanaCelda: View {
     let cara: CaraDetalle
     var onTapFoto: ((URL) -> Void)? = nil
     var onCambiarCampana: (() -> Void)? = nil
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var fotoURL: URL? {
         if let s = cara.fotoCampana ?? cara.campana?.fotoUrl { return URL(string: s) }
@@ -94,7 +95,7 @@ struct CampanaCelda: View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: 100)
+                        .frame(maxWidth: .infinity, maxHeight: sizeClass == .regular ? 200 : 100)
                 case .failure:
                     placeholderImage
                 default:

@@ -477,16 +477,13 @@ struct EstructuraDetalleView: View {
         .ignoresSafeArea(edges: .top)
     }
 
-    // MARK: - iPad portrait (columna única, mejor aprovechamiento)
+    // MARK: - iPad portrait (columna única, hero más alto)
     private var iPadPortraitLayout: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                heroImage(height: 480)
+        VStack(spacing: 0) {
+            heroImage(height: 620)
+            ScrollView {
                 contentCards
-                    .frame(maxWidth: 720)
-                    .padding(.horizontal, 8)
             }
-            .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .ignoresSafeArea(edges: .top)
