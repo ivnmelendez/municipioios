@@ -52,7 +52,7 @@ struct CampoAdminView: View {
                             .foregroundStyle(.tertiary)
                     }
                     .padding(18)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 20)
