@@ -65,45 +65,13 @@ struct CampanasChartCard: View {
             CampanasListaCompleta(datos: datos)
         }
         .sheet(item: $campanaImagen) { campana in
-            CampanaImagenSheet(campana: campana)
-        }
-    }
-}
-
-// MARK: - Imagen sheet
-
-private struct CampanaImagenSheet: View {
-    let campana: UsoCampana
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
             if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img.resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity, maxHeight: 480)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .padding(.horizontal, 20)
-                    case .failure:
-                        Image(systemName: "photo.slash")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.white.opacity(0.4))
-                    default:
-                        ProgressView().tint(.white)
-                    }
-                }
+                FotoFullscreenView(url: url, titulo: campana.nombre)
             }
         }
-        .presentationBackground(Color.black)
-        .presentationDetents([.fraction(0.75)])
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(28)
     }
 }
+
 
 // MARK: - Lista completa
 
@@ -151,9 +119,9 @@ private struct CampanasListaCompleta: View {
                 }
             }
             .sheet(item: $campanaImagen) { campana in
-                CampanaImagenSheet(campana: campana)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
+                    FotoFullscreenView(url: url, titulo: campana.nombre)
+                }
             }
         }
     }
