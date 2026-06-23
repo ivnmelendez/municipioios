@@ -161,6 +161,10 @@ final class EstructurasService {
 
     private init() {}
 
+    private var campanasCached: [CampanaBasica] = []
+    private var campanasCachedAt: Date? = nil
+    private let campanasTTL: TimeInterval = 300
+
     func fetchEstructuras() async throws -> [EstructuraConParque] {
         try await client
             .from("estructuras")
@@ -515,13 +519,20 @@ final class EstructurasService {
     }
 
     func fetchCampanasActivas() async throws -> [CampanaBasica] {
-        try await client
+        if let ts = campanasCachedAt, !campanasCached.isEmpty,
+           Date().timeIntervalSince(ts) < campanasTTL {
+            return campanasCached
+        }
+        let result: [CampanaBasica] = try await client
             .from("campanas")
             .select("id, nombre, foto_url")
             .eq("activa", value: true)
             .order("nombre")
             .execute()
             .value
+        campanasCached = result
+        campanasCachedAt = Date()
+        return result
     }
 
 }
