@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import SwiftUI
 
 @MainActor
 @Observable
@@ -13,6 +14,35 @@ final class DashboardViewModel {
     var coloniasDetalle: [ColoniaConCampanas] = []
     var errorMessage: String?
     var isLoading = false
+
+    var cardConfig: [DashboardCardItem] = DashboardCardItem.defaults
+    private var configUserId: UUID?
+    private var saveTask: Task<Void, Never>?
+
+    func cargarConfig(userId: UUID) async {
+        configUserId = userId
+        cardConfig = await DashboardConfigService.shared.fetch(userId: userId)
+    }
+
+    func toggleCard(_ id: DashboardCardID) {
+        guard let idx = cardConfig.firstIndex(where: { $0.id == id }) else { return }
+        cardConfig[idx].activa.toggle()
+        programarGuardado()
+    }
+
+    func moverCard(from: IndexSet, to: Int) {
+        cardConfig.move(fromOffsets: from, toOffset: to)
+        programarGuardado()
+    }
+
+    private func programarGuardado() {
+        saveTask?.cancel()
+        saveTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled, let self, let userId = self.configUserId else { return }
+            await DashboardConfigService.shared.save(userId: userId, config: self.cardConfig)
+        }
+    }
 
     func cargar() async {
         guard !isLoading else { return }

@@ -5,6 +5,7 @@ struct DashboardView: View {
     @Environment(AuthViewModel.self) private var auth
     @State private var vm = DashboardViewModel()
     @State private var mostrarConfiguracion = false
+    @State private var mostrarEditorDashboard = false
     @State private var aparecer = false
     @State private var ultimaActualizacion: Date? = nil
     @State private var fotoPerfil: Image? = nil
@@ -70,60 +71,18 @@ struct DashboardView: View {
                 } else {
                     VStack(spacing: 16) {
 
-                        // MARK: Alerta dañadas
+                        // MARK: Alerta dañadas (siempre visible, no personalizable)
                         if vm.kpi.dañadas > 0 {
                             alertaDañadas
                                 .padding(.horizontal, 20)
                                 .intro(aparecer, delay: 0.04)
                         }
 
-                        // MARK: Cobertura mensual — hero ring
-                        CoberturaRingCard(kpi: vm.kpi)
-                            .padding(.horizontal, 20)
-                            .intro(aparecer, delay: 0.08)
-
-                        // MARK: Esta semana
-                        SemanaCard(kpi: vm.kpi)
-                            .padding(.horizontal, 20)
-                            .intro(aparecer, delay: 0.16)
-
-                        // MARK: Datos del municipio
-                        if !vm.usoColonias.isEmpty || vm.kpi.isLoaded {
-                            VStack(alignment: .leading, spacing: 12) {
-                                sectionLabel("Datos del municipio")
-                                    .padding(.horizontal, 20)
-                                ResumenMunicipalCard(
-                                    kpi: vm.kpi,
-                                    coloniasConEstructuras: vm.coloniasConEstructuras
-                                )
+                        // MARK: Cards dinámicas
+                        ForEach(Array(vm.cardConfig.filter { $0.activa }.enumerated()), id: \.element.id) { index, card in
+                            cardView(for: card.id)
                                 .padding(.horizontal, 20)
-                                if !vm.usoColonias.isEmpty {
-                                    TopColoniasCard(colonias: vm.usoColonias)
-                                        .padding(.horizontal, 20)
-                                }
-                            }
-                            .intro(aparecer, delay: 0.22)
-                        }
-
-
-                        // MARK: Coroplast del mes
-                        coroplastMes
-                            .padding(.horizontal, 20)
-                            .intro(aparecer, delay: 0.26)
-
-                        // MARK: Charts
-                        if !vm.usoCampanas.isEmpty || vm.kpi.isLoaded {
-                            VStack(spacing: 12) {
-                                sectionLabel("Estadísticas")
-                                    .padding(.horizontal, 20)
-                                CampanasChartCard(datos: vm.usoCampanas)
-                                    .padding(.horizontal, 20)
-                                if !vm.usoColonias.isEmpty {
-                                    ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
-                                        .padding(.horizontal, 20)
-                                }
-                            }
-                            .intro(aparecer, delay: 0.34)
+                                .intro(aparecer, delay: 0.08 + Double(index) * 0.06)
                         }
                     }
                     .padding(.bottom, 48)
@@ -143,6 +102,9 @@ struct DashboardView: View {
             ultimaActualizacion = Date()
         }
         .task {
+            if let userId = auth.perfilId {
+                await vm.cargarConfig(userId: userId)
+            }
             await vm.cargar()
             ultimaActualizacion = Date()
             aparecer = true
@@ -152,8 +114,22 @@ struct DashboardView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $mostrarEditorDashboard) {
+            EditorDashboardSheet(vm: vm)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { mostrarEditorDashboard = true } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.body.weight(.medium))
+                }
+                .tint(Color("Navy"))
+            }
+        }
         .navigationDestination(isPresented: $navegarEstructuras) {
             EstructurasListView(filtroInicial: filtroNavegacion)
                 .navigationDestination(for: EstructuraConParque.self) { e in
@@ -311,6 +287,83 @@ struct DashboardView: View {
         Text(texto)
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(Color("TextMuted"))
+    }
+
+    @ViewBuilder
+    private func cardView(for id: DashboardCardID) -> some View {
+        switch id {
+        case .cobertura:
+            CoberturaRingCard(kpi: vm.kpi)
+        case .semana:
+            SemanaCard(kpi: vm.kpi)
+        case .resumenMunicipal:
+            ResumenMunicipalCard(kpi: vm.kpi, coloniasConEstructuras: vm.coloniasConEstructuras)
+        case .topColonias:
+            if !vm.usoColonias.isEmpty {
+                TopColoniasCard(colonias: vm.usoColonias)
+            }
+        case .coroplastMes:
+            coroplastMes
+        case .campanasChart:
+            CampanasChartCard(datos: vm.usoCampanas)
+        case .coloniasChart:
+            if !vm.usoColonias.isEmpty {
+                ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
+            }
+        }
+    }
+}
+
+// MARK: - Editor Dashboard Sheet
+
+private struct EditorDashboardSheet: View {
+    @Bindable var vm: DashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach($vm.cardConfig) { $card in
+                        HStack(spacing: 14) {
+                            Image(systemName: card.id.icono)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(card.activa ? Color("Navy") : Color("TextMuted"))
+                                .frame(width: 28)
+
+                            Text(card.id.titulo)
+                                .font(.body)
+                                .foregroundStyle(card.activa ? .primary : Color("TextMuted"))
+
+                            Spacer()
+
+                            Toggle("", isOn: Binding(
+                                get: { card.activa },
+                                set: { _ in vm.toggleCard(card.id) }
+                            ))
+                            .labelsHidden()
+                            .tint(Color("Navy"))
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .onMove { from, to in vm.moverCard(from: from, to: to) }
+                } header: {
+                    Text("Arrastra para reordenar")
+                } footer: {
+                    Text("Los cambios se guardan automáticamente.")
+                }
+            }
+            .navigationTitle("Personalizar inicio")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Listo") { dismiss() }
+                        .fontWeight(.semibold)
+                        .tint(Color("Navy"))
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+        }
     }
 }
 
