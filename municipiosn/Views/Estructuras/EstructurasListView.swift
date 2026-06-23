@@ -498,8 +498,8 @@ struct EstructuraDetalleView: View {
         GeometryReader { geo in
             HStack(spacing: 0) {
                 // Columna izquierda — ancho fijo 45%
-                heroImage(height: geo.size.height)
-                    .frame(width: geo.size.width * 0.45)
+                heroImage(height: geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom)
+                    .frame(width: geo.size.width * 0.45, height: geo.size.height)
                     .clipped()
                     .ignoresSafeArea(edges: .vertical)
 
