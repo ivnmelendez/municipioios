@@ -495,36 +495,21 @@ struct EstructuraDetalleView: View {
 
     // MARK: - iPad landscape (2 columnas)
     private var iPadLayout: some View {
-        HStack(spacing: 0) {
-            // Columna izquierda — imagen fija con info superpuesta
-            ZStack(alignment: .bottomLeading) {
-                heroImage(height: nil)
+        GeometryReader { geo in
+            HStack(spacing: 0) {
+                // Columna izquierda — ancho fijo 45%
+                heroImage(height: geo.size.height)
+                    .frame(width: geo.size.width * 0.45)
+                    .clipped()
+                    .ignoresSafeArea(edges: .vertical)
 
-                // Gradient + info
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.75)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea(edges: .bottom)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(estructura.numero)
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(.white)
-                    EstadoBadge(estado: estructura.estado)
+                // Columna derecha — ancho fijo 55%
+                ScrollView {
+                    contentCards
+                        .padding(.top, 12)
                 }
-                .padding(28)
+                .frame(width: geo.size.width * 0.55)
             }
-            .frame(maxWidth: .infinity)
-            .ignoresSafeArea(edges: .vertical)
-
-            // Columna derecha — cards scrollables
-            ScrollView {
-                contentCards
-                    .padding(.top, 12)
-            }
-            .frame(maxWidth: .infinity)
         }
         .ignoresSafeArea(edges: .bottom)
     }
