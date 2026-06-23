@@ -176,7 +176,11 @@ struct ConfiguracionView: View {
         }
         .alert("¿Cerrar sesión?", isPresented: $confirmarCerrarSesion) {
             Button("Cerrar sesión", role: .destructive) {
-                Task { await auth.signOut() }
+                dismiss()
+                Task {
+                    try? await Task.sleep(for: .milliseconds(400))
+                    await auth.signOut()
+                }
             }
             Button("Cancelar", role: .cancel) {}
         } message: {
