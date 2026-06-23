@@ -13,7 +13,10 @@ struct ConfiguracionView: View {
     @Environment(AuthViewModel.self) private var auth
 
     var body: some View {
-        NavigationStack {
+        let initiales = auth.initiales
+        let displayName = auth.displayName
+        let rol = auth.rol
+        return NavigationStack {
         List {
 
                 // MARK: Header perfil
@@ -29,7 +32,7 @@ struct ConfiguracionView: View {
                                             .frame(width: 72, height: 72)
                                             .clipShape(Circle())
                                     } else {
-                                        Text(auth.initiales.isEmpty ? "?" : auth.initiales)
+                                        Text(initiales.isEmpty ? "?" : initiales)
                                             .font(.system(size: 24, weight: .bold, design: .rounded))
                                             .foregroundStyle(Color("Navy"))
                                             .frame(width: 72, height: 72)
@@ -56,10 +59,10 @@ struct ConfiguracionView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(auth.displayName.isEmpty ? "Usuario" : auth.displayName)
+                            Text(displayName.isEmpty ? "Usuario" : displayName)
                                 .font(.headline)
                                 .foregroundStyle(.primary)
-                            Text(auth.rol == "campo" ? "Campo" : "Administrador")
+                            Text(rol == "campo" ? "Campo" : "Administrador")
                                 .font(.subheadline)
                                 .foregroundStyle(Color("TextMuted"))
                             Text("San Nicolás de los Garza, NL")
