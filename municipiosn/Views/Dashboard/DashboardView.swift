@@ -382,7 +382,7 @@ private struct SemanaCard: View {
                     .contentTransition(.identity)
                 Spacer()
                 Button {
-                    withAnimation(.spring(duration: 0.3, bounce: 0.1)) { esMes.toggle() }
+                    withAnimation(.easeInOut(duration: 0.2)) { esMes.toggle() }
                     HapticService.seleccion()
                 } label: {
                     Text(esMes ? "Ver semana" : "Ver mes")
@@ -427,7 +427,6 @@ private struct SemanaCard: View {
                 )
             }
             .padding(.vertical, 20)
-            .animation(.spring(duration: 0.3), value: esMes)
         }
         .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
