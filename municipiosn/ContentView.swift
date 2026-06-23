@@ -27,7 +27,12 @@ struct ContentView: View {
                 DashboardView()
             }
             Tab("Mapa", systemImage: "map.fill", value: "mapa") {
-                MapaView()
+                NavigationStack {
+                    MapaView()
+                        .navigationDestination(for: EstructuraConParque.self) { e in
+                            EstructuraDetalleView(estructura: e)
+                        }
+                }
             }
             Tab("Estructuras", systemImage: "square.stack.fill", value: "estructuras") {
                 NavigationStack {
@@ -66,7 +71,12 @@ struct ContentView: View {
         } detail: {
             switch tabSeleccionada {
             case "mapa":
-                MapaView()
+                NavigationStack {
+                    MapaView()
+                        .navigationDestination(for: EstructuraConParque.self) { e in
+                            EstructuraDetalleView(estructura: e)
+                        }
+                }
             case "estructuras":
                 NavigationStack {
                     EstructurasListView()

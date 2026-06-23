@@ -168,6 +168,7 @@ struct MapaView: View {
     @State private var estructuraSemanaMap: [UUID: RutaSemana] = [:]
     @State private var coloniaSemanaColors: [String: String] = [:]
     @State private var mostrarRutas: Bool = false
+    @State private var estructuraNavegada: EstructuraConParque? = nil
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
     @State private var visitadasVersion: Int = 0
@@ -368,6 +369,15 @@ struct MapaView: View {
                 estructuras: vm.estructuras,
                 semanaMap: estructuraSemanaMap
             )
+        }
+        .navigationDestination(item: $estructuraNavegada) { e in
+            EstructuraDetalleView(estructura: e)
+        }
+        .onChange(of: vm.mostrarDetalle) { _, mostrar in
+            if mostrar, !puedeCrearEstructuras, let e = vm.estructuraSeleccionada {
+                estructuraNavegada = e
+                vm.mostrarDetalle = false
+            }
         }
         .sheet(isPresented: $vm.mostrarDetalle) {
             if let estructura = vm.estructuraSeleccionada {
