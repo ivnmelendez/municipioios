@@ -3,15 +3,20 @@ import SwiftUI
 struct CampanasSideBySideView: View {
     let caras: [CaraDetalle]
     var onTapFoto: ((URL, String) -> Void)? = nil
+    var onCambiarCampana: ((CaraDetalle) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             GlassEffectContainer(spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
                     ForEach(caras.sorted(by: { $0.tipo < $1.tipo })) { cara in
-                        CampanaCelda(cara: cara, onTapFoto: { url in
-                            onTapFoto?(url, "Campaña Cara \(cara.tipo)")
-                        })
+                        CampanaCelda(
+                            cara: cara,
+                            onTapFoto: onCambiarCampana == nil ? { url in
+                                onTapFoto?(url, "Campaña Cara \(cara.tipo)")
+                            } : nil,
+                            onCambiarCampana: onCambiarCampana != nil ? { onCambiarCampana?(cara) } : nil
+                        )
                     }
                 }
             }
@@ -24,6 +29,7 @@ struct CampanasSideBySideView: View {
 struct CampanaCelda: View {
     let cara: CaraDetalle
     var onTapFoto: ((URL) -> Void)? = nil
+    var onCambiarCampana: (() -> Void)? = nil
 
     var fotoURL: URL? {
         if let s = cara.fotoCampana ?? cara.campana?.fotoUrl { return URL(string: s) }
@@ -32,7 +38,11 @@ struct CampanaCelda: View {
 
     var body: some View {
         Button {
-            if let url = fotoURL { onTapFoto?(url) }
+            if let cambiar = onCambiarCampana {
+                cambiar()
+            } else if let url = fotoURL {
+                onTapFoto?(url)
+            }
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 imageArea

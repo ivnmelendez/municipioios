@@ -369,11 +369,15 @@ private struct TransparentNavBar: UIViewRepresentable {
 
 struct EstructuraDetalleView: View {
     let estructura: EstructuraConParque
+    var esCampo: Bool = false
     @Environment(\.dismiss) private var dismiss
     @State private var caras: [CaraDetalle] = []
     @State private var historial: [IntervencionCompleta] = []
     @State private var isLoading = true
     @State private var fotoFullscreen: IdentifiableURL?
+    @State private var campanas: [CampanaBasica] = []
+    @State private var caraParaCambio: CaraDetalle? = nil
+    @State private var campanaSeleccionada: CampanaBasica? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -454,9 +458,16 @@ struct EstructuraDetalleView: View {
                         ProgressView().frame(maxWidth: .infinity).padding(.vertical, 32)
                     } else {
                         if !caras.isEmpty {
-                            CampanasSideBySideView(caras: caras) { url, titulo in
-                                fotoFullscreen = IdentifiableURL(url: url, titulo: titulo)
-                            }
+                            CampanasSideBySideView(
+                                caras: caras,
+                                onTapFoto: esCampo ? nil : { url, titulo in
+                                    fotoFullscreen = IdentifiableURL(url: url, titulo: titulo)
+                                },
+                                onCambiarCampana: esCampo ? { cara in
+                                    campanaSeleccionada = cara.campana.flatMap { c in campanas.first { $0.id == c.id } }
+                                    caraParaCambio = cara
+                                } : nil
+                            )
                             .padding(.top, 8)
                         }
 
@@ -556,6 +567,19 @@ struct EstructuraDetalleView: View {
             caras = (try? await carasTask) ?? []
             historial = (try? await historialTask) ?? []
             isLoading = false
+            if esCampo {
+                campanas = (try? await EstructurasService.shared.fetchCampanasActivas()) ?? []
+            }
+        }
+        .sheet(item: $caraParaCambio) { cara in
+            CampanaPickerSheet(campanas: campanas, seleccionada: $campanaSeleccionada)
+                .onDisappear {
+                    guard let nuevaCampana = campanaSeleccionada else { return }
+                    Task {
+                        try? await EstructurasService.shared.asignarCampana(caraId: cara.id, campanaId: nuevaCampana.id)
+                        caras = (try? await EstructurasService.shared.fetchCarasDetalle(estructuraId: estructura.id)) ?? caras
+                    }
+                }
         }
         .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
             FotoFullscreenView(url: item.url, titulo: item.titulo)

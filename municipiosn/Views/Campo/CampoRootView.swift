@@ -19,7 +19,7 @@ struct CampoRootView: View {
                 NavigationStack {
                     EstructurasListView()
                         .navigationDestination(for: EstructuraConParque.self) { e in
-                            EstructuraDetalleView(estructura: e)
+                            EstructuraDetalleView(estructura: e, esCampo: true)
                         }
                 }
             }
