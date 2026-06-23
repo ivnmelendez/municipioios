@@ -66,8 +66,6 @@ struct CampanasChartCard: View {
         }
         .sheet(item: $campanaImagen) { campana in
             CampanaImagenSheet(campana: campana)
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
         }
     }
 }
@@ -76,51 +74,40 @@ struct CampanasChartCard: View {
 
 private struct CampanaImagenSheet: View {
     let campana: UsoCampana
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
-
-            VStack(spacing: 16) {
-                Spacer()
-
-                if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let img):
-                            img.resizable()
-                                .scaledToFit()
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        case .failure:
-                            Image(systemName: "photo.slash")
-                                .font(.system(size: 48))
-                                .foregroundStyle(.white.opacity(0.4))
-                        default:
-                            ProgressView().tint(.white)
-                        }
+        VStack(spacing: 24) {
+            if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: 320)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    case .failure:
+                        Image(systemName: "photo.slash")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Color("TextMuted"))
+                            .frame(height: 200)
+                    default:
+                        ProgressView()
+                            .frame(height: 200)
                     }
-                    .padding(.horizontal, 20)
                 }
-
-                Text(campana.nombre)
-                    .font(.title3.bold())
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-
-                Spacer()
+                .padding(.horizontal, 20)
             }
 
-            Button { dismiss() } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.white)
-            }
-            .padding(20)
+            Text(campana.nombre)
+                .font(.title3.bold())
+                .foregroundStyle(Color("Navy"))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
         }
-        .presentationBackground(Color.black)
+        .padding(.top, 12)
+        .frame(maxWidth: .infinity)
+        .presentationDetents([.fraction(0.55)])
+        .presentationDragIndicator(.visible)
         .presentationCornerRadius(28)
     }
 }
