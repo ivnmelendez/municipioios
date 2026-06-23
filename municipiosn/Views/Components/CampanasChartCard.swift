@@ -127,7 +127,7 @@ private struct CampanasListaCompleta: View {
                         Text(item.nombre)
                             .font(.body)
                         Spacer()
-                        Text("\(item.totalEstructuras) estructuras")
+                        Text("\(item.totalEstructuras)")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color("Navy"))
                             .monospacedDigit()
