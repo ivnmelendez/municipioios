@@ -477,29 +477,41 @@ final class EstructurasService {
     }
 
     func asignarCampana(caraId: UUID, campanaId: UUID) async throws {
-        // Desactivar campaña actual
         struct Desactivacion: Encodable {
             let activa: Bool
             let fecha_fin: String
         }
-        let hoy = ISO8601DateFormatter().string(from: Date())
-        try await client
-            .from("caras_campanas")
-            .update(Desactivacion(activa: false, fecha_fin: hoy))
-            .eq("cara_id", value: caraId.uuidString)
-            .eq("activa", value: true)
-            .execute()
-
-        // Insertar nueva
         struct Asignacion: Encodable {
             let cara_id: String
             let campana_id: String
             let activa: Bool
         }
-        try await client
-            .from("caras_campanas")
-            .insert(Asignacion(cara_id: caraId.uuidString, campana_id: campanaId.uuidString, activa: true))
-            .execute()
+
+        let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM-dd"
+        let hoy = fmt.string(from: Date())
+
+        do {
+            try await client
+                .from("caras_campanas")
+                .update(Desactivacion(activa: false, fecha_fin: hoy))
+                .eq("cara_id", value: caraId.uuidString)
+                .eq("activa", value: true)
+                .execute()
+            print("[asignarCampana] desactivada cara \(caraId)")
+        } catch {
+            print("[asignarCampana] ERROR desactivando: \(error)")
+        }
+
+        do {
+            try await client
+                .from("caras_campanas")
+                .insert(Asignacion(cara_id: caraId.uuidString, campana_id: campanaId.uuidString, activa: true))
+                .execute()
+            print("[asignarCampana] insertada campana \(campanaId) en cara \(caraId)")
+        } catch {
+            print("[asignarCampana] ERROR insertando: \(error)")
+            throw error
+        }
     }
 
     func fetchCampanasActivas() async throws -> [CampanaBasica] {
