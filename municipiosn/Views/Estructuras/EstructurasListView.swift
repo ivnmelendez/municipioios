@@ -371,6 +371,7 @@ struct EstructuraDetalleView: View {
     let estructura: EstructuraConParque
     var esCampo: Bool = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var caras: [CaraDetalle] = []
     @State private var historial: [IntervencionCompleta] = []
     @State private var isLoading = true
@@ -380,142 +381,13 @@ struct EstructuraDetalleView: View {
     @State private var campanaSeleccionada: CampanaBasica? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Foto fuera del ScrollView — extiende bajo el navbar sin scroll edge
-            if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-                ZStack {
-                    Color(.systemGray5)
-                        .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
-
-                    AsyncImage(url: url) { phase in
-                        if case .success(let image) = phase {
-                            Button {
-                                fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
-                            } label: {
-                                image.resizable()
-                                    .scaledToFill()
-                                    .frame(maxWidth: .infinity, minHeight: 500, maxHeight: 500)
-                                    .clipped()
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .transition(.opacity.animation(.easeOut(duration: 0.5)))
-                        } else if case .failure = phase {
-                            EmptyView()
-                        } else {
-                            ProgressView().tint(.secondary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
+        Group {
+            if sizeClass == .regular {
+                iPadLayout
+            } else {
+                iPhoneLayout
             }
-
-            VStack(alignment: .leading, spacing: 0) {
-
-                    // Info card — tappable, abre Google Maps
-                    if let parque = estructura.parques {
-                        Button {
-                            if let lat = estructura.lat, let lng = estructura.lng {
-                                NotificationCenter.default.post(
-                                    name: .abrirMapaEnEstructura,
-                                    object: nil,
-                                    userInfo: ["lat": lat, "lng": lng]
-                                )
-                                dismiss()
-                            }
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    if let colonia = parque.colonias {
-                                        Label(colonia.nombre, systemImage: "map.fill")
-                                            .font(.subheadline.weight(.medium))
-                                            .foregroundStyle(.primary)
-                                    }
-                                    Label(parque.nombre, systemImage: "tree.fill")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                    if let fecha = estructura.fechaInstalacion {
-                                        Label(fecha.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                Spacer()
-                            }
-                            .padding(16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
-                        .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-                    }
-
-                    // Campañas
-                    if isLoading {
-                        ProgressView().frame(maxWidth: .infinity).padding(.vertical, 32)
-                    } else {
-                        if !caras.isEmpty {
-                            CampanasSideBySideView(
-                                caras: caras,
-                                onTapFoto: { url, titulo in
-                                    fotoFullscreen = IdentifiableURL(url: url, titulo: titulo)
-                                },
-                                onCambiarCampana: esCampo ? { cara in
-                                    campanaSeleccionada = cara.campana.flatMap { c in campanas.first { $0.id == c.id } }
-                                    caraParaCambio = cara
-                                } : nil
-                            )
-                            .padding(.top, 8)
-                        }
-
-                        if !historial.isEmpty {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text("Historial")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 20)
-                                    .padding(.top, 24)
-                                    .padding(.bottom, 8)
-                                VStack(spacing: 0) {
-                                    ForEach(historial) { item in
-                                        HistorialRow(item: item)
-                                        if item.id != historial.last?.id {
-                                            Divider().padding(.leading, 52)
-                                        }
-                                    }
-                                }
-                                .background(Color(.secondarySystemGroupedBackground),
-                                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .padding(.horizontal, 16)
-                            }
-                        }
-                    }
-
-                    if let notas = estructura.notas, !notas.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Notas")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                            Text(notas).font(.subheadline)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.secondarySystemGroupedBackground),
-                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                    }
-
-                Spacer().frame(height: 32)
-            }
-            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .ignoresSafeArea(edges: .top)
         .background {
             Color(.systemGray6).ignoresSafeArea()
             if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
@@ -525,7 +397,7 @@ struct EstructuraDetalleView: View {
                             .aspectRatio(contentMode: .fill)
                             .scaleEffect(1.4)
                             .blur(radius: 60)
-                            .opacity(0.55)
+                            .opacity(0.45)
                             .ignoresSafeArea()
                             .transition(.opacity.animation(.easeInOut(duration: 0.8)))
                     }
@@ -585,6 +457,192 @@ struct EstructuraDetalleView: View {
         .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
         }
+    }
+
+    // MARK: - iPhone layout (vertical, hero arriba)
+    private var iPhoneLayout: some View {
+        VStack(spacing: 0) {
+            heroImage(height: 500)
+            ScrollView {
+                contentCards
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
+    }
+
+    // MARK: - iPad layout (2 columnas)
+    private var iPadLayout: some View {
+        HStack(spacing: 0) {
+            // Columna izquierda — imagen fija con info superpuesta
+            ZStack(alignment: .bottomLeading) {
+                heroImage(height: nil)
+
+                // Gradient + info
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.75)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .bottom)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(estructura.numero)
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(.white)
+                    EstadoBadge(estado: estructura.estado)
+                }
+                .padding(28)
+            }
+            .frame(maxWidth: .infinity)
+            .ignoresSafeArea(edges: .vertical)
+
+            // Columna derecha — cards scrollables
+            ScrollView {
+                contentCards
+                    .padding(.top, 12)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    // MARK: - Hero image
+    @ViewBuilder
+    private func heroImage(height: CGFloat?) -> some View {
+        if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
+            ZStack {
+                Color(.systemGray5)
+                    .frame(maxWidth: .infinity, maxHeight: height ?? .infinity)
+
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        Button {
+                            fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)
+                        } label: {
+                            image.resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity, maxHeight: height ?? .infinity)
+                                .clipped()
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.opacity.animation(.easeOut(duration: 0.5)))
+                    } else if case .failure = phase {
+                        EmptyView()
+                    } else {
+                        ProgressView().tint(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height ?? .infinity)
+        }
+    }
+
+    // MARK: - Content cards (compartidos iPhone / iPad)
+    private var contentCards: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Info card — tappable, va al mapa
+            if let parque = estructura.parques {
+                Button {
+                    if let lat = estructura.lat, let lng = estructura.lng {
+                        NotificationCenter.default.post(
+                            name: .abrirMapaEnEstructura,
+                            object: nil,
+                            userInfo: ["lat": lat, "lng": lng]
+                        )
+                        dismiss()
+                    }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let colonia = parque.colonias {
+                                Label(colonia.nombre, systemImage: "map.fill")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.primary)
+                            }
+                            Label(parque.nombre, systemImage: "tree.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            if let fecha = estructura.fechaInstalacion {
+                                Label(fecha.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
+                .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+            }
+
+            // Campañas
+            if isLoading {
+                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 32)
+            } else {
+                if !caras.isEmpty {
+                    CampanasSideBySideView(
+                        caras: caras,
+                        onTapFoto: { url, titulo in
+                            fotoFullscreen = IdentifiableURL(url: url, titulo: titulo)
+                        },
+                        onCambiarCampana: esCampo ? { cara in
+                            campanaSeleccionada = cara.campana.flatMap { c in campanas.first { $0.id == c.id } }
+                            caraParaCambio = cara
+                        } : nil
+                    )
+                    .padding(.top, 8)
+                }
+
+                if !historial.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Historial")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 24)
+                            .padding(.bottom, 8)
+                        VStack(spacing: 0) {
+                            ForEach(historial) { item in
+                                HistorialRow(item: item)
+                                if item.id != historial.last?.id {
+                                    Divider().padding(.leading, 52)
+                                }
+                            }
+                        }
+                        .background(Color(.secondarySystemGroupedBackground),
+                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.horizontal, 16)
+                    }
+                }
+            }
+
+            if let notas = estructura.notas, !notas.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Notas")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(notas).font(.subheadline)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+            }
+
+            Spacer().frame(height: 32)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func abrirGoogleMaps(lat: Double, lng: Double) {
