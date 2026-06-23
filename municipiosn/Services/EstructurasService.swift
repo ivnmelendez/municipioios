@@ -477,6 +477,15 @@ final class EstructurasService {
     }
 
     func asignarCampana(caraId: UUID, campanaId: UUID) async throws {
+        // Desactivar campaña actual
+        try await client
+            .from("caras_campanas")
+            .update(["activa": false, "fecha_fin": ISO8601DateFormatter().string(from: Date())])
+            .eq("cara_id", value: caraId.uuidString)
+            .eq("activa", value: true)
+            .execute()
+
+        // Insertar nueva
         struct Asignacion: Encodable {
             let cara_id: String
             let campana_id: String
