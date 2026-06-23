@@ -478,9 +478,14 @@ final class EstructurasService {
 
     func asignarCampana(caraId: UUID, campanaId: UUID) async throws {
         // Desactivar campaña actual
+        struct Desactivacion: Encodable {
+            let activa: Bool
+            let fecha_fin: String
+        }
+        let hoy = ISO8601DateFormatter().string(from: Date())
         try await client
             .from("caras_campanas")
-            .update(["activa": false, "fecha_fin": ISO8601DateFormatter().string(from: Date())])
+            .update(Desactivacion(activa: false, fecha_fin: hoy))
             .eq("cara_id", value: caraId.uuidString)
             .eq("activa", value: true)
             .execute()
