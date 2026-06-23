@@ -15,6 +15,14 @@ struct CampoRootView: View {
                 )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }
+            Tab("Estructuras", systemImage: "square.stack.fill") {
+                NavigationStack {
+                    EstructurasListView()
+                        .navigationDestination(for: EstructuraConParque.self) { e in
+                            EstructuraDetalleView(estructura: e)
+                        }
+                }
+            }
             Tab("Configuración", systemImage: "gearshape.fill") {
                 configTab
             }
