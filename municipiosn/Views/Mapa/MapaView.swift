@@ -838,21 +838,11 @@ private struct BusquedaResultados: View {
                     }
                 }
                 .padding(.vertical, 10)
+                .padding(.horizontal, 4)
             }
             .frame(maxHeight: .infinity)
+            .scrollClipDisabled()
             .scrollBounceBehavior(.basedOnSize)
-            .mask(
-                LinearGradient(
-                    stops: [
-                        .init(color: .clear, location: 0),
-                        .init(color: .black, location: 0.05),
-                        .init(color: .black, location: 0.88),
-                        .init(color: .clear, location: 1),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
         }
     }
 }
