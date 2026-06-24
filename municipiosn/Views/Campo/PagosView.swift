@@ -338,25 +338,13 @@ private struct NuevoPagoSheet: View {
                         .foregroundStyle(Color("Navy"))
                 }
             }
-            .overlay {
-                if exito {
-                    ZStack {
-                        Color.black.opacity(0.45).ignoresSafeArea()
-                        VStack(spacing: 16) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundStyle(.green)
-                            Text("Pago registrado")
-                                .font(.title2.bold())
-                                .foregroundStyle(.white)
-                        }
-                        .padding(40)
-                    }
-                    .onAppear {
-                        HapticService.exito()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { dismiss() }
-                    }
-                }
+            .fullScreenCover(isPresented: $exito) {
+                PagoConfirmadoView(
+                    monto: montoValido ?? 0,
+                    trabajador: trabajadorFinal,
+                    fecha: fecha,
+                    onDismiss: { dismiss() }
+                )
             }
         }
     }
@@ -389,5 +377,130 @@ private struct NuevoPagoSheet: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Confirmación bancaria
+
+private struct PagoConfirmadoView: View {
+    let monto: Double
+    let trabajador: String
+    let fecha: Date
+    let onDismiss: () -> Void
+
+    @State private var anillo: Double = 0
+    @State private var mostrarDetalle = false
+
+    private var montoFormateado: String {
+        let fmt = NumberFormatter()
+        fmt.numberStyle = .decimal
+        fmt.minimumFractionDigits = 2
+        fmt.maximumFractionDigits = 2
+        return "$\(fmt.string(from: NSNumber(value: monto)) ?? "0.00")"
+    }
+
+    private var fechaFormateada: String {
+        let fmt = DateFormatter()
+        fmt.dateStyle = .long
+        fmt.timeStyle = .short
+        fmt.locale = Locale(identifier: "es_MX")
+        return fmt.string(from: fecha)
+    }
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Spacer()
+
+                // Checkmark animado
+                ZStack {
+                    Circle()
+                        .stroke(Color(hex: "#16a34a").opacity(0.15), lineWidth: 6)
+                        .frame(width: 96, height: 96)
+                    Circle()
+                        .trim(from: 0, to: anillo)
+                        .stroke(Color(hex: "#16a34a"), style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .frame(width: 96, height: 96)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 0.6), value: anillo)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 36, weight: .semibold))
+                        .foregroundStyle(Color(hex: "#16a34a"))
+                        .scaleEffect(mostrarDetalle ? 1 : 0)
+                        .animation(.spring(duration: 0.4, bounce: 0.3).delay(0.5), value: mostrarDetalle)
+                }
+
+                Spacer().frame(height: 32)
+
+                // Monto
+                Text(montoFormateado)
+                    .font(.system(size: 52, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("Navy"))
+                    .opacity(mostrarDetalle ? 1 : 0)
+                    .offset(y: mostrarDetalle ? 0 : 12)
+                    .animation(.easeOut(duration: 0.4).delay(0.55), value: mostrarDetalle)
+
+                Spacer().frame(height: 8)
+
+                Text("Pago registrado")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .opacity(mostrarDetalle ? 1 : 0)
+                    .animation(.easeOut(duration: 0.4).delay(0.65), value: mostrarDetalle)
+
+                Spacer().frame(height: 40)
+
+                // Detalle tipo recibo
+                VStack(spacing: 0) {
+                    filaRecibo(label: "Trabajador", valor: trabajador)
+                    Divider().padding(.horizontal, 20)
+                    filaRecibo(label: "Fecha", valor: fechaFormateada)
+                    Divider().padding(.horizontal, 20)
+                    filaRecibo(label: "Estado", valor: "Registrado ✓")
+                }
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 24)
+                .opacity(mostrarDetalle ? 1 : 0)
+                .animation(.easeOut(duration: 0.4).delay(0.75), value: mostrarDetalle)
+
+                Spacer()
+
+                Button {
+                    onDismiss()
+                } label: {
+                    Text("Listo")
+                        .font(.headline.bold())
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color("Navy"), in: RoundedRectangle(cornerRadius: 14))
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
+                .opacity(mostrarDetalle ? 1 : 0)
+                .animation(.easeOut(duration: 0.4).delay(0.85), value: mostrarDetalle)
+            }
+        }
+        .onAppear {
+            withAnimation { anillo = 1 }
+            mostrarDetalle = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { onDismiss() }
+        }
+    }
+
+    private func filaRecibo(label: String, valor: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(Color("TextMuted"))
+            Spacer()
+            Text(valor)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
     }
 }
