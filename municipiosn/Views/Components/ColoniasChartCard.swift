@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ColoniasChartCard: View {
     let datos: [UsoColonia]
-    let detalle: [ColoniaConCampanas]
     @State private var mostrarTodo = false
     @State private var animado = false
 
@@ -51,7 +50,7 @@ struct ColoniasChartCard: View {
             withAnimation(.spring(duration: 0.9, bounce: 0.05).delay(0.3)) { animado = true }
         }
         .sheet(isPresented: $mostrarTodo) {
-            ColoniasListaCompleta(datos: datos, detalle: detalle)
+            ColoniasListaCompleta(datos: datos)
         }
     }
 
@@ -98,7 +97,6 @@ struct ColoniasChartCard: View {
 
 private struct ColoniasListaCompleta: View {
     let datos: [UsoColonia]
-    let detalle: [ColoniaConCampanas]
     @Environment(\.dismiss) private var dismiss
     @State private var busqueda = ""
 
@@ -106,34 +104,20 @@ private struct ColoniasListaCompleta: View {
         busqueda.isEmpty ? datos : datos.filter { $0.nombre.localizedCaseInsensitiveContains(busqueda) }
     }
 
-    private func detalleParaColonia(_ nombre: String) -> ColoniaConCampanas? {
-        detalle.first { $0.nombre == nombre }
-    }
-
     var body: some View {
         NavigationStack {
             List {
                 ForEach(filtrados) { item in
-                    let detColonia = detalleParaColonia(item.nombre)
-                    NavigationLink {
-                        ColoniaDetalleView(colonia: detColonia ?? ColoniaConCampanas(
-                            id: item.id,
-                            nombre: item.nombre,
-                            totalEstructuras: item.totalEstructuras,
-                            campanas: []
-                        ))
-                    } label: {
-                        HStack {
-                            Text(item.nombre)
-                                .font(.body)
-                            Spacer()
-                            Text("\(item.totalEstructuras)")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(Color("Navy"))
-                                .monospacedDigit()
-                        }
-                        .padding(.vertical, 4)
+                    HStack {
+                        Text(item.nombre)
+                            .font(.body)
+                        Spacer()
+                        Text("\(item.totalEstructuras)")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color("Navy"))
+                            .monospacedDigit()
                     }
+                    .padding(.vertical, 4)
                 }
             }
             .searchable(text: $busqueda, prompt: "Buscar colonia")
@@ -146,67 +130,4 @@ private struct ColoniasListaCompleta: View {
             }
         }
     }
-}
-
-private struct ColoniaDetalleView: View {
-    let colonia: ColoniaConCampanas
-    @State private var fotoItem: CampanaFotoItem?
-
-    var body: some View {
-        List {
-            Section {
-                HStack {
-                    Text("Estructuras")
-                        .foregroundStyle(Color("TextMuted"))
-                    Spacer()
-                    Text("\(colonia.totalEstructuras)")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color("Navy"))
-                }
-            }
-
-            Section("Campañas activas") {
-                if colonia.campanas.isEmpty {
-                    Text("Sin campañas activas")
-                        .foregroundStyle(Color("TextMuted"))
-                } else {
-                    ForEach(colonia.campanas) { campana in
-                        Button {
-                            if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
-                                fotoItem = CampanaFotoItem(url: url, titulo: campana.nombre)
-                            }
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(campana.nombre)
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(.primary)
-                                    Text("\(campana.totalCaras) cara\(campana.totalCaras == 1 ? "" : "s")")
-                                        .font(.caption)
-                                        .foregroundStyle(Color("TextMuted"))
-                                }
-                                Spacer()
-                                Image(systemName: campana.fotoUrl != nil ? "photo" : "megaphone.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Color("Navy"))
-                            }
-                            .padding(.vertical, 2)
-                        }
-                        .disabled(campana.fotoUrl == nil)
-                    }
-                }
-            }
-        }
-        .navigationTitle(colonia.nombre)
-        .navigationBarTitleDisplayMode(.large)
-        .fullScreenCover(item: $fotoItem) { item in
-            FotoFullscreenView(url: item.url, titulo: item.titulo)
-        }
-    }
-}
-
-private struct CampanaFotoItem: Identifiable {
-    let id = UUID()
-    let url: URL
-    let titulo: String
 }

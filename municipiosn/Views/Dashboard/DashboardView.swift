@@ -289,7 +289,7 @@ struct DashboardView: View {
             CampanasChartCard(datos: vm.usoCampanas)
         case .coloniasChart:
             if !vm.usoColonias.isEmpty {
-                ColoniasChartCard(datos: vm.usoColonias, detalle: vm.coloniasDetalle)
+                ColoniasChartCard(datos: vm.usoColonias)
             }
         }
     }
