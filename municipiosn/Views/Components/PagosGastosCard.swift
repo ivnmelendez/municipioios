@@ -2,7 +2,6 @@ import SwiftUI
 
 struct PagosGastosCard: View {
     let vm: PagosViewModel
-    @State private var mostrarPagos = false
 
     private var totalMesFormateado: String {
         let fmt = NumberFormatter()
@@ -15,7 +14,7 @@ struct PagosGastosCard: View {
     private var ultimoPago: PagoManoObra? { vm.pagos.first }
 
     var body: some View {
-        Button { mostrarPagos = true } label: {
+        NavigationLink(destination: PagosView()) {
             VStack(spacing: 0) {
                 HStack {
                     Text("Mano de obra")
@@ -79,17 +78,5 @@ struct PagosGastosCard: View {
         }
         .buttonStyle(.glass(.regular))
         .buttonBorderShape(.roundedRectangle(radius: 24))
-        .sheet(isPresented: $mostrarPagos) {
-            NavigationStack {
-                PagosView()
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Listo") { mostrarPagos = false }
-                                .foregroundStyle(Color("Navy"))
-                        }
-                    }
-            }
-            .presentationDragIndicator(.visible)
-        }
     }
 }
