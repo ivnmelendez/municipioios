@@ -80,7 +80,16 @@ struct PagosGastosCard: View {
         .buttonStyle(.glass(.regular))
         .buttonBorderShape(.roundedRectangle(radius: 24))
         .sheet(isPresented: $mostrarPagos) {
-            PagosView()
+            NavigationStack {
+                PagosView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Listo") { mostrarPagos = false }
+                                .foregroundStyle(Color("Navy"))
+                        }
+                    }
+            }
+            .presentationDragIndicator(.visible)
         }
     }
 }
