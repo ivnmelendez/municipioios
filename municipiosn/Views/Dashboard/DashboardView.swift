@@ -348,9 +348,6 @@ private struct SemanaCard: View {
                         .foregroundStyle(Color("TextMuted"))
                         .contentTransition(.identity)
                     Spacer()
-                    Image(systemName: "arrow.2.squarepath")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color("Navy").opacity(0.4))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
