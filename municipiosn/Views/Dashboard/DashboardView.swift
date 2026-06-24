@@ -631,8 +631,6 @@ private struct CoberturaRingCard: View {
 
     private var pctInt: Int { Int(pct * 100) }
 
-    private var sinIncidentesMes: Bool { kpi.danosMes == 0 && kpi.isLoaded }
-
     private var mensaje: String {
         switch pct {
         case 1.0:        return "¡Cobertura completa este mes!"
@@ -690,20 +688,6 @@ private struct CoberturaRingCard: View {
                     .foregroundStyle(Color("TextMuted"))
                     .multilineTextAlignment(.center)
 
-                if sinIncidentesMes {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(Color(hex: "#16a34a"))
-                        Text("Mes sin incidentes")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color(hex: "#16a34a"))
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color(hex: "#16a34a").opacity(0.1),
-                                in: Capsule())
-                }
             }
         }
         .frame(maxWidth: .infinity)
