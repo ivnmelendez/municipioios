@@ -4,12 +4,24 @@ struct PagosView: View {
     @Environment(AuthViewModel.self) private var auth
     @State private var vm = PagosViewModel()
     @State private var mostrarNuevoPago = false
+    @State private var mostrarPickerMes = false
     @State private var periodo: Periodo = .mes
+    @State private var mesSeleccionado = Date()
 
     enum Periodo: String, CaseIterable {
-        case semana = "Esta semana"
-        case mes    = "Este mes"
-        case todo   = "Todo"
+        case semana       = "Esta semana"
+        case mes          = "Este mes"
+        case personalizado = "Elegir mes"
+    }
+
+    private var etiquetaPeriodo: String {
+        if periodo == .personalizado {
+            let fmt = DateFormatter()
+            fmt.dateFormat = "MMM yyyy"
+            fmt.locale = Locale(identifier: "es_MX")
+            return fmt.string(from: mesSeleccionado).capitalized
+        }
+        return periodo.rawValue
     }
 
     private var pagosFiltrados: [PagoManoObra] {
@@ -19,8 +31,12 @@ struct PagosView: View {
             return vm.pagos.filter { cal.isDate($0.fechaDate, equalTo: Date(), toGranularity: .weekOfYear) }
         case .mes:
             return vm.pagos.filter { cal.isDate($0.fechaDate, equalTo: Date(), toGranularity: .month) }
-        case .todo:
-            return vm.pagos
+        case .personalizado:
+            let comps = cal.dateComponents([.year, .month], from: mesSeleccionado)
+            return vm.pagos.filter {
+                let p = cal.dateComponents([.year, .month], from: $0.fechaDate)
+                return p.year == comps.year && p.month == comps.month
+            }
         }
     }
 
@@ -118,25 +134,60 @@ struct PagosView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    ForEach(Periodo.allCases, id: \.self) { p in
-                        Button {
-                            withAnimation { periodo = p }
-                        } label: {
-                            if periodo == p {
-                                Label(p.rawValue, systemImage: "checkmark")
-                            } else {
-                                Text(p.rawValue)
-                            }
-                        }
+                    Button {
+                        withAnimation { periodo = .semana }
+                    } label: {
+                        if periodo == .semana { Label("Esta semana", systemImage: "checkmark") }
+                        else { Text("Esta semana") }
+                    }
+                    Button {
+                        withAnimation { periodo = .mes }
+                    } label: {
+                        if periodo == .mes { Label("Este mes", systemImage: "checkmark") }
+                        else { Text("Este mes") }
+                    }
+                    Button {
+                        mostrarPickerMes = true
+                    } label: {
+                        if periodo == .personalizado { Label(etiquetaPeriodo, systemImage: "checkmark") }
+                        else { Text("Elegir mes...") }
                     }
                 } label: {
-                    Label(periodo.rawValue, systemImage: "calendar")
+                    Label(etiquetaPeriodo, systemImage: "calendar")
                         .symbolVariant(.fill)
                 }
                 .tint(Color("Navy"))
             }
         }
         .task { await vm.cargar() }
+        .sheet(isPresented: $mostrarPickerMes) {
+            NavigationStack {
+                VStack(spacing: 24) {
+                    DatePicker("", selection: $mesSeleccionado, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .environment(\.locale, Locale(identifier: "es_MX"))
+                        .padding(.horizontal)
+                    Spacer()
+                }
+                .navigationTitle("Seleccionar mes")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Listo") {
+                            withAnimation { periodo = .personalizado }
+                            mostrarPickerMes = false
+                        }
+                        .foregroundStyle(Color("Navy"))
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancelar") { mostrarPickerMes = false }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $mostrarNuevoPago) {
             NuevoPagoSheet(perfilId: auth.perfilId) { fecha, trabajador, monto, concepto in
                 Task { await vm.registrar(fecha: fecha, trabajador: trabajador, monto: monto, concepto: concepto, creadoPor: auth.perfilId ?? UUID()) }
