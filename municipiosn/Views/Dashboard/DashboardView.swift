@@ -348,15 +348,9 @@ private struct SemanaCard: View {
                         .foregroundStyle(Color("TextMuted"))
                         .contentTransition(.identity)
                     Spacer()
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.2.squarepath")
-                            .font(.caption2.weight(.semibold))
-                        Text(esMes ? "Ver semana" : "Ver mes")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .foregroundStyle(Color("Navy").opacity(0.5))
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Color("Navy").opacity(0.07), in: Capsule())
+                    Image(systemName: "arrow.2.squarepath")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color("Navy").opacity(0.4))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
