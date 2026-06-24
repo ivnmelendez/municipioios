@@ -4,6 +4,7 @@ import UIKit
 struct DashboardView: View {
     @Environment(AuthViewModel.self) private var auth
     @State private var vm = DashboardViewModel()
+    @State private var pagosVm = PagosViewModel()
     @State private var mostrarConfiguracion = false
     @State private var aparecer = false
     @State private var ultimaActualizacion: Date? = nil
@@ -105,6 +106,7 @@ struct DashboardView: View {
                 await vm.cargarConfig(userId: userId)
             }
             await vm.cargar()
+            await pagosVm.cargar()
             ultimaActualizacion = Date()
             aparecer = true
         }
@@ -258,6 +260,8 @@ struct DashboardView: View {
             if !vm.usoColonias.isEmpty {
                 ColoniasChartCard(datos: vm.usoColonias)
             }
+        case .pagos:
+            PagosGastosCard(vm: pagosVm)
         }
     }
 }

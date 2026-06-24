@@ -6,6 +6,7 @@ enum DashboardCardID: String, Codable, CaseIterable {
     case resumenMunicipal = "resumen_municipal"
     case campanasChart    = "campanas_chart"
     case coloniasChart    = "colonias_chart"
+    case pagos            = "pagos"
 
     var titulo: String {
         switch self {
@@ -14,6 +15,7 @@ enum DashboardCardID: String, Codable, CaseIterable {
         case .resumenMunicipal: "Datos del municipio"
         case .campanasChart:    "Estadísticas campañas"
         case .coloniasChart:    "Estadísticas colonias"
+        case .pagos:            "Gastos mano de obra"
         }
     }
 
@@ -24,6 +26,7 @@ enum DashboardCardID: String, Codable, CaseIterable {
         case .resumenMunicipal: "building.2.fill"
         case .campanasChart:    "megaphone.fill"
         case .coloniasChart:    "map.fill"
+        case .pagos:            "banknote.fill"
         }
     }
 }
