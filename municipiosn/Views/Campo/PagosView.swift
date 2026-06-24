@@ -161,31 +161,13 @@ struct PagosView: View {
         }
         .task { await vm.cargar() }
         .sheet(isPresented: $mostrarPickerMes) {
-            NavigationStack {
-                VStack(spacing: 24) {
-                    DatePicker("", selection: $mesSeleccionado, displayedComponents: .date)
-                        .datePickerStyle(.graphical)
-                        .labelsHidden()
-                        .environment(\.locale, Locale(identifier: "es_MX"))
-                        .padding(.horizontal)
-                    Spacer()
-                }
-                .navigationTitle("Seleccionar mes")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Listo") {
-                            withAnimation { periodo = .personalizado }
-                            mostrarPickerMes = false
-                        }
-                        .foregroundStyle(Color("Navy"))
-                    }
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancelar") { mostrarPickerMes = false }
-                    }
-                }
+            MesAnioPickerSheet(seleccion: $mesSeleccionado) {
+                withAnimation { periodo = .personalizado }
+                mostrarPickerMes = false
+            } onCancelar: {
+                mostrarPickerMes = false
             }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.height(280)])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $mostrarNuevoPago) {
@@ -553,5 +535,76 @@ private struct PagoConfirmadoView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+    }
+}
+
+private struct MesAnioPickerSheet: View {
+    @Binding var seleccion: Date
+    let onListo: () -> Void
+    let onCancelar: () -> Void
+
+    private let meses = Calendar.current.monthSymbols
+    private let anos: [Int] = {
+        let actual = Calendar.current.component(.year, from: Date())
+        return Array((actual - 3)...actual).reversed()
+    }()
+
+    @State private var mesIdx: Int
+    @State private var ano: Int
+
+    init(seleccion: Binding<Date>, onListo: @escaping () -> Void, onCancelar: @escaping () -> Void) {
+        self._seleccion = seleccion
+        self.onListo = onListo
+        self.onCancelar = onCancelar
+        let cal = Calendar.current
+        let d = seleccion.wrappedValue
+        self._mesIdx = State(initialValue: cal.component(.month, from: d) - 1)
+        let actual = cal.component(.year, from: Date())
+        self._ano = State(initialValue: cal.component(.year, from: d))
+        _ = actual
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancelar", action: onCancelar)
+                Spacer()
+                Text("Seleccionar mes")
+                    .font(.headline)
+                Spacer()
+                Button("Listo") {
+                    var comps = DateComponents()
+                    comps.year = ano
+                    comps.month = mesIdx + 1
+                    comps.day = 1
+                    seleccion = Calendar.current.date(from: comps) ?? Date()
+                    onListo()
+                }
+                .fontWeight(.semibold)
+                .foregroundStyle(Color("Navy"))
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+
+            Divider()
+
+            HStack(spacing: 0) {
+                Picker("Mes", selection: $mesIdx) {
+                    ForEach(0..<meses.count, id: \.self) { i in
+                        Text(meses[i].capitalized).tag(i)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+
+                Picker("Año", selection: $ano) {
+                    ForEach(anos, id: \.self) { a in
+                        Text(String(a)).tag(a)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 100)
+            }
+        }
     }
 }
