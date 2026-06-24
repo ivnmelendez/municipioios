@@ -4,7 +4,6 @@ enum DashboardCardID: String, Codable, CaseIterable {
     case cobertura        = "cobertura"
     case semana           = "semana"
     case resumenMunicipal = "resumen_municipal"
-    case coroplastMes     = "coroplast_mes"
     case campanasChart    = "campanas_chart"
     case coloniasChart    = "colonias_chart"
 
@@ -13,7 +12,6 @@ enum DashboardCardID: String, Codable, CaseIterable {
         case .cobertura:        "Cobertura mensual"
         case .semana:           "Esta semana"
         case .resumenMunicipal: "Datos del municipio"
-        case .coroplastMes:     "Coroplast del mes"
         case .campanasChart:    "Estadísticas campañas"
         case .coloniasChart:    "Estadísticas colonias"
         }
@@ -24,7 +22,6 @@ enum DashboardCardID: String, Codable, CaseIterable {
         case .cobertura:        "chart.pie.fill"
         case .semana:           "calendar.badge.clock"
         case .resumenMunicipal: "building.2.fill"
-        case .coroplastMes:     "arrow.2.squarepath"
         case .campanasChart:    "megaphone.fill"
         case .coloniasChart:    "map.fill"
         }

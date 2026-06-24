@@ -236,37 +236,6 @@ struct DashboardView: View {
 
     // MARK: - Coroplast del mes
 
-    private var coroplastMes: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color("Navy").opacity(0.1))
-                    .frame(width: 56, height: 56)
-                Image(systemName: "arrow.2.squarepath")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(Color("Navy"))
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Coroplast cambiados")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Text("Durante este mes")
-                    .font(.subheadline)
-                    .foregroundStyle(Color("TextMuted"))
-            }
-
-            Spacer()
-
-            Text("\(vm.kpi.coroplastMes)")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .foregroundStyle(Color("Navy"))
-                .contentTransition(.numericText())
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 20)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
 
     private func sectionLabel(_ texto: String) -> some View {
         Text(texto)
@@ -283,8 +252,6 @@ struct DashboardView: View {
             SemanaCard(kpi: vm.kpi)
         case .resumenMunicipal:
             ResumenMunicipalCard(kpi: vm.kpi, coloniasConEstructuras: vm.coloniasConEstructuras)
-        case .coroplastMes:
-            coroplastMes
         case .campanasChart:
             CampanasChartCard(datos: vm.usoCampanas)
         case .coloniasChart:
