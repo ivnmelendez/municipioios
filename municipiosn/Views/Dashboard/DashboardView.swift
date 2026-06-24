@@ -337,61 +337,64 @@ private struct SemanaCard: View {
     private var danos: Int    { esMes ? kpi.danosMes     : kpi.danosSemana }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(esMes ? "Este mes" : "Esta semana")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color("TextMuted"))
-                    .contentTransition(.identity)
-                Spacer()
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { esMes.toggle() }
-                    HapticService.seleccion()
-                } label: {
-                    Text(esMes ? "Ver semana" : "Ver mes")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color("Navy"))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color("Navy").opacity(0.08), in: Capsule())
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { esMes.toggle() }
+            HapticService.seleccion()
+        } label: {
+            VStack(spacing: 0) {
+                HStack {
+                    Text(esMes ? "Este mes" : "Esta semana")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color("TextMuted"))
+                        .contentTransition(.identity)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.2.squarepath")
+                            .font(.caption2.weight(.semibold))
+                        Text(esMes ? "Ver semana" : "Ver mes")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(Color("Navy").opacity(0.5))
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color("Navy").opacity(0.07), in: Capsule())
                 }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
 
-            Divider().padding(.horizontal, 20)
+                Divider().padding(.horizontal, 20)
 
-            HStack(spacing: 0) {
-                columna(
-                    valor: visitas,
-                    label: "Revisadas",
-                    icono: "checkmark.circle.fill",
-                    color: Color(hex: "#16a34a")
-                )
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(width: 1, height: 72)
-                columna(
-                    valor: cambios,
-                    label: "Coroplast",
-                    icono: "arrow.2.squarepath",
-                    color: Color("Navy")
-                )
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(width: 1, height: 72)
-                columna(
-                    valor: danos,
-                    label: "Daños",
-                    icono: "exclamationmark.triangle.fill",
-                    color: Color(hex: "#dc2626")
-                )
+                HStack(spacing: 0) {
+                    columna(
+                        valor: visitas,
+                        label: "Revisadas",
+                        icono: "checkmark.circle.fill",
+                        color: Color(hex: "#16a34a")
+                    )
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.08))
+                        .frame(width: 1, height: 72)
+                    columna(
+                        valor: cambios,
+                        label: "Coroplast",
+                        icono: "arrow.2.squarepath",
+                        color: Color("Navy")
+                    )
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.08))
+                        .frame(width: 1, height: 72)
+                    columna(
+                        valor: danos,
+                        label: "Daños",
+                        icono: "exclamationmark.triangle.fill",
+                        color: Color(hex: "#dc2626")
+                    )
+                }
+                .padding(.vertical, 20)
             }
-            .padding(.vertical, 20)
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 24))
     }
 
     private func columna(valor: Int, label: String, icono: String, color: Color) -> some View {
