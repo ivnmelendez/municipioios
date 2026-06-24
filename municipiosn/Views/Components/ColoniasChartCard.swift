@@ -113,7 +113,7 @@ private struct ColoniasListaCompleta: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
+                ForEach(filtrados) { item in
                     let detColonia = detalleParaColonia(item.nombre)
                     NavigationLink {
                         ColoniaDetalleView(colonia: detColonia ?? ColoniaConCampanas(
@@ -123,20 +123,9 @@ private struct ColoniasListaCompleta: View {
                             campanas: []
                         ))
                     } label: {
-                        HStack(spacing: 12) {
-                            Text("\(index + 1)")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(Color("TextMuted"))
-                                .frame(width: 28, alignment: .center)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.nombre)
-                                    .font(.body)
-                                if let d = detColonia, !d.campanas.isEmpty {
-                                    Text("\(d.campanas.count) campaña\(d.campanas.count == 1 ? "" : "s")")
-                                        .font(.caption)
-                                        .foregroundStyle(Color("Navy"))
-                                }
-                            }
+                        HStack {
+                            Text(item.nombre)
+                                .font(.body)
                             Spacer()
                             Text("\(item.totalEstructuras)")
                                 .font(.body.weight(.semibold))
