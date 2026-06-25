@@ -652,34 +652,22 @@ struct EstructuraDetalleView: View {
 
             if let lat = estructura.lat, let lng = estructura.lng {
                 let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Ubicación en mapa")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
-                    Button { mostrarMapaCompleto = true } label: {
-                        Map(initialPosition: .region(MKCoordinateRegion(
-                            center: coord,
-                            span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
-                        ))) {
-                            Marker(estructura.numero, coordinate: coord)
-                                .tint(Color("Navy"))
-                        }
-                        .frame(height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .allowsHitTesting(false)
-                        .overlay(alignment: .bottomTrailing) {
-                            Label("Abrir", systemImage: "arrow.up.left.and.arrow.down.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.black.opacity(0.4), in: Capsule())
-                                .padding(10)
-                        }
+                Button { mostrarMapaCompleto = true } label: {
+                    Map(initialPosition: .region(MKCoordinateRegion(
+                        center: coord,
+                        span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+                    ))) {
+                        Marker(estructura.numero, coordinate: coord)
+                            .tint(Color("Navy"))
                     }
-                    .buttonStyle(.plain)
+                    .frame(height: 200)
+                    .allowsHitTesting(false)
                 }
+                .buttonStyle(.plain)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
+                .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 .fullScreenCover(isPresented: $mostrarMapaCompleto) {
