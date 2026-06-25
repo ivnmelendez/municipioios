@@ -402,6 +402,16 @@ final class EstructurasService {
         }.sorted { $0.totalEstructuras > $1.totalEstructuras }
     }
 
+    func fetchTotalColonias() async throws -> Int {
+        struct ColoniaID: Decodable { let id: UUID }
+        let result: [ColoniaID] = try await client
+            .from("colonias")
+            .select("id")
+            .execute()
+            .value
+        return result.count
+    }
+
     func fetchUsoCampanas() async throws -> [UsoCampana] {
         let items: [CaraCampanaItem] = try await client
             .from("caras_campanas")
