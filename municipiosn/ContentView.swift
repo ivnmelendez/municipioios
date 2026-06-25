@@ -45,9 +45,18 @@ struct ContentView: View {
         }
         .tint(Color("Navy"))
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in campoBadge += 1 }
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: "pendingRondines") {
+                UserDefaults.standard.removeObject(forKey: "pendingRondines")
+                tabSeleccionada = "campo"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(name: .mostrarSeccionVisitas, object: nil)
+                }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .abrirRondines)) { _ in
             tabSeleccionada = "campo"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 NotificationCenter.default.post(name: .mostrarSeccionVisitas, object: nil)
             }
         }

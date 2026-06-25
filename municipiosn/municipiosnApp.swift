@@ -13,7 +13,10 @@ final class NotificacionDelegate: NSObject, UNUserNotificationCenterDelegate {
     ) {
         let destino = response.notification.request.content.userInfo["destino"] as? String
         if destino == "rondines" {
-            NotificationCenter.default.post(name: .abrirRondines, object: nil)
+            UserDefaults.standard.set(true, forKey: "pendingRondines")
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .abrirRondines, object: nil)
+            }
         }
         completionHandler()
     }
