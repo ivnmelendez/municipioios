@@ -531,6 +531,13 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 mapView.addOverlay(mkPoly, level: .aboveRoads)
             }
 
+            if !context.coordinator.overlaysRevealed && !coloniasPolygons.isEmpty {
+                context.coordinator.overlaysRevealed = true
+                mapView.alpha = 0
+                UIView.animate(withDuration: 0.45, delay: 0.05, options: .curveEaseOut) {
+                    mapView.alpha = 1
+                }
+            }
         }
 
         context.coordinator.visitadasHoy = visitadasHoy
@@ -576,6 +583,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var loadedSemanaColorCount = 0
         var loadedVisitadasVersion = -1
         var initialRegionSet = false
+        var overlaysRevealed = false
         private var markerCache: [String: UIImage] = [:]
 
         init(onSelect: @escaping (EstructuraConParque) -> Void) {
