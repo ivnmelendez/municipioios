@@ -539,11 +539,26 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         let newIds = Set(anotaciones.map { $0.id })
         let semanaVersionChanged = context.coordinator.loadedSemanaVersion != semanaMapVersion
         let visitadasVersionChanged = context.coordinator.loadedVisitadasVersion != visitadasVersion
-        if currentIds != newIds || semanaVersionChanged || visitadasVersionChanged {
+
+        if semanaVersionChanged || visitadasVersionChanged {
             context.coordinator.loadedSemanaVersion = semanaMapVersion
             context.coordinator.loadedVisitadasVersion = visitadasVersion
-            mapView.removeAnnotations(mapView.annotations.filter { $0 is EstructuraMKAnnotation })
-            mapView.addAnnotations(anotaciones.map { EstructuraMKAnnotation(from: $0) })
+            for annotation in mapView.annotations {
+                guard let ann = annotation as? EstructuraMKAnnotation,
+                      let view = mapView.view(for: annotation) else { continue }
+                view.image = context.coordinator.markerImage(for: ann)
+            }
+        }
+
+        if currentIds != newIds {
+            let toRemove = mapView.annotations.filter {
+                guard let a = $0 as? EstructuraMKAnnotation else { return false }
+                return !newIds.contains(a.estructura.id)
+            }
+            let toAdd = anotaciones.filter { !currentIds.contains($0.id) }
+                .map { EstructuraMKAnnotation(from: $0) }
+            mapView.removeAnnotations(toRemove)
+            if !toAdd.isEmpty { mapView.addAnnotations(toAdd) }
         }
     }
 
