@@ -128,7 +128,7 @@ struct ConfiguracionView: View {
                                 Text("Probar notificación de rondín")
                                     .font(.body)
                                     .foregroundStyle(.primary)
-                                Text("Llega en 30 segundos — cierra la app para probar")
+                                Text("Llega en 15 segundos — cierra la app para probar")
                                     .font(.caption)
                                     .foregroundStyle(Color("TextMuted"))
                             }
@@ -220,7 +220,7 @@ struct ConfiguracionView: View {
         content.body = "Ya puedes revisar las estructuras visitadas hoy por el equipo de campo."
         content.sound = .default
         content.userInfo = ["destino": "rondines"]
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 30, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 15, repeats: false)
         let request = UNNotificationRequest(identifier: "rondin_prueba", content: content, trigger: trigger)
         Task { try? await UNUserNotificationCenter.current().add(request) }
     }
