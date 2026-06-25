@@ -82,7 +82,7 @@ final class DashboardViewModel {
     }
 
     private func computarCobertura(estructuras: [EstructuraConParque]) {
-        let polygons = loadGeoPolygons(named: "nuevascolonias")
+        let polygons = loadGeoPolygons(named: "colonias_san_nicolas")
         let coords = estructuras.compactMap { e -> CLLocationCoordinate2D? in
             guard let lat = e.lat, let lng = e.lng else { return nil }
             return CLLocationCoordinate2D(latitude: lat, longitude: lng)
