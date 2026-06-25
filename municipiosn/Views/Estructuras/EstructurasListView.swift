@@ -472,9 +472,9 @@ struct EstructuraDetalleView: View {
 
     // MARK: - iPhone layout (vertical, hero arriba)
     private var iPhoneLayout: some View {
-        VStack(spacing: 0) {
-            heroImage(height: 500)
-            ScrollView {
+        ScrollView {
+            VStack(spacing: 0) {
+                heroImage(height: 500)
                 contentCards
             }
         }
@@ -484,9 +484,9 @@ struct EstructuraDetalleView: View {
 
     // MARK: - iPad portrait (columna única, hero más alto)
     private var iPadPortraitLayout: some View {
-        VStack(spacing: 0) {
-            heroImage(height: 700)
-            ScrollView {
+        ScrollView {
+            VStack(spacing: 0) {
+                heroImage(height: 700)
                 contentCards
             }
         }
