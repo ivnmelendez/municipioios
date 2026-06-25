@@ -14,7 +14,11 @@ func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
 
     return features.compactMap { $0 as? MKGeoJSONFeature }.flatMap { feature in
         let props = (try? JSONSerialization.jsonObject(with: feature.properties ?? Data())) as? [String: Any]
-        let cvegeo = props?["CVEGEO"] as? String ?? ""
+        let cvegeo = props?["CVEGEO"] as? String
+            ?? props?["name"] as? String
+            ?? props?["NAME"] as? String
+            ?? (props?["@id"].map { "\($0)" })
+            ?? ""
         let poblacion = props?["POBTOT"] as? Int ?? 0
         return feature.geometry.compactMap { $0 as? MKPolygon }.map { polygon in
             let coords = (0..<polygon.pointCount).map { polygon.points()[$0].coordinate }

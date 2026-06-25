@@ -357,7 +357,7 @@ struct MapaView: View {
                 return
             }
             await vm.cargar()
-            coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
+            coloniasPolygons = loadGeoPolygons(named: "nuevascolonias")
             municipioPolygons = loadGeoPolygons(named: "san_nicolas")
             coloniasConEstructuras = computarColoniasConEstructuras(
                 polygons: coloniasPolygons,
