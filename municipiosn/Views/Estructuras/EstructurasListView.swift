@@ -469,6 +469,14 @@ struct EstructuraDetalleView: View {
         .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
         }
+        .fullScreenCover(isPresented: $mostrarMapaCompleto) {
+            if let lat = estructura.lat, let lng = estructura.lng {
+                MapaEstructuraFullView(
+                    numero: estructura.numero,
+                    coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)
+                )
+            }
+        }
     }
 
     // MARK: - iPhone layout (vertical, hero arriba)
@@ -662,6 +670,7 @@ struct EstructuraDetalleView: View {
                     }
                     .frame(height: 200)
                     .allowsHitTesting(false)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -670,12 +679,6 @@ struct EstructuraDetalleView: View {
                 .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
-                .fullScreenCover(isPresented: $mostrarMapaCompleto) {
-                    MapaEstructuraFullView(
-                        numero: estructura.numero,
-                        coordinate: coord
-                    )
-                }
             }
 
             Spacer().frame(height: 32)
