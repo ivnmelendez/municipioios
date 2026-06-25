@@ -219,6 +219,7 @@ struct ConfiguracionView: View {
         content.title = "Historial de rondín disponible"
         content.body = "Ya puedes revisar las estructuras visitadas hoy por el equipo de campo."
         content.sound = .default
+        content.userInfo = ["destino": "rondines"]
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 30, repeats: false)
         let request = UNNotificationRequest(identifier: "rondin_prueba", content: content, trigger: trigger)
         Task { try? await UNUserNotificationCenter.current().add(request) }
