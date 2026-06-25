@@ -52,9 +52,10 @@ struct ConfiguracionView: View {
                         .onChange(of: photoItem) {
                             Task {
                                 if let data = try? await photoItem?.loadTransferable(type: Data.self),
-                                   let uiImage = UIImage(data: data) {
+                                   let uiImage = UIImage(data: data),
+                                   let compressed = uiImage.jpegData(compressionQuality: 0.7) {
                                     fotoPerfil = Image(uiImage: uiImage)
-                                    guardarFoto(data: data)
+                                    guardarFoto(data: compressed)
                                 }
                             }
                         }

@@ -11,7 +11,9 @@
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
+	<key>CFBundleDisplayName</key>
+	<string>Estructuras</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Municipio SN necesita acceso para guardar imágenes en tu galería.</string>
+	<string>Estructuras necesita acceso para guardar imágenes en tu galería.</string>
 </dict>
 </plist>
