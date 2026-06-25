@@ -98,7 +98,7 @@ struct CampoAdminView: View {
             if new == .coroplast { badge = 0 }
             HapticService.seleccion()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .abrirRondines)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .mostrarSeccionVisitas)) { _ in
             seccion = .visitas
         }
         .task { await resumen.cargar() }

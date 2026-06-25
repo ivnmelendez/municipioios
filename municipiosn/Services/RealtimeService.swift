@@ -138,5 +138,6 @@ final class RealtimeService {
 extension Notification.Name {
     static let nuevoCambioRotoplas = Notification.Name("nuevoCambioRotoplas")
     static let abrirRondines = Notification.Name("abrirRondines")
+    static let mostrarSeccionVisitas = Notification.Name("mostrarSeccionVisitas")
     static let abrirMapaEnEstructura = Notification.Name("abrirMapaEnEstructura")
 }
