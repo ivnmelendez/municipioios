@@ -108,10 +108,7 @@ struct ConfiguracionView: View {
                                 Text("Personalizar inicio")
                                     .font(.body)
                                     .foregroundStyle(.primary)
-                                Text("Elige qué tarjetas ver y en qué orden")
-                                    .font(.caption)
-                                    .foregroundStyle(Color("TextMuted"))
-                            }
+                                    }
                         } icon: {
                             Image(systemName: "slider.horizontal.3")
                                 .foregroundStyle(Color("Navy"))
@@ -131,7 +128,7 @@ struct ConfiguracionView: View {
                                 Text("Probar notificación de rondín")
                                     .font(.body)
                                     .foregroundStyle(.primary)
-                                Text("Llega en 2 minutos — cierra la app para probar")
+                                Text("Llega en 30 segundos — cierra la app para probar")
                                     .font(.caption)
                                     .foregroundStyle(Color("TextMuted"))
                             }
@@ -153,15 +150,6 @@ struct ConfiguracionView: View {
                     }
                 }
 
-                // MARK: Footer versión
-                Section {
-                    EmptyView()
-                } footer: {
-                    Text("Municipios SN · Versión 1.0\nSan Nicolás de los Garza, NL")
-                        .font(.caption2)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                }
             }
             .navigationTitle("Mi perfil")
             .navigationBarTitleDisplayMode(.inline)
@@ -231,7 +219,7 @@ struct ConfiguracionView: View {
         content.title = "Historial de rondín disponible"
         content.body = "Ya puedes revisar las estructuras visitadas hoy por el equipo de campo."
         content.sound = .default
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 120, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 30, repeats: false)
         let request = UNNotificationRequest(identifier: "rondin_prueba", content: content, trigger: trigger)
         Task { try? await UNUserNotificationCenter.current().add(request) }
     }
