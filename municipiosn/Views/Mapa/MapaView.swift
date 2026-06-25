@@ -19,21 +19,35 @@ private let municipioRegion = MKCoordinateRegion(
     span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
 )
 
+private func coloniaParaCoordenada(_ coord: CLLocationCoordinate2D, polygons: [GeoPolygon]) -> String? {
+    for polygon in polygons where !polygon.cvegeo.isEmpty {
+        if pointInPolygon(coord, polygon.coordinates) { return polygon.cvegeo }
+    }
+    // Fallback: nearest centroid (handles structures in parks)
+    var minDist = Double.infinity
+    var nearest: String?
+    for polygon in polygons where !polygon.cvegeo.isEmpty {
+        let n = Double(polygon.coordinates.count)
+        guard n > 0 else { continue }
+        let lat = polygon.coordinates.reduce(0.0) { $0 + $1.latitude } / n
+        let lng = polygon.coordinates.reduce(0.0) { $0 + $1.longitude } / n
+        let d = (coord.latitude - lat) * (coord.latitude - lat)
+              + (coord.longitude - lng) * (coord.longitude - lng)
+        if d < minDist { minDist = d; nearest = polygon.cvegeo }
+    }
+    return nearest
+}
+
 private func computarColoniasConEstructuras(
     polygons: [GeoPolygon],
     estructuras: [EstructuraConParque]
 ) -> Set<String> {
-    let coords = estructuras.compactMap { e -> CLLocationCoordinate2D? in
-        guard let lat = e.lat, let lng = e.lng else { return nil }
-        return CLLocationCoordinate2D(latitude: lat, longitude: lng)
-    }
     var result = Set<String>()
-    for polygon in polygons where !polygon.cvegeo.isEmpty {
-        for coord in coords {
-            if pointInPolygon(coord, polygon.coordinates) {
-                result.insert(polygon.cvegeo)
-                break
-            }
+    for e in estructuras {
+        guard let lat = e.lat, let lng = e.lng else { continue }
+        let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        if let cvegeo = coloniaParaCoordenada(coord, polygons: polygons) {
+            result.insert(cvegeo)
         }
     }
     return result
@@ -49,10 +63,8 @@ private func computarColoniasConSemana(
         guard let lat = e.lat, let lng = e.lng,
               let semana = semanaMap[e.id] else { continue }
         let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-        for polygon in polygons where !polygon.cvegeo.isEmpty && result[polygon.cvegeo] == nil {
-            if pointInPolygon(coord, polygon.coordinates) {
-                result[polygon.cvegeo] = semana.color
-            }
+        if let cvegeo = coloniaParaCoordenada(coord, polygons: polygons), result[cvegeo] == nil {
+            result[cvegeo] = semana.color
         }
     }
     return result
