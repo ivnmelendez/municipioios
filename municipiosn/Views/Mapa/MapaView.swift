@@ -925,6 +925,7 @@ struct EstructuraDetalleSheet: View {
                     infoView
                     if mostrarCampanas && !caras.isEmpty { Divider(); campanasView }
                     if let n = estructura.notas, !n.isEmpty { Divider(); notasView(n) }
+                    if estructura.lat != nil && estructura.lng != nil { Divider(); mapaUbicacion }
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -942,6 +943,7 @@ struct EstructuraDetalleSheet: View {
                 infoView
                 if mostrarCampanas && !caras.isEmpty { Divider(); campanasView }
                 if let n = estructura.notas, !n.isEmpty { Divider(); notasView(n) }
+                if estructura.lat != nil && estructura.lng != nil { Divider(); mapaUbicacion }
             }
             .frame(maxWidth: .infinity)
             .background(GeometryReader { geo in
@@ -1096,6 +1098,29 @@ struct EstructuraDetalleSheet: View {
             Text(notas).font(.body)
         }
         .padding(20)
+    }
+
+    @ViewBuilder
+    private var mapaUbicacion: some View {
+        if let lat = estructura.lat, let lng = estructura.lng {
+            let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Ubicación en mapa")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Map(initialPosition: .region(MKCoordinateRegion(
+                    center: coord,
+                    span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+                ))) {
+                    Marker(estructura.numero, coordinate: coord)
+                        .tint(Color("Navy"))
+                }
+                .frame(height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .allowsHitTesting(false)
+            }
+            .padding(20)
+        }
     }
 }
 
