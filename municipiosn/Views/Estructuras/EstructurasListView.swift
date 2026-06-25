@@ -381,6 +381,7 @@ struct EstructuraDetalleView: View {
     @State private var campanas: [CampanaBasica] = []
     @State private var caraParaCambio: CaraDetalle? = nil
     @State private var campanaSeleccionada: CampanaBasica? = nil
+    @State private var mostrarMapaCompleto = false
 
     var body: some View {
         Group {
@@ -656,19 +657,37 @@ struct EstructuraDetalleView: View {
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
-                    Map(initialPosition: .region(MKCoordinateRegion(
-                        center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
-                    ))) {
-                        Marker(estructura.numero, coordinate: coord)
-                            .tint(Color("Navy"))
+                    Button { mostrarMapaCompleto = true } label: {
+                        Map(initialPosition: .region(MKCoordinateRegion(
+                            center: coord,
+                            span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+                        ))) {
+                            Marker(estructura.numero, coordinate: coord)
+                                .tint(Color("Navy"))
+                        }
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .allowsHitTesting(false)
+                        .overlay(alignment: .bottomTrailing) {
+                            Label("Abrir", systemImage: "arrow.up.left.and.arrow.down.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.black.opacity(0.4), in: Capsule())
+                                .padding(10)
+                        }
                     }
-                    .frame(height: 200)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .allowsHitTesting(false)
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
+                .fullScreenCover(isPresented: $mostrarMapaCompleto) {
+                    MapaEstructuraFullView(
+                        numero: estructura.numero,
+                        coordinate: coord
+                    )
+                }
             }
 
             Spacer().frame(height: 32)
@@ -681,6 +700,38 @@ struct EstructuraDetalleView: View {
         let web = URL(string: "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lng)&travelmode=driving")!
         UIApplication.shared.open(gm) { success in
             if !success { UIApplication.shared.open(web) }
+        }
+    }
+}
+
+// MARK: - Fullscreen map
+
+private struct MapaEstructuraFullView: View {
+    let numero: String
+    let coordinate: CLLocationCoordinate2D
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Map(initialPosition: .region(MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+            ))) {
+                Marker(numero, coordinate: coordinate)
+                    .tint(Color("Navy"))
+            }
+            .ignoresSafeArea(edges: .bottom)
+            .navigationTitle(numero)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.title3)
+                    }
+                }
+            }
         }
     }
 }
