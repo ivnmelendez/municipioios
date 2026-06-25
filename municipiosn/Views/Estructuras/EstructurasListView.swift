@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 @MainActor
 @Observable
@@ -644,6 +645,28 @@ struct EstructuraDetalleView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.secondarySystemGroupedBackground),
                             in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+            }
+
+            if let lat = estructura.lat, let lng = estructura.lng {
+                let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Ubicación en mapa")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                    Map(initialPosition: .region(MKCoordinateRegion(
+                        center: coord,
+                        span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+                    ))) {
+                        Marker(estructura.numero, coordinate: coord)
+                            .tint(Color("Navy"))
+                    }
+                    .frame(height: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .allowsHitTesting(false)
+                }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
             }
