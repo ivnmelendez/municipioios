@@ -43,8 +43,6 @@ struct DashboardView: View {
         return fmt.string(from: fecha)
     }
 
-    private var sistemaOperativo: Bool { vm.kpi.dañadas == 0 }
-
     private func cargarFotoPerfil() {
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("perfil.jpg")
@@ -63,6 +61,7 @@ struct DashboardView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 28)
                     .padding(.bottom, 28)
+                    .intro(aparecer, delay: 0.0)
 
                 if vm.isLoading && !vm.kpi.isLoaded {
                     ProgressView()
@@ -144,23 +143,6 @@ struct DashboardView: View {
                 Text(fechaFormateada)
                     .font(.subheadline)
                     .foregroundStyle(Color("TextMuted"))
-
-                // Sistema de salud
-                if vm.kpi.isLoaded {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(sistemaOperativo ? Color(hex: "#16a34a") : Color(hex: "#dc2626"))
-                            .frame(width: 7, height: 7)
-                            .shadow(color: (sistemaOperativo ? Color(hex: "#16a34a") : Color(hex: "#dc2626")).opacity(0.6), radius: 3)
-                        Text(sistemaOperativo
-                             ? "Sistema operativo"
-                             : "\(vm.kpi.dañadas) \(vm.kpi.dañadas == 1 ? "estructura requiere" : "estructuras requieren") atención")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(sistemaOperativo ? Color(hex: "#16a34a") : Color(hex: "#dc2626"))
-                    }
-                    .padding(.top, 2)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
             }
 
             Spacer()
