@@ -173,6 +173,7 @@ struct MapaView: View {
     @State private var estructuraParaDano: EstructuraConParque? = nil
     @State private var visitadasVersion: Int = 0
     @State private var mostrarNuevaEstructura = false
+    @State private var mapaListo = false
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -222,9 +223,16 @@ struct MapaView: View {
                 VStack(spacing: 8) {
                     Button { searchFocused = true } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(.secondary)
-                                .font(.system(size: 15, weight: .medium))
+                            if mapaListo {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundStyle(.secondary)
+                                    .font(.system(size: 15, weight: .medium))
+                                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                            } else {
+                                ProgressView()
+                                    .scaleEffect(0.85)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                            }
                             TextField("Buscar por SN, colonia o parque", text: $busqueda)
                                 .textFieldStyle(.plain)
                                 .autocorrectionDisabled()
@@ -314,17 +322,6 @@ struct MapaView: View {
             .padding(.bottom, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 
-            if vm.isLoading && vm.estructuras.isEmpty {
-                HStack {
-                    ProgressView()
-                    Text("Cargando estructuras…")
-                        .font(.caption)
-                }
-                .padding(12)
-                .background(.regularMaterial, in: Capsule())
-                .padding(.bottom, 100)
-            }
-
             if userId != nil && !vm.visitadasHoy.isEmpty {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
@@ -355,7 +352,10 @@ struct MapaView: View {
             visitadasVersion += 1
         }
         .task {
-            guard coloniasPolygons.isEmpty else { return }
+            guard coloniasPolygons.isEmpty else {
+                mapaListo = true
+                return
+            }
             await vm.cargar()
             coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
             municipioPolygons = loadGeoPolygons(named: "san_nicolas")
@@ -369,6 +369,9 @@ struct MapaView: View {
                 estructuras: vm.estructuras,
                 semanaMap: estructuraSemanaMap
             )
+            withAnimation(.easeOut(duration: 0.6)) {
+                mapaListo = true
+            }
         }
         .navigationDestination(item: $estructuraNavegada) { e in
             EstructuraDetalleView(estructura: e)
@@ -528,13 +531,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 mapView.addOverlay(mkPoly, level: .aboveRoads)
             }
 
-            if context.coordinator.isFirstLoad && !coloniasPolygons.isEmpty {
-                context.coordinator.isFirstLoad = false
-                mapView.alpha = 0
-                UIView.animate(withDuration: 0.5, delay: 0.1, options: .curveEaseIn) {
-                    mapView.alpha = 1
-                }
-            }
         }
 
         context.coordinator.visitadasHoy = visitadasHoy
@@ -564,7 +560,6 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var loadedSemanaVersion = -1
         var loadedSemanaColorCount = 0
         var loadedVisitadasVersion = -1
-        var isFirstLoad = true
         var initialRegionSet = false
         private var markerCache: [String: UIImage] = [:]
 
