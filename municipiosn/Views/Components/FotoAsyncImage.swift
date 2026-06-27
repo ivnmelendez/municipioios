@@ -6,37 +6,45 @@ struct FotoAsyncImage: View {
     var cornerRadius: CGFloat = 12
     var thumbnail: Bool = true
 
-    private var resolvedURL: URL? {
-        guard let urlStr = url else { return nil }
-        return thumbnail ? supabaseThumb(urlStr, width: 600, quality: 70)
-                         : supabaseThumb(urlStr, width: 1400, quality: 85)
-    }
+    @State private var uiImage: UIImage? = nil
+    @State private var loadState: LoadState = .idle
+
+    private enum LoadState { case idle, loading, failed }
 
     var body: some View {
         Group {
-            if let imageURL = resolvedURL {
-                AsyncImage(url: imageURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure:
-                        placeholderView
-                    case .empty:
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(Color("Background"))
-                    @unknown default:
-                        placeholderView
-                    }
-                }
-            } else {
+            if let img = uiImage {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else if loadState == .failed {
                 placeholderView
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color("Background"))
             }
         }
         .aspectRatio(aspectRatio, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .onAppear {
+            guard loadState == .idle, let urlStr = url,
+                  let imageURL = thumbnail
+                    ? supabaseThumb(urlStr, width: 600, quality: 70)
+                    : supabaseThumb(urlStr, width: 1400, quality: 85)
+            else { return }
+            loadState = .loading
+            Task {
+                let request = URLRequest(url: imageURL, cachePolicy: .returnCacheDataElseLoad)
+                if let (data, _) = try? await URLSession.shared.data(for: request),
+                   let img = UIImage(data: data) {
+                    uiImage = img
+                } else {
+                    loadState = .failed
+                }
+                if loadState == .loading { loadState = .idle }
+            }
+        }
     }
 
     private var placeholderView: some View {

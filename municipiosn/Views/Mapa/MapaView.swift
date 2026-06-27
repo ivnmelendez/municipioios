@@ -1186,7 +1186,8 @@ struct FotoFullscreenView: View {
                 }
             }
             .task {
-                guard let (data, _) = try? await URLSession.shared.data(from: url) else { return }
+                let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
+                guard let (data, _) = try? await URLSession.shared.data(for: request) else { return }
                 uiImage = UIImage(data: data)
             }
         }

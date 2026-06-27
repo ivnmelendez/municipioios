@@ -38,8 +38,8 @@ struct municipiosnApp: App {
 
     init() {
         URLCache.shared = URLCache(
-            memoryCapacity: 50 * 1024 * 1024,
-            diskCapacity: 200 * 1024 * 1024,
+            memoryCapacity: 100 * 1024 * 1024,
+            diskCapacity: 500 * 1024 * 1024,
             directory: nil
         )
         UNUserNotificationCenter.current().delegate = NotificacionDelegate.shared

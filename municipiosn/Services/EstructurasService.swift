@@ -180,12 +180,29 @@ final class EstructurasService {
     private var campanasCachedAt: Date? = nil
     private let campanasTTL: TimeInterval = 300
 
+    private var estructurasCache: [EstructuraConParque]? = nil
+    private var estructurasCachedAt: Date? = nil
+    private let estructurasTTL: TimeInterval = 120
+
     func fetchEstructuras() async throws -> [EstructuraConParque] {
-        try await client
+        if let cache = estructurasCache,
+           let cachedAt = estructurasCachedAt,
+           Date().timeIntervalSince(cachedAt) < estructurasTTL {
+            return cache
+        }
+        let result: [EstructuraConParque] = try await client
             .from("estructuras")
             .select("*, parques(id, nombre, colonias(id, nombre, activo))")
             .execute()
             .value
+        estructurasCache = result
+        estructurasCachedAt = Date()
+        return result
+    }
+
+    func invalidarCacheEstructuras() {
+        estructurasCache = nil
+        estructurasCachedAt = nil
     }
 
     func fetchKPIs() async throws -> KPIData {
