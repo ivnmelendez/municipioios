@@ -86,16 +86,6 @@ final class CoroplastService {
 
     private init() {}
 
-    func fetchCampanasActivas() async throws -> [CampanaBasica] {
-        try await client
-            .from("campanas")
-            .select("id, nombre, foto_url")
-            .eq("activa", value: true)
-            .order("nombre")
-            .execute()
-            .value
-    }
-
     func fetchCarasParaCambio(estructuraId: UUID) async throws -> [CaraParaCambio] {
         let raw: [CaraConCampanaRaw] = try await client
             .from("caras")

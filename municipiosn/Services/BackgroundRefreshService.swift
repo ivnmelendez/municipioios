@@ -51,7 +51,7 @@ final class BackgroundRefreshService {
             LocalDataCache.shared.guardar(estructuras, clave: "estructuras_campo")
             LocalDataCache.shared.guardar(estructuras, clave: "estructuras_lista")
         }
-        if let campanas = try? await CoroplastService.shared.fetchCampanasActivas() {
+        if let campanas = try? await EstructurasService.shared.fetchCampanasActivas() {
             LocalDataCache.shared.guardar(campanas, clave: "campanas")
         }
         if let kpi = try? await EstructurasService.shared.fetchKPIs() {

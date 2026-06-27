@@ -35,7 +35,7 @@ final class CampoViewModel {
 
         do {
             async let e = EstructurasService.shared.fetchEstructuras()
-            async let c = CoroplastService.shared.fetchCampanasActivas()
+            async let c = EstructurasService.shared.fetchCampanasActivas()
             let (nuevasE, nuevasC) = try await (e, c)
             estructuras = nuevasE
             campanas = nuevasC
