@@ -28,6 +28,38 @@ struct IntervencionCompleta: Codable, Identifiable {
         case createdAt = "created_at"
         case estructuras, rondines
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        rondinId = try c.decode(UUID.self, forKey: .rondinId)
+        estructuraId = try c.decode(UUID.self, forKey: .estructuraId)
+        accion = try c.decode(AccionIntervencion.self, forKey: .accion)
+        tipoDano = try c.decodeIfPresent(TipoDano.self, forKey: .tipoDano)
+        fotoAntesUrl = try c.decodeIfPresent(String.self, forKey: .fotoAntesUrl)
+        fotoDespuesUrl = try c.decodeIfPresent(String.self, forKey: .fotoDespuesUrl)
+        notas = try c.decodeIfPresent(String.self, forKey: .notas)
+        estructuras = try c.decodeIfPresent(EstructuraResumen.self, forKey: .estructuras)
+        rondines = try c.decodeIfPresent(RondinConPerfil.self, forKey: .rondines)
+        let raw = try c.decode(String.self, forKey: .createdAt)
+        createdAt = Self.parseDate(raw) ?? Date()
+    }
+
+    private static func parseDate(_ s: String) -> Date? {
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXXXX",
+            "yyyy-MM-dd HH:mm:ss.SSSSSSXXXXX",
+            "yyyy-MM-dd HH:mm:ssXXXXX"
+        ]
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        for fmt in formats {
+            f.dateFormat = fmt
+            if let d = f.date(from: s) { return d }
+        }
+        return nil
+    }
 }
 
 struct EstructuraResumen: Codable, Identifiable {
@@ -66,6 +98,18 @@ final class IntervencionesService {
 
     func fetchDanos(filtro: FiltroFecha = .todo) async throws -> [IntervencionCompleta] {
         return try await fetchIntervenciones(acciones: ["reporte_dano"], filtro: filtro)
+    }
+
+    func debugFetchCambios() async throws -> Int {
+        struct Row: Decodable { let id: UUID; let accion: String }
+        let rows: [Row] = try await client
+            .from("rondines_estructuras")
+            .select("id, accion")
+            .in("accion", values: ["cambio_coroplast", "reparacion_coroplast", "reactivacion"])
+            .execute()
+            .value
+        print("[DEBUG] cambios encontrados: \(rows.count) — \(rows.map(\.accion))")
+        return rows.count
     }
 
     func fetchHistorial(estructuraId: UUID, limit: Int = 8) async throws -> [IntervencionCompleta] {
