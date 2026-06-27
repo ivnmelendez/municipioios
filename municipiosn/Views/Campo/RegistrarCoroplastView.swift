@@ -31,9 +31,9 @@ struct RegistrarCoroplastView: View {
     private var pasoNumero: Int {
         switch paso {
         case .accion:      return 1
-        case .campanas:    return 2
-        case .fotoAntes:   return esCambio ? 3 : 2
-        case .fotoDespues: return esCambio ? 4 : 3
+        case .fotoAntes:   return 2
+        case .fotoDespues: return 3
+        case .campanas:    return 4
         case .confirmar:   return totalPasos
         }
     }
@@ -169,7 +169,7 @@ struct RegistrarCoroplastView: View {
                 ) {
                     if caras.isEmpty { Task { await cargarCaras() } }
                     tipoSeleccionado = .cambio
-                    withAnimation(.easeInOut(duration: 0.2)) { paso = .campanas }
+                    withAnimation(.easeInOut(duration: 0.2)) { paso = .fotoAntes }
                 }
             }
             .padding(.horizontal, 20)
@@ -214,7 +214,7 @@ struct RegistrarCoroplastView: View {
                 }
 
                 botonContinuar(habilitado: todasCarasAsignadas) {
-                    withAnimation(.easeInOut(duration: 0.2)) { paso = .fotoAntes }
+                    withAnimation(.easeInOut(duration: 0.2)) { paso = .confirmar }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
@@ -230,7 +230,7 @@ struct RegistrarCoroplastView: View {
         let subtitulo = esAntes
             ? "Documenta el estado del coroplast antes de tocarlo"
             : "Documenta el resultado final del trabajo"
-        let siguientePaso: Paso = esAntes ? .fotoDespues : .confirmar
+        let siguientePaso: Paso = esAntes ? .fotoDespues : (esCambio ? .campanas : .confirmar)
         let tieneFoto = esAntes ? fotoAntesUI != nil : fotoDespuesUI != nil
 
         return VStack(spacing: 24) {
@@ -403,10 +403,10 @@ struct RegistrarCoroplastView: View {
         withAnimation(.easeInOut(duration: 0.2)) {
             switch paso {
             case .accion:      break
-            case .campanas:    paso = .accion
-            case .fotoAntes:   paso = esCambio ? .campanas : .accion
+            case .fotoAntes:   paso = .accion
             case .fotoDespues: paso = .fotoAntes
-            case .confirmar:   paso = .fotoDespues
+            case .campanas:    paso = .fotoDespues
+            case .confirmar:   paso = esCambio ? .campanas : .fotoDespues
             }
         }
     }
