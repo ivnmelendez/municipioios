@@ -25,7 +25,7 @@ final class IntervencionesViewModel {
             intervenciones = nuevas
             LocalDataCache.shared.guardar(nuevas, clave: claveCache)
         } catch {
-            if intervenciones.isEmpty { errorMessage = error.localizedDescription }
+            errorMessage = error.localizedDescription
         }
     }
 

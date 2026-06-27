@@ -9,17 +9,21 @@ struct IntervencionesView: View {
                 ProgressView("Cargando intervenciones…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = vm.errorMessage, vm.intervenciones.isEmpty {
-                ContentUnavailableView(
-                    "Error al cargar",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(error)
-                )
+                ScrollView {
+                    ContentUnavailableView(
+                        "Error al cargar",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(error)
+                    )
+                }
             } else if vm.intervenciones.isEmpty {
-                ContentUnavailableView(
-                    "Sin intervenciones",
-                    systemImage: "arrow.triangle.2.circlepath",
-                    description: Text("No hay cambios en el período seleccionado.")
-                )
+                ScrollView {
+                    ContentUnavailableView(
+                        "Sin intervenciones",
+                        systemImage: "arrow.triangle.2.circlepath",
+                        description: Text("No hay cambios en el período seleccionado.")
+                    )
+                }
             } else {
                 List(vm.intervenciones) { intervencion in
                     IntervencionRow(intervencion: intervencion)

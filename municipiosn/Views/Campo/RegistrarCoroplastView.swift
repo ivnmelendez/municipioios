@@ -338,6 +338,7 @@ struct RegistrarCoroplastView: View {
         .onAppear {
             if icono == "wifi.slash" { HapticService.advertencia() } else { HapticService.exito() }
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                NotificationCenter.default.post(name: .nuevoCambioRotoplas, object: nil)
                 onCompletion?()
                 dismiss()
             }
