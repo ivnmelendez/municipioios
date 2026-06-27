@@ -97,6 +97,7 @@ struct DashboardView: View {
         }
         .background(Color("Background"))
         .refreshable {
+            EstructurasService.shared.invalidarCacheEstructuras()
             await vm.cargar()
             ultimaActualizacion = Date()
         }
