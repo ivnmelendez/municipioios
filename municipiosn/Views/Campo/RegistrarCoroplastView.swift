@@ -505,7 +505,7 @@ struct RegistrarCoroplastView: View {
     private func subirFoto(_ data: Data?, sufijo: String, userId: UUID) async throws -> String? {
         guard let data else { return nil }
         let path = "\(userId.uuidString)/\(UUID().uuidString)_\(sufijo).jpg"
-        return try? await CoroplastService.shared.uploadFoto(data: data, path: path)
+        return try await CoroplastService.shared.uploadFoto(data: data, path: path)
     }
 }
 
