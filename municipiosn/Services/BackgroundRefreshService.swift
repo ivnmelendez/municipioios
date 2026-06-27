@@ -45,6 +45,9 @@ final class BackgroundRefreshService {
         // Flush offline queue first
         await OfflineQueueService.shared.procesarQueue()
 
+        // Force fresh fetch — bypass in-memory TTL cache
+        EstructurasService.shared.invalidarCacheEstructuras()
+
         // Refresh and cache estructuras + campañas
         if let estructuras = try? await EstructurasService.shared.fetchEstructuras() {
             LocalDataCache.shared.guardar(estructuras, clave: "estructuras_mapa")
