@@ -18,7 +18,7 @@ struct FotoAsyncImage: View {
                 Image(uiImage: img)
                     .resizable()
                     .scaledToFill()
-            } else if loadState == .failed {
+            } else if loadState == .failed || url == nil || url?.isEmpty == true {
                 placeholderView
             } else {
                 ProgressView()
