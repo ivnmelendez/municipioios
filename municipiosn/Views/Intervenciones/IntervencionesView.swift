@@ -30,11 +30,6 @@ struct IntervencionesView: View {
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
-                        .scrollTransition(.animated.threshold(.visible(0.1))) { content, phase in
-                            content
-                                .opacity(phase.isIdentity ? 1 : 0)
-                                .offset(y: phase.isIdentity ? 0 : 8)
-                        }
                 }
                 .listStyle(.plain)
             }
