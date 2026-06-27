@@ -257,11 +257,13 @@ final class CoroplastService {
         formatter.formatOptions = [.withFullDate]
         let hoy = formatter.string(from: Date())
 
+        let authUserId = try await client.auth.session.user.id
+
         struct RondinRow: Codable { let id: UUID }
         let rondines: [RondinRow] = try await client
             .from("rondines")
             .select("id")
-            .eq("created_by", value: userId.uuidString)
+            .eq("created_by", value: authUserId.uuidString)
             .eq("fecha", value: hoy)
             .execute()
             .value
@@ -303,12 +305,15 @@ final class CoroplastService {
         formatter.formatOptions = [.withFullDate]
         let hoy = formatter.string(from: Date())
 
+        // Use auth.uid() directly — RLS policy checks auth.uid(), not perfiles.id
+        let authUserId = try await client.auth.session.user.id
+
         struct RondinResponse: Codable { let id: UUID }
 
         let result: RondinResponse = try await client
             .from("rondines")
             .upsert(
-                RondinInsert(fecha: hoy, created_by: userId.uuidString, ruta_semana_id: rutaSemanaId?.uuidString),
+                RondinInsert(fecha: hoy, created_by: authUserId.uuidString, ruta_semana_id: rutaSemanaId?.uuidString),
                 onConflict: "created_by,fecha"
             )
             .select("id")

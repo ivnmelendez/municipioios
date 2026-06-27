@@ -63,10 +63,12 @@ final class RutasService {
         formatter.formatOptions = [.withFullDate]
         let hoy = formatter.string(from: Date())
 
+        let authUserId = try await client.auth.session.user.id
+
         let visitas: [VisitaHoy] = try await client
             .from("rondines_estructuras")
             .select("estructura_id, rondines!inner(created_by, fecha)")
-            .eq("rondines.created_by", value: userId.uuidString)
+            .eq("rondines.created_by", value: authUserId.uuidString)
             .eq("rondines.fecha", value: hoy)
             .in("estructura_id", values: estructuraIds)
             .execute()
