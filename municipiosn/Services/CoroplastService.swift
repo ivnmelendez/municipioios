@@ -244,10 +244,10 @@ final class CoroplastService {
     func uploadFoto(data: Data, path: String) async throws -> String {
         let fileOptions = FileOptions(contentType: "image/jpeg")
         try await client.storage
-            .from("rondines")
+            .from("fotos")
             .upload(path, data: data, options: fileOptions)
         return try client.storage
-            .from("rondines")
+            .from("fotos")
             .getPublicURL(path: path)
             .absoluteString
     }
