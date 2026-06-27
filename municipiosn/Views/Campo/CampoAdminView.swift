@@ -59,9 +59,15 @@ struct CampoAdminView: View {
 
                 // MARK: Contenido
                 ZStack {
-                    HistorialCampoView().opacity(seccion == .visitas   ? 1 : 0)
-                    IntervencionesView().opacity(seccion == .coroplast ? 1 : 0)
-                    DañosView().opacity(seccion == .danos     ? 1 : 0)
+                    HistorialCampoView()
+                        .opacity(seccion == .visitas   ? 1 : 0)
+                        .allowsHitTesting(seccion == .visitas)
+                    IntervencionesView()
+                        .opacity(seccion == .coroplast ? 1 : 0)
+                        .allowsHitTesting(seccion == .coroplast)
+                    DañosView()
+                        .opacity(seccion == .danos     ? 1 : 0)
+                        .allowsHitTesting(seccion == .danos)
                 }
                 .animation(.easeInOut(duration: 0.2), value: seccion)
             }
