@@ -403,7 +403,7 @@ struct EstructuraDetalleView: View {
         .background {
             Color(.systemGray6).ignoresSafeArea()
             if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-                AsyncImage(url: url) { phase in
+                CachedAsyncImage(url: url) { phase in
                     if case .success(let image) = phase {
                         image.resizable()
                             .aspectRatio(contentMode: .fill)
@@ -533,7 +533,7 @@ struct EstructuraDetalleView: View {
                 Color(.systemGray5)
                     .frame(maxWidth: .infinity, maxHeight: height ?? .infinity)
 
-                AsyncImage(url: url) { phase in
+                CachedAsyncImage(url: url) { phase in
                     if case .success(let image) = phase {
                         Button {
                             fotoFullscreen = IdentifiableURL(url: url, titulo: estructura.numero)

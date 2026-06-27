@@ -89,7 +89,7 @@ struct CampanaCelda: View {
     @ViewBuilder
     private var imageArea: some View {
         if let url = fotoURL {
-            AsyncImage(url: url) { phase in
+            CachedAsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
                     image

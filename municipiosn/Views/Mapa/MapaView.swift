@@ -974,7 +974,7 @@ struct EstructuraDetalleSheet: View {
     @ViewBuilder
     private func fotoView(fixedHeight: CGFloat?) -> some View {
         if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-            AsyncImage(url: url) { phase in
+            CachedAsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
                     Button {
@@ -1230,7 +1230,7 @@ struct CampanaRow: View {
                 }
 
                 if let url = fotoURL {
-                    AsyncImage(url: url) { phase in
+                    CachedAsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
                             Button {
