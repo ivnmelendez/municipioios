@@ -278,7 +278,7 @@ struct ReportarDanoView: View {
                 var fotoUrl: String? = nil
                 if let data = fotoData {
                     let path = "\(userId.uuidString)/\(UUID().uuidString)_dano.jpg"
-                    fotoUrl = try? await CoroplastService.shared.uploadFoto(data: data, path: path)
+                    fotoUrl = try await CoroplastService.shared.uploadFoto(data: data, path: path)
                 }
                 try await CoroplastService.shared.reportarDano(
                     estructuraId: estructura.id,

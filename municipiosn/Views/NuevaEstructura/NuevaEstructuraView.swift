@@ -130,7 +130,7 @@ final class NuevaEstructuraViewModel {
             var fotoUrl: String? = nil
             if let img = fotoUI, let data = img.jpegData(compressionQuality: 0.85) {
                 let path = "estructuras/\(UUID().uuidString).jpg"
-                fotoUrl = try? await CoroplastService.shared.uploadFoto(data: data, path: path)
+                fotoUrl = try await CoroplastService.shared.uploadFoto(data: data, path: path)
             }
             let creada = try await EstructurasService.shared.crearEstructura(
                 parqueId: parqueSeleccionado?.id,
