@@ -106,7 +106,7 @@ struct IntervencionRow: View {
 
             HStack(spacing: 8) {
                 VStack(spacing: 4) {
-                    FotoAsyncImage(url: intervencion.fotoAntesUrl, aspectRatio: 1, cornerRadius: 10)
+                    FotoAsyncImage(url: intervencion.fotoAntesUrl, aspectRatio: 1, cornerRadius: 10, thumbnailWidth: 200)
                     Text("Antes")
                         .font(.caption2)
                         .foregroundStyle(Color("TextMuted"))
@@ -114,7 +114,7 @@ struct IntervencionRow: View {
                 Image(systemName: "arrow.right")
                     .foregroundStyle(Color("Navy"))
                 VStack(spacing: 4) {
-                    FotoAsyncImage(url: intervencion.fotoDespuesUrl, aspectRatio: 1, cornerRadius: 10)
+                    FotoAsyncImage(url: intervencion.fotoDespuesUrl, aspectRatio: 1, cornerRadius: 10, thumbnailWidth: 200)
                     Text("Después")
                         .font(.caption2)
                         .foregroundStyle(Color("TextMuted"))

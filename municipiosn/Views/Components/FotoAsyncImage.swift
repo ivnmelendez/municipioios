@@ -5,6 +5,7 @@ struct FotoAsyncImage: View {
     var aspectRatio: CGFloat = 4/3
     var cornerRadius: CGFloat = 12
     var thumbnail: Bool = true
+    var thumbnailWidth: Int = 600
 
     @State private var uiImage: UIImage? = nil
     @State private var loadState: LoadState = .idle
@@ -30,7 +31,7 @@ struct FotoAsyncImage: View {
         .onAppear {
             guard loadState == .idle, let urlStr = url,
                   let imageURL = thumbnail
-                    ? supabaseThumb(urlStr, width: 600, quality: 70)
+                    ? supabaseThumb(urlStr, width: thumbnailWidth, quality: 60)
                     : supabaseThumb(urlStr, width: 1400, quality: 85)
             else { return }
             loadState = .loading
