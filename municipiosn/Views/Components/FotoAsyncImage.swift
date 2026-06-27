@@ -29,21 +29,22 @@ struct FotoAsyncImage: View {
         .aspectRatio(aspectRatio, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .onAppear {
-            guard loadState == .idle, let urlStr = url,
-                  let imageURL = thumbnail
-                    ? supabaseThumb(urlStr, width: thumbnailWidth, quality: 60)
-                    : supabaseThumb(urlStr, width: 1400, quality: 85)
-            else { return }
+            guard loadState == .idle, let urlStr = url else { return }
             loadState = .loading
             Task {
-                let request = URLRequest(url: imageURL, cachePolicy: .returnCacheDataElseLoad)
-                if let (data, _) = try? await URLSession.shared.data(for: request),
-                   let img = UIImage(data: data) {
-                    uiImage = img
-                } else {
-                    loadState = .failed
+                let thumbURL = thumbnail
+                    ? supabaseThumb(urlStr, width: thumbnailWidth, quality: 60)
+                    : supabaseThumb(urlStr, width: 1400, quality: 85)
+                let urls = [thumbURL, URL(string: urlStr)].compactMap { $0 }
+                for imageURL in urls {
+                    let request = URLRequest(url: imageURL, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 15)
+                    if let (data, _) = try? await URLSession.shared.data(for: request),
+                       let img = UIImage(data: data) {
+                        uiImage = img
+                        return
+                    }
                 }
-                if loadState == .loading { loadState = .idle }
+                loadState = .failed
             }
         }
     }
