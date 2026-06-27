@@ -64,6 +64,7 @@ struct ReportarDanoView: View {
                 if exito { exitoOverlay }
                 if exitoOffline { exitoOfflineOverlay }
             }
+            .interactiveDismissDisabled(fotoUI != nil || paso == .confirmar)
         }
     }
 

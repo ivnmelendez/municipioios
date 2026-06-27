@@ -88,6 +88,7 @@ struct RegistrarCoroplastView: View {
                 if exito { exitoOverlay }
                 if exitoOffline { exitoOfflineOverlay }
             }
+            .interactiveDismissDisabled(paso != .accion)
         }
     }
 
