@@ -200,6 +200,11 @@ final class EstructurasService {
         return result
     }
 
+    func fetchEstructura(id: UUID) async throws -> EstructuraConParque? {
+        let todas = try await fetchEstructuras()
+        return todas.first { $0.id == id }
+    }
+
     func invalidarCacheEstructuras() {
         estructurasCache = nil
         estructurasCachedAt = nil

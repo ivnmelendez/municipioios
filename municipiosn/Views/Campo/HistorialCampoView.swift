@@ -1,5 +1,28 @@
 import SwiftUI
 
+private struct EstructuraDetalleLoader: View {
+    let id: UUID
+    @State private var estructura: EstructuraConParque? = nil
+    @State private var cargando = true
+
+    var body: some View {
+        Group {
+            if cargando {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let e = estructura {
+                EstructuraDetalleView(estructura: e)
+            } else {
+                ContentUnavailableView("No encontrada", systemImage: "exclamationmark.triangle")
+            }
+        }
+        .task {
+            estructura = try? await EstructurasService.shared.fetchEstructura(id: id)
+            cargando = false
+        }
+    }
+}
+
 struct HistorialCampoView: View {
     @State private var vm = HistorialViewModel()
     @State private var periodo: Periodo = .semana
@@ -54,20 +77,17 @@ struct HistorialCampoView: View {
     private func diaSection(dia: DiaVisita) -> some View {
         Section {
             ForEach(dia.estructuras) { e in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Estructura \(e.numero)")
-                        .font(.subheadline.weight(.medium))
-                    if let colonia = e.colonia {
-                        Text(colonia)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                NavigationLink(destination: EstructuraDetalleLoader(id: e.id)) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(e.numero)
+                            .font(.subheadline.weight(.medium))
+                        if let colonia = e.colonia {
+                            Text(colonia)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                }
-                .padding(.vertical, 2)
-                .scrollTransition(.animated.threshold(.visible(0.1))) { content, phase in
-                    content
-                        .opacity(phase.isIdentity ? 1 : 0)
-                        .offset(y: phase.isIdentity ? 0 : 6)
+                    .padding(.vertical, 2)
                 }
             }
         } header: {

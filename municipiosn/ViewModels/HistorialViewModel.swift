@@ -31,7 +31,7 @@ final class HistorialViewModel {
             LocalDataCache.shared.guardar(s, clave: "historial_semana")
             LocalDataCache.shared.guardar(m, clave: "historial_mes")
         } catch {
-            if diasSemana.isEmpty { self.error = error.localizedDescription }
+            self.error = error.localizedDescription
         }
         cargando = false
     }
