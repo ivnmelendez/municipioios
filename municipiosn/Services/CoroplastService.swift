@@ -59,6 +59,7 @@ private struct RondinEstructuraInsert: Encodable {
     let estructura_id: String
     let accion: String
     let tipo_dano: String?
+    let tipo_mantenimiento: String?
     let foto_antes_url: String?
     let foto_despues_url: String?
     let notas: String?
@@ -121,6 +122,7 @@ final class CoroplastService {
                 estructura_id: estructuraId.uuidString,
                 accion: "reparacion_coroplast",
                 tipo_dano: nil,
+                tipo_mantenimiento: nil,
                 foto_antes_url: fotoAntesUrl,
                 foto_despues_url: fotoDespuesUrl,
                 notas: notas
@@ -172,6 +174,7 @@ final class CoroplastService {
                 estructura_id: estructuraId.uuidString,
                 accion: "cambio_coroplast",
                 tipo_dano: nil,
+                tipo_mantenimiento: nil,
                 foto_antes_url: fotoAntesUrl,
                 foto_despues_url: fotoDespuesUrl,
                 notas: notas
@@ -202,6 +205,7 @@ final class CoroplastService {
                 estructura_id: estructuraId.uuidString,
                 accion: "reporte_dano",
                 tipo_dano: nil,
+                tipo_mantenimiento: nil,
                 foto_antes_url: fotoUrl,
                 foto_despues_url: nil,
                 notas: notas
@@ -229,6 +233,7 @@ final class CoroplastService {
                 estructura_id: estructuraId.uuidString,
                 accion: "reactivacion",
                 tipo_dano: nil,
+                tipo_mantenimiento: nil,
                 foto_antes_url: fotoProveedorUrl,
                 foto_despues_url: nil,
                 notas: notas
@@ -284,6 +289,35 @@ final class CoroplastService {
         return Set(rows.map { $0.estructuraId })
     }
 
+    func registrarMantenimiento(
+        estructuraId: UUID,
+        userId: UUID,
+        rutaSemanaId: UUID? = nil,
+        tipoMantenimiento: String,
+        fotoUrl: String?,
+        notas: String?
+    ) async throws {
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "reporte_mantenimiento",
+                tipo_dano: nil,
+                tipo_mantenimiento: tipoMantenimiento,
+                foto_antes_url: fotoUrl,
+                foto_despues_url: nil,
+                notas: notas
+            ))
+            .execute()
+        try await client
+            .from("estructuras")
+            .update(EstadoUpdate(estado: "necesita_mantenimiento"))
+            .eq("id", value: estructuraId.uuidString)
+            .execute()
+    }
+
     func registrarRevision(estructuraId: UUID, rutaSemanaId: UUID? = nil, userId: UUID) async throws {
         let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
@@ -293,6 +327,7 @@ final class CoroplastService {
                 estructura_id: estructuraId.uuidString,
                 accion: "revision",
                 tipo_dano: nil,
+                tipo_mantenimiento: nil,
                 foto_antes_url: nil,
                 foto_despues_url: nil,
                 notas: nil

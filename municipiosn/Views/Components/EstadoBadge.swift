@@ -8,6 +8,7 @@ extension EstadoEstructura {
         case .destruida: Color(hex: "#7c3aed")
         case .en_reparacion: Color(hex: "#d97706")
         case .inactiva: Color(hex: "#94a3b8")
+        case .necesita_mantenimiento: Color(hex: "#0891b2")
         }
     }
 
@@ -18,6 +19,7 @@ extension EstadoEstructura {
         case .destruida: "Destruida"
         case .en_reparacion: "En reparación"
         case .inactiva: "Inactiva"
+        case .necesita_mantenimiento: "Mantenimiento"
         }
     }
 
@@ -28,6 +30,7 @@ extension EstadoEstructura {
         case .destruida: "xmark.octagon.fill"
         case .en_reparacion: "wrench.and.screwdriver.fill"
         case .inactiva: "xmark.circle.fill"
+        case .necesita_mantenimiento: "wrench.fill"
         }
     }
 }

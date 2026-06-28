@@ -181,6 +181,7 @@ struct MapaView: View {
     @State private var estructuraNavegada: EstructuraConParque? = nil
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
+    @State private var estructuraParaMantenimiento: EstructuraConParque? = nil
     @State private var visitadasVersion: Int = 0
     @State private var mostrarNuevaEstructura = false
     @State private var mapaListo = false
@@ -427,6 +428,12 @@ struct MapaView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             estructuraParaDano = estructura
                         }
+                    } : nil,
+                    onReportarMantenimiento: userId != nil ? {
+                        vm.mostrarDetalle = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            estructuraParaMantenimiento = estructura
+                        }
                     } : nil
                 )
             }
@@ -441,6 +448,13 @@ struct MapaView: View {
         }
         .sheet(item: $estructuraParaDano) { estructura in
             ReportarDanoView(
+                estructura: estructura,
+                userId: userId,
+                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
+            )
+        }
+        .sheet(item: $estructuraParaMantenimiento) { estructura in
+            ReportarMantenimientoView(
                 estructura: estructura,
                 userId: userId,
                 rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
@@ -582,11 +596,12 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 return UIColor.systemGray3
             }
             switch annotation.estado {
-            case .dañada:       return UIColor.systemRed
-            case .destruida:    return UIColor.systemGray
-            case .en_reparacion: return UIColor(named: "Navy")?.withAlphaComponent(0.5) ?? .systemOrange
-            case .inactiva:     return UIColor.systemGray4
-            case .activa:       return UIColor(named: "Navy") ?? .systemBlue
+            case .dañada:                  return UIColor.systemRed
+            case .destruida:               return UIColor.systemGray
+            case .en_reparacion:           return UIColor(named: "Navy")?.withAlphaComponent(0.5) ?? .systemOrange
+            case .inactiva:                return UIColor.systemGray4
+            case .activa:                  return UIColor(named: "Navy") ?? .systemBlue
+            case .necesita_mantenimiento:  return UIColor.systemCyan
             }
         }
 
@@ -886,6 +901,7 @@ struct EstructuraDetalleSheet: View {
     var onOk: (() -> Void)? = nil
     var onRegistrarCambio: (() -> Void)? = nil
     var onReportarDano: (() -> Void)? = nil
+    var onReportarMantenimiento: (() -> Void)? = nil
     @State private var fotoFullscreen: IdentifiableURL?
     @State private var contentHeight: CGFloat = 420
 
@@ -1038,7 +1054,7 @@ struct EstructuraDetalleSheet: View {
                 Label("Sin parque asignado", systemImage: "tree")
                     .font(.subheadline).foregroundStyle(Color("TextMuted"))
             }
-            if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil {
+            if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil || onReportarMantenimiento != nil {
                 Divider().padding(.top, 8)
                 if let ok = onOk {
                     Button { ok() } label: {
@@ -1077,6 +1093,18 @@ struct EstructuraDetalleSheet: View {
                     .tint(.red)
                     .controlSize(.large)
                     .accessibilityLabel("Reportar daño en esta estructura")
+                }
+                if let mantenimiento = onReportarMantenimiento {
+                    Button { mantenimiento() } label: {
+                        Label("Reportar mantenimiento", systemImage: "wrench.fill")
+                            .font(.headline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.cyan)
+                    .controlSize(.large)
+                    .accessibilityLabel("Reportar necesidad de mantenimiento en esta estructura")
                 }
             }
         }

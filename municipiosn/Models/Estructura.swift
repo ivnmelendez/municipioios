@@ -26,6 +26,7 @@ enum EstadoEstructura: String, Codable, CaseIterable {
     case destruida
     case en_reparacion
     case inactiva
+    case necesita_mantenimiento
 }
 
 struct Estructura: Codable, Identifiable {

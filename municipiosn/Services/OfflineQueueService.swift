@@ -109,6 +109,16 @@ final class OfflineQueueService {
                 fotoUrl: antesUrl,
                 notas: accion.notas
             )
+
+        case .reporteMantenimiento:
+            try await CoroplastService.shared.registrarMantenimiento(
+                estructuraId: accion.estructuraId,
+                userId: accion.userId,
+                rutaSemanaId: accion.rutaSemanaId,
+                tipoMantenimiento: accion.tipoMantenimiento ?? "otro",
+                fotoUrl: antesUrl,
+                notas: accion.notas
+            )
         }
     }
 
