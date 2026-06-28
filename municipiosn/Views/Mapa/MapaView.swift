@@ -183,6 +183,7 @@ struct MapaView: View {
     @State private var estructuraParaDano: EstructuraConParque? = nil
     @State private var estructuraParaMantenimiento: EstructuraConParque? = nil
     @State private var estructuraParaMantenimientoRealizado: EstructuraConParque? = nil
+    @State private var pinResaltado: UUID? = nil
     @State private var visitadasVersion: Int = 0
     @State private var mostrarNuevaEstructura = false
     @State private var mapaListo = false
@@ -223,9 +224,12 @@ struct MapaView: View {
                 visitadasHoy: vm.visitadasHoy,
                 visitadasVersion: visitadasVersion,
                 mapController: mapController,
+                pinResaltado: pinResaltado,
                 onSelect: { estructura in
+                    pinResaltado = nil
                     Task { await vm.seleccionar(estructura) }
-                }
+                },
+                onClearPin: { pinResaltado = nil }
             )
             .ignoresSafeArea()
             .overlay(alignment: .top) {
@@ -268,7 +272,7 @@ struct MapaView: View {
                             resultados: anotacionesFiltradas,
                             onSeleccionar: { anotacion in
                                 mapController.centerOn(anotacion.coordinate)
-                                Task { await vm.seleccionar(anotacion.estructura) }
+                                pinResaltado = anotacion.estructura.id
                                 busqueda = ""
                                 searchFocused = false
                             }
@@ -504,9 +508,11 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let visitadasHoy: Set<UUID>
     let visitadasVersion: Int
     let mapController: MapController
+    let pinResaltado: UUID?
     let onSelect: (EstructuraConParque) -> Void
+    let onClearPin: () -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect) }
+    func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect, onClearPin: onClearPin) }
 
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
@@ -586,12 +592,27 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             mapView.removeAnnotations(toRemove)
             if !toAdd.isEmpty { mapView.addAnnotations(toAdd) }
         }
+
+        let newResaltado = pinResaltado
+        if context.coordinator.pinResaltadoId != newResaltado {
+            context.coordinator.pinResaltadoId = newResaltado
+            for annotation in mapView.annotations {
+                guard let ann = annotation as? EstructuraMKAnnotation,
+                      let view = mapView.view(for: annotation) as? EstructuraMKAnnotationView else { continue }
+                if ann.estructura.id == newResaltado {
+                    view.startPulse(color: context.coordinator.markerColor(for: ann))
+                } else {
+                    view.stopPulse()
+                }
+            }
+        }
     }
 
     // MARK: Coordinator
 
     final class Coordinator: NSObject, MKMapViewDelegate {
         let onSelect: (EstructuraConParque) -> Void
+        let onClearPin: () -> Void
         var coloniasConEstructuras: Set<String> = []
         var visitadasHoy: Set<UUID> = []
         var loadedPolygonCount = 0
@@ -599,10 +620,12 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         var loadedVisitadasVersion = -1
         var initialRegionSet = false
         var overlaysRevealed = false
+        var pinResaltadoId: UUID? = nil
         private var markerCache: [String: UIImage] = [:]
 
-        init(onSelect: @escaping (EstructuraConParque) -> Void) {
+        init(onSelect: @escaping (EstructuraConParque) -> Void, onClearPin: @escaping () -> Void) {
             self.onSelect = onSelect
+            self.onClearPin = onClearPin
         }
 
         func markerColor(for annotation: EstructuraMKAnnotation) -> UIColor {
@@ -682,12 +705,16 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     ?? UserLocationAnnotationView(annotation: annotation, reuseIdentifier: UserLocationAnnotationView.reuseID)
             }
             guard let ann = annotation as? EstructuraMKAnnotation else { return nil }
-            let id = "estructura"
-            let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
-                ?? MKAnnotationView(annotation: annotation, reuseIdentifier: id)
+            let view = mapView.dequeueReusableAnnotationView(withIdentifier: EstructuraMKAnnotationView.reuseID) as? EstructuraMKAnnotationView
+                ?? EstructuraMKAnnotationView(annotation: annotation, reuseIdentifier: EstructuraMKAnnotationView.reuseID)
             view.annotation = annotation
             view.image = markerImage(for: ann)
             view.zPriority = ann.estado == .dañada ? .max : .defaultUnselected
+            if ann.estructura.id == pinResaltadoId {
+                view.startPulse(color: markerColor(for: ann))
+            } else {
+                view.stopPulse()
+            }
             return view
         }
 
@@ -706,6 +733,62 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             guard let ann = annotation as? EstructuraMKAnnotation else { return }
             onSelect(ann.estructura)
         }
+
+        func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+            guard !animated, pinResaltadoId != nil else { return }
+            onClearPin()
+        }
+    }
+}
+
+// MARK: - Estructura annotation view
+
+private final class EstructuraMKAnnotationView: MKAnnotationView {
+    static let reuseID = "estructura"
+    private var pulseLayer: CAShapeLayer?
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func startPulse(color: UIColor) {
+        guard pulseLayer == nil else { return }
+        let size = max(bounds.width, bounds.height).isZero ? 20 : max(bounds.width, bounds.height)
+        let pulseSize = size * 3.8
+        let pulse = CAShapeLayer()
+        pulse.frame = CGRect(
+            x: (size - pulseSize) / 2,
+            y: (size - pulseSize) / 2,
+            width: pulseSize,
+            height: pulseSize
+        )
+        pulse.path = UIBezierPath(ovalIn: pulse.bounds).cgPath
+        pulse.fillColor = color.withAlphaComponent(0.2).cgColor
+        pulse.strokeColor = color.withAlphaComponent(0.55).cgColor
+        pulse.lineWidth = 2
+
+        let scaleAnim = CABasicAnimation(keyPath: "transform.scale")
+        scaleAnim.fromValue = 0.25
+        scaleAnim.toValue = 1.0
+        let opacityAnim = CABasicAnimation(keyPath: "opacity")
+        opacityAnim.fromValue = 1.0
+        opacityAnim.toValue = 0.0
+        let group = CAAnimationGroup()
+        group.animations = [scaleAnim, opacityAnim]
+        group.duration = 1.5
+        group.repeatCount = .infinity
+        group.timingFunction = CAMediaTimingFunction(name: .easeOut)
+
+        pulse.add(group, forKey: "pulse")
+        layer.insertSublayer(pulse, at: 0)
+        pulseLayer = pulse
+    }
+
+    func stopPulse() {
+        pulseLayer?.removeFromSuperlayer()
+        pulseLayer = nil
     }
 }
 
