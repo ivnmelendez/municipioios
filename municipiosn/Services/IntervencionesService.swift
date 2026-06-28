@@ -112,15 +112,16 @@ final class IntervencionesService {
         return rows.count
     }
 
-    func fetchHistorial(estructuraId: UUID, limit: Int = 8) async throws -> [IntervencionCompleta] {
-        try await client
+    func fetchHistorial(estructuraId: UUID) async throws -> [IntervencionCompleta] {
+        let accionesExcluidas = ["revision", "cambio_campana", "instalacion"]
+        let all: [IntervencionCompleta] = try await client
             .from("rondines_estructuras")
             .select(selectFields)
             .eq("estructura_id", value: estructuraId.uuidString)
             .order("created_at", ascending: false)
-            .limit(limit)
             .execute()
             .value
+        return all.filter { !accionesExcluidas.contains($0.accion.rawValue) }
     }
 
     private func fetchIntervenciones(acciones: [String], filtro: FiltroFecha) async throws -> [IntervencionCompleta] {

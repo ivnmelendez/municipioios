@@ -9,6 +9,8 @@ enum AccionIntervencion: String, Codable {
     case reparacion_coroplast
     case reporte_dano
     case reactivacion
+    case reporte_mantenimiento
+    case mantenimiento_realizado
 }
 
 enum TipoDano: String, Codable, CaseIterable {

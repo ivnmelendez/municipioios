@@ -382,6 +382,7 @@ struct EstructuraDetalleView: View {
     @State private var caraParaCambio: CaraDetalle? = nil
     @State private var campanaSeleccionada: CampanaBasica? = nil
     @State private var mostrarMapaCompleto = false
+    @State private var eventoSeleccionado: IntervencionCompleta? = nil
 
     var body: some View {
         Group {
@@ -465,6 +466,9 @@ struct EstructuraDetalleView: View {
                         caras = (try? await EstructurasService.shared.fetchCarasDetalle(estructuraId: estructura.id)) ?? caras
                     }
                 }
+        }
+        .sheet(item: $eventoSeleccionado) { evento in
+            EventoDetalleSheet(evento: evento)
         }
         .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
@@ -630,7 +634,10 @@ struct EstructuraDetalleView: View {
                             .padding(.bottom, 8)
                         VStack(spacing: 0) {
                             ForEach(historial) { item in
-                                HistorialRow(item: item)
+                                Button { eventoSeleccionado = item } label: {
+                                    HistorialRow(item: item)
+                                }
+                                .buttonStyle(.plain)
                                 if item.id != historial.last?.id {
                                     Divider().padding(.leading, 52)
                                 }
@@ -734,52 +741,196 @@ private struct HistorialRow: View {
 
     private var accionInfo: (icono: String, label: String, color: Color) {
         switch item.accion {
-        case .revision:         return ("checkmark.circle.fill",       "Revisión",              Color(hex: "#16a34a"))
-        case .cambio_coroplast: return ("arrow.2.squarepath",          "Cambio de coroplast",   Color("Navy"))
-        case .reparacion_coroplast: return ("wrench.and.screwdriver.fill", "Reparación de coroplast", Color("Navy"))
-        case .reporte_dano:     return ("exclamationmark.triangle.fill","Daño reportado",        Color(hex: "#dc2626"))
-        case .reactivacion:     return ("arrow.clockwise",             "Reactivación",          Color(hex: "#16a34a"))
-        case .instalacion:      return ("plus.circle.fill",            "Instalación",           Color("Navy"))
-        case .cambio_campana:   return ("megaphone.fill",              "Cambio de campaña",     Color("Navy"))
-        case .reparacion:       return ("hammer.fill",                 "Reparación",            Color("Navy"))
+        case .revision:                return ("checkmark.circle.fill",        "Revisión",                  Color(hex: "#16a34a"))
+        case .cambio_coroplast:        return ("arrow.2.squarepath",           "Cambio de coroplast",       Color("Navy"))
+        case .reparacion_coroplast:    return ("wrench.and.screwdriver.fill",  "Reparación de coroplast",   Color("Navy"))
+        case .reporte_dano:            return ("exclamationmark.triangle.fill", "Daño reportado",           Color(hex: "#dc2626"))
+        case .reactivacion:            return ("arrow.clockwise",              "Reactivación",              Color(hex: "#16a34a"))
+        case .instalacion:             return ("plus.circle.fill",             "Instalación",               Color("Navy"))
+        case .cambio_campana:          return ("megaphone.fill",               "Cambio de campaña",         Color("Navy"))
+        case .reparacion:              return ("hammer.fill",                  "Reparación",                Color("Navy"))
+        case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#0891b2"))
+        case .mantenimiento_realizado: return ("checkmark.seal.fill",          "Mantenimiento realizado",   Color(hex: "#16a34a"))
         }
+    }
+
+    private var tieneFoto: Bool {
+        item.fotoAntesUrl != nil || item.fotoDespuesUrl != nil
     }
 
     var body: some View {
         let info = accionInfo
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: info.icono)
-                .font(.title3)
-                .foregroundStyle(info.color)
-                .frame(width: 36)
-                .padding(.top, 1)
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(info.color.opacity(0.12))
+                    .frame(width: 42, height: 42)
+                Image(systemName: info.icono)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(info.color)
+            }
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(info.label)
-                    .font(.subheadline.weight(.medium))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
 
                 HStack(spacing: 6) {
                     Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(Color("TextMuted"))
                     if let nombre = item.rondines?.perfiles?.nombre {
-                        Text("·").font(.caption).foregroundStyle(Color("TextMuted"))
-                        Text(nombre).font(.caption).foregroundStyle(Color("TextMuted"))
+                        Text("·").font(.subheadline).foregroundStyle(Color("TextMuted"))
+                        Text(nombre).font(.subheadline).foregroundStyle(Color("TextMuted"))
                     }
                 }
 
                 if let notas = item.notas, !notas.isEmpty {
                     Text(notas)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(Color("TextMuted"))
                         .lineLimit(2)
                         .padding(.top, 1)
                 }
             }
+
             Spacer()
+
+            if tieneFoto {
+                Image(systemName: "photo.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color("TextMuted").opacity(0.6))
+                    .padding(.top, 4)
+            }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Evento detalle sheet
+
+private struct EventoDetalleSheet: View {
+    let evento: IntervencionCompleta
+    @Environment(\.dismiss) private var dismiss
+    @State private var fotoFullscreen: IdentifiableURL?
+
+    private var accionInfo: (icono: String, label: String, color: Color) {
+        switch evento.accion {
+        case .revision:                return ("checkmark.circle.fill",        "Revisión",                  Color(hex: "#16a34a"))
+        case .cambio_coroplast:        return ("arrow.2.squarepath",           "Cambio de coroplast",       Color("Navy"))
+        case .reparacion_coroplast:    return ("wrench.and.screwdriver.fill",  "Reparación de coroplast",   Color("Navy"))
+        case .reporte_dano:            return ("exclamationmark.triangle.fill", "Daño reportado",           Color(hex: "#dc2626"))
+        case .reactivacion:            return ("arrow.clockwise",              "Reactivación",              Color(hex: "#16a34a"))
+        case .instalacion:             return ("plus.circle.fill",             "Instalación",               Color("Navy"))
+        case .cambio_campana:          return ("megaphone.fill",               "Cambio de campaña",         Color("Navy"))
+        case .reparacion:              return ("hammer.fill",                  "Reparación",                Color("Navy"))
+        case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#0891b2"))
+        case .mantenimiento_realizado: return ("checkmark.seal.fill",          "Mantenimiento realizado",   Color(hex: "#16a34a"))
+        }
+    }
+
+    var body: some View {
+        let info = accionInfo
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    fotoSection
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                Circle()
+                                    .fill(info.color.opacity(0.12))
+                                    .frame(width: 52, height: 52)
+                                Image(systemName: info.icono)
+                                    .font(.title2.weight(.semibold))
+                                    .foregroundStyle(info.color)
+                            }
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(info.label)
+                                    .font(.title3.bold())
+                                Text(evento.createdAt.formatted(date: .long, time: .omitted))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        if let nombre = evento.rondines?.perfiles?.nombre {
+                            Label(nombre, systemImage: "person.fill")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let notas = evento.notas, !notas.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Notas")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                Text(notas)
+                                    .font(.body)
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.secondarySystemGroupedBackground),
+                                        in: RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.title3)
+                    }
+                }
+            }
+            .fullScreenCover(item: $fotoFullscreen) { item in
+                FotoFullscreenView(url: item.url, titulo: item.titulo)
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private var fotoSection: some View {
+        let fotoUrl = evento.fotoAntesUrl ?? evento.fotoDespuesUrl
+        if let urlStr = fotoUrl, let url = URL(string: urlStr) {
+            CachedAsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    Button {
+                        fotoFullscreen = IdentifiableURL(url: url, titulo: accionInfo.label)
+                    } label: {
+                        image.resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 260)
+                            .clipped()
+                            .overlay(alignment: .bottomTrailing) {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(6)
+                                    .background(.black.opacity(0.4), in: Circle())
+                                    .padding(12)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                case .failure:
+                    EmptyView()
+                default:
+                    Color.secondary.opacity(0.1)
+                        .frame(height: 260)
+                        .overlay { ProgressView() }
+                }
+            }
+        }
     }
 }
