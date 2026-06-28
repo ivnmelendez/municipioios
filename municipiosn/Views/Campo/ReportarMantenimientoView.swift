@@ -26,7 +26,7 @@ struct ReportarMantenimientoView: View {
                         Text("Foto del problema")
                             .font(.title2.bold())
                             .foregroundStyle(Color("Navy"))
-                        Text("Opcional — muestra qué necesita la estructura")
+                        Text("Toma una foto que muestre qué necesita la estructura")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -55,9 +55,12 @@ struct ReportarMantenimientoView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color("Navy"), in: RoundedRectangle(cornerRadius: 14))
+                        .background(
+                        isLoading || fotoUI == nil ? Color.secondary.opacity(0.35) : Color("Navy"),
+                        in: RoundedRectangle(cornerRadius: 14)
+                    )
                     }
-                    .disabled(isLoading)
+                    .disabled(isLoading || fotoUI == nil)
                     .opacity(isLoading ? 0.6 : 1)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 32)
@@ -81,7 +84,7 @@ struct ReportarMantenimientoView: View {
                 if exito { exitoOverlay }
                 if exitoOffline { exitoOfflineOverlay }
             }
-            .interactiveDismissDisabled(fotoUI != nil || !notas.isEmpty)
+            .interactiveDismissDisabled(fotoUI != nil || !notas.isEmpty || isLoading)
         }
     }
 
