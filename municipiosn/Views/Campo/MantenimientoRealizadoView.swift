@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ReportarMantenimientoView: View {
+struct MantenimientoRealizadoView: View {
     let estructura: EstructuraConParque
     let userId: UUID?
     var rutaSemanaId: UUID? = nil
@@ -23,10 +23,10 @@ struct ReportarMantenimientoView: View {
                         .padding(.top, 16)
 
                     VStack(spacing: 6) {
-                        Text("Foto del problema")
+                        Text("Foto del resultado")
                             .font(.title2.bold())
                             .foregroundStyle(Color("Navy"))
-                        Text("Opcional — muestra qué necesita la estructura")
+                        Text("Opcional — documenta cómo quedó la estructura")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -36,7 +36,7 @@ struct ReportarMantenimientoView: View {
                     FotoCapturaView(imagen: $fotoUI)
                         .padding(.horizontal, 20)
 
-                    TextField("Ej: Pintura descarapelada, base oxidada, salida de su lugar", text: $notas, axis: .vertical)
+                    TextField("Ej: Estructura nivelada, pintura aplicada", text: $notas, axis: .vertical)
                         .lineLimit(3...6)
                         .padding(14)
                         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
@@ -47,8 +47,8 @@ struct ReportarMantenimientoView: View {
                             if isLoading {
                                 ProgressView().tint(.white)
                             } else {
-                                Image(systemName: "paperplane.fill")
-                                Text("Enviar reporte")
+                                Image(systemName: "checkmark.seal.fill")
+                                Text("Registrar mantenimiento")
                             }
                         }
                         .font(.headline.bold())
@@ -64,7 +64,7 @@ struct ReportarMantenimientoView: View {
                 }
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Reportar mantenimiento")
+            .navigationTitle("Mantenimiento realizado")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -116,9 +116,9 @@ struct ReportarMantenimientoView: View {
     private var exitoOverlay: some View {
         exitoView(
             icono: "checkmark.circle.fill",
-            color: .cyan,
-            titulo: "Mantenimiento reportado",
-            detalle: "La estructura fue marcada como necesita mantenimiento.",
+            color: .green,
+            titulo: "Mantenimiento registrado",
+            detalle: "La estructura fue marcada como activa.",
             delay: 1.8
         )
     }
@@ -168,7 +168,7 @@ struct ReportarMantenimientoView: View {
 
         guard OfflineQueueService.shared.isConnected else {
             let accion = AccionPendiente(
-                tipo: .reporteMantenimiento,
+                tipo: .mantenimientoRealizado,
                 estructuraId: estructura.id,
                 rutaSemanaId: rutaSemanaId,
                 userId: userId,
@@ -186,10 +186,10 @@ struct ReportarMantenimientoView: View {
             do {
                 var fotoUrl: String? = nil
                 if let data = fotoData {
-                    let path = "\(userId.uuidString)/\(UUID().uuidString)_mant.jpg"
+                    let path = "\(userId.uuidString)/\(UUID().uuidString)_mant_ok.jpg"
                     fotoUrl = try await CoroplastService.shared.uploadFoto(data: data, path: path)
                 }
-                try await CoroplastService.shared.registrarMantenimiento(
+                try await CoroplastService.shared.registrarMantenimientoRealizado(
                     estructuraId: estructura.id,
                     userId: userId,
                     rutaSemanaId: rutaSemanaId,

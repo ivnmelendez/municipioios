@@ -182,6 +182,7 @@ struct MapaView: View {
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
     @State private var estructuraParaMantenimiento: EstructuraConParque? = nil
+    @State private var estructuraParaMantenimientoRealizado: EstructuraConParque? = nil
     @State private var visitadasVersion: Int = 0
     @State private var mostrarNuevaEstructura = false
     @State private var mapaListo = false
@@ -429,10 +430,16 @@ struct MapaView: View {
                             estructuraParaDano = estructura
                         }
                     } : nil,
-                    onReportarMantenimiento: userId != nil ? {
+                    onReportarMantenimiento: userId != nil && estructura.estado != .necesita_mantenimiento ? {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             estructuraParaMantenimiento = estructura
+                        }
+                    } : nil,
+                    onMantenimientoRealizado: userId != nil && estructura.estado == .necesita_mantenimiento ? {
+                        vm.mostrarDetalle = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            estructuraParaMantenimientoRealizado = estructura
                         }
                     } : nil
                 )
@@ -455,6 +462,13 @@ struct MapaView: View {
         }
         .sheet(item: $estructuraParaMantenimiento) { estructura in
             ReportarMantenimientoView(
+                estructura: estructura,
+                userId: userId,
+                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
+            )
+        }
+        .sheet(item: $estructuraParaMantenimientoRealizado) { estructura in
+            MantenimientoRealizadoView(
                 estructura: estructura,
                 userId: userId,
                 rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
@@ -902,6 +916,7 @@ struct EstructuraDetalleSheet: View {
     var onRegistrarCambio: (() -> Void)? = nil
     var onReportarDano: (() -> Void)? = nil
     var onReportarMantenimiento: (() -> Void)? = nil
+    var onMantenimientoRealizado: (() -> Void)? = nil
     @State private var fotoFullscreen: IdentifiableURL?
     @State private var contentHeight: CGFloat = 420
 
@@ -1054,7 +1069,7 @@ struct EstructuraDetalleSheet: View {
                 Label("Sin parque asignado", systemImage: "tree")
                     .font(.subheadline).foregroundStyle(Color("TextMuted"))
             }
-            if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil || onReportarMantenimiento != nil {
+            if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil || onReportarMantenimiento != nil || onMantenimientoRealizado != nil {
                 Divider().padding(.top, 8)
                 if let ok = onOk {
                     Button { ok() } label: {
@@ -1105,6 +1120,18 @@ struct EstructuraDetalleSheet: View {
                     .tint(.cyan)
                     .controlSize(.large)
                     .accessibilityLabel("Reportar necesidad de mantenimiento en esta estructura")
+                }
+                if let realizado = onMantenimientoRealizado {
+                    Button { realizado() } label: {
+                        Label("Mantenimiento realizado", systemImage: "checkmark.seal.fill")
+                            .font(.headline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .controlSize(.large)
+                    .accessibilityLabel("Registrar que el mantenimiento fue completado")
                 }
             }
         }

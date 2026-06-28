@@ -132,7 +132,6 @@ final class CoroplastService {
 
     func registrarCambio(
         estructuraId: UUID,
-        estadoActual: EstadoEstructura,
         userId: UUID,
         rutaSemanaId: UUID? = nil,
         carasNuevasCampanas: [(caraId: UUID, campanaId: UUID)],
@@ -181,13 +180,6 @@ final class CoroplastService {
             ))
             .execute()
 
-        if estadoActual == .dañada {
-            try await client
-                .from("estructuras")
-                .update(EstadoUpdate(estado: "activa"))
-                .eq("id", value: estructuraId.uuidString)
-                .execute()
-        }
     }
 
     func reportarDano(
@@ -293,7 +285,6 @@ final class CoroplastService {
         estructuraId: UUID,
         userId: UUID,
         rutaSemanaId: UUID? = nil,
-        tipoMantenimiento: String,
         fotoUrl: String?,
         notas: String?
     ) async throws {
@@ -305,7 +296,7 @@ final class CoroplastService {
                 estructura_id: estructuraId.uuidString,
                 accion: "reporte_mantenimiento",
                 tipo_dano: nil,
-                tipo_mantenimiento: tipoMantenimiento,
+                tipo_mantenimiento: nil,
                 foto_antes_url: fotoUrl,
                 foto_despues_url: nil,
                 notas: notas
@@ -314,6 +305,34 @@ final class CoroplastService {
         try await client
             .from("estructuras")
             .update(EstadoUpdate(estado: "necesita_mantenimiento"))
+            .eq("id", value: estructuraId.uuidString)
+            .execute()
+    }
+
+    func registrarMantenimientoRealizado(
+        estructuraId: UUID,
+        userId: UUID,
+        rutaSemanaId: UUID? = nil,
+        fotoUrl: String?,
+        notas: String?
+    ) async throws {
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "mantenimiento_realizado",
+                tipo_dano: nil,
+                tipo_mantenimiento: nil,
+                foto_antes_url: fotoUrl,
+                foto_despues_url: nil,
+                notas: notas
+            ))
+            .execute()
+        try await client
+            .from("estructuras")
+            .update(EstadoUpdate(estado: "activa"))
             .eq("id", value: estructuraId.uuidString)
             .execute()
     }

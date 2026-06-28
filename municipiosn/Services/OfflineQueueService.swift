@@ -88,11 +88,9 @@ final class OfflineQueueService {
             )
 
         case .cambioCoroplast:
-            let estado = EstadoEstructura(rawValue: accion.estadoEstructura ?? "") ?? .activa
             let asignaciones = (accion.caras ?? []).map { (caraId: $0.caraId, campanaId: $0.campanaId) }
             try await CoroplastService.shared.registrarCambio(
                 estructuraId: accion.estructuraId,
-                estadoActual: estado,
                 userId: accion.userId,
                 rutaSemanaId: accion.rutaSemanaId,
                 carasNuevasCampanas: asignaciones,
@@ -115,7 +113,15 @@ final class OfflineQueueService {
                 estructuraId: accion.estructuraId,
                 userId: accion.userId,
                 rutaSemanaId: accion.rutaSemanaId,
-                tipoMantenimiento: accion.tipoMantenimiento ?? "otro",
+                fotoUrl: antesUrl,
+                notas: accion.notas
+            )
+
+        case .mantenimientoRealizado:
+            try await CoroplastService.shared.registrarMantenimientoRealizado(
+                estructuraId: accion.estructuraId,
+                userId: accion.userId,
+                rutaSemanaId: accion.rutaSemanaId,
                 fotoUrl: antesUrl,
                 notas: accion.notas
             )

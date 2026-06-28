@@ -451,7 +451,6 @@ struct RegistrarCoroplastView: View {
                     estructuraId: estructura.id,
                     rutaSemanaId: rutaSemanaId,
                     userId: userId,
-                    estadoEstructura: estructura.estado.rawValue,
                     caras: carasPendientes,
                     fotoAntesData: antesData,
                     fotoDespuesData: despuesData,
@@ -486,7 +485,6 @@ struct RegistrarCoroplastView: View {
                     }
                     try await CoroplastService.shared.registrarCambio(
                         estructuraId: estructura.id,
-                        estadoActual: estructura.estado,
                         userId: userId,
                         rutaSemanaId: rutaSemanaId,
                         carasNuevasCampanas: asignaciones,

@@ -7,6 +7,7 @@ struct AccionPendiente: Codable, Identifiable {
         case cambioCoroplast
         case reporteDano
         case reporteMantenimiento
+        case mantenimientoRealizado
     }
 
     struct CaraPendiente: Codable {
@@ -19,9 +20,7 @@ struct AccionPendiente: Codable, Identifiable {
     let estructuraId: UUID
     let rutaSemanaId: UUID?
     let userId: UUID
-    let estadoEstructura: String?  // solo cambioCoroplast — para auto-resolver si ya reparada
     let caras: [CaraPendiente]?    // solo cambioCoroplast
-    let tipoMantenimiento: String? // solo reporteMantenimiento
     let fotoAntesData: Data?
     let fotoDespuesData: Data?
     let notas: String?
@@ -33,9 +32,7 @@ struct AccionPendiente: Codable, Identifiable {
         estructuraId: UUID,
         rutaSemanaId: UUID?,
         userId: UUID,
-        estadoEstructura: String? = nil,
         caras: [CaraPendiente]? = nil,
-        tipoMantenimiento: String? = nil,
         fotoAntesData: Data? = nil,
         fotoDespuesData: Data? = nil,
         notas: String? = nil
@@ -45,9 +42,7 @@ struct AccionPendiente: Codable, Identifiable {
         self.estructuraId = estructuraId
         self.rutaSemanaId = rutaSemanaId
         self.userId = userId
-        self.estadoEstructura = estadoEstructura
         self.caras = caras
-        self.tipoMantenimiento = tipoMantenimiento
         self.fotoAntesData = fotoAntesData
         self.fotoDespuesData = fotoDespuesData
         self.notas = notas
