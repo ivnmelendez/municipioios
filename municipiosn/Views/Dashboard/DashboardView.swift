@@ -70,9 +70,9 @@ struct DashboardView: View {
                 } else {
                     VStack(spacing: 16) {
 
-                        // MARK: Alerta dañadas (siempre visible, no personalizable)
-                        if vm.kpi.dañadas > 0 {
-                            alertaDañadas
+                        // MARK: Alertas estado (siempre visible, no personalizable)
+                        if vm.kpi.dañadas > 0 || vm.kpi.necesitaMantenimiento > 0 {
+                            alertasEstado
                                 .padding(.horizontal, 20)
                                 .intro(aparecer, delay: 0.04)
                         }
@@ -179,44 +179,64 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Alerta dañadas
+    // MARK: - Alertas estado
 
-    private var alertaDañadas: some View {
+    private var alertasEstado: some View {
+        HStack(spacing: 12) {
+            if vm.kpi.dañadas > 0 {
+                alertaCard(
+                    count: vm.kpi.dañadas,
+                    singular: "dañada",
+                    plural: "dañadas",
+                    icono: "exclamationmark.triangle.fill",
+                    color: Color(hex: "#dc2626"),
+                    filtro: .dañada
+                )
+            }
+            if vm.kpi.necesitaMantenimiento > 0 {
+                alertaCard(
+                    count: vm.kpi.necesitaMantenimiento,
+                    singular: "con mantenimiento",
+                    plural: "con mantenimiento",
+                    icono: "wrench.fill",
+                    color: Color(hex: "#0891b2"),
+                    filtro: .necesita_mantenimiento
+                )
+            }
+        }
+    }
+
+    private func alertaCard(count: Int, singular: String, plural: String, icono: String, color: Color, filtro: EstadoEstructura) -> some View {
         Button {
             HapticService.impacto(.medium)
-            filtroNavegacion = .dañada
+            filtroNavegacion = filtro
             navegarEstructuras = true
         } label: {
-            HStack(spacing: 16) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title2)
-                    .foregroundStyle(Color(hex: "#dc2626"))
-                    .symbolEffect(.pulse)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("\(vm.kpi.dañadas) estructura\(vm.kpi.dañadas == 1 ? "" : "s") dañada\(vm.kpi.dañadas == 1 ? "" : "s")")
-                        .font(.headline)
-                        .foregroundStyle(Color(hex: "#dc2626"))
-                    Text("Toca para ver cuáles son")
-                        .font(.subheadline)
-                        .foregroundStyle(Color(hex: "#dc2626").opacity(0.7))
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: icono)
+                        .font(.title2)
+                        .foregroundStyle(color)
+                        .symbolEffect(.pulse)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(color.opacity(0.4))
                 }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color(hex: "#dc2626").opacity(0.4))
+                Text("\(count)")
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+                Text(count == 1 ? singular : plural)
+                    .font(.subheadline)
+                    .foregroundStyle(color.opacity(0.8))
+                    .lineLimit(2)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-            .background(Color(hex: "#dc2626").opacity(0.08),
-                        in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: "#dc2626").opacity(0.3), lineWidth: 1.5))
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(color.opacity(0.25), lineWidth: 1.5))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(vm.kpi.dañadas) estructuras dañadas. Toca para ver la lista.")
     }
 
     // MARK: - Coroplast del mes

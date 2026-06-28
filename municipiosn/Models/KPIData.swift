@@ -6,6 +6,7 @@ struct KPIData: Codable {
     var dañadas: Int = 0
     var enReparacion: Int = 0
     var inactivas: Int = 0
+    var necesitaMantenimiento: Int = 0
     var campanasActivas: Int = 0
     var coroplastMes: Int = 0
     var visitasSemana: Int = 0

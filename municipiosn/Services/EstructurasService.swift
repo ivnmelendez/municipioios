@@ -231,6 +231,7 @@ final class EstructurasService {
         kpi.dañadas = e.filter { $0.estado == .dañada }.count
         kpi.enReparacion = e.filter { $0.estado == .en_reparacion }.count
         kpi.inactivas = e.filter { $0.estado == .inactiva }.count
+        kpi.necesitaMantenimiento = e.filter { $0.estado == .necesita_mantenimiento }.count
         kpi.campanasActivas = c.count
         kpi.coroplastMes = cm
         kpi.visitasSemana = visitas
