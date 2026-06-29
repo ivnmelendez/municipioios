@@ -70,13 +70,6 @@ struct DashboardView: View {
                 } else {
                     VStack(spacing: 16) {
 
-                        // MARK: Alertas estado (siempre visible, no personalizable)
-                        if vm.kpi.dañadas > 0 || vm.kpi.necesitaMantenimiento > 0 {
-                            alertasEstado
-                                .padding(.horizontal, 20)
-                                .intro(aparecer, delay: 0.04)
-                        }
-
                         // MARK: Cards dinámicas
                         ForEach(Array(vm.cardConfig.filter { $0.activa }.enumerated()), id: \.element.id) { index, card in
                             cardView(for: card.id)
@@ -179,65 +172,6 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Alertas estado
-
-    private var alertasEstado: some View {
-        HStack(spacing: 12) {
-            if vm.kpi.dañadas > 0 {
-                alertaCard(
-                    count: vm.kpi.dañadas,
-                    singular: "dañada",
-                    plural: "dañadas",
-                    icono: "exclamationmark.triangle.fill",
-                    color: Color(hex: "#dc2626"),
-                    filtro: .dañada
-                )
-            }
-            if vm.kpi.necesitaMantenimiento > 0 {
-                alertaCard(
-                    count: vm.kpi.necesitaMantenimiento,
-                    singular: "con mantenimiento",
-                    plural: "con mantenimiento",
-                    icono: "wrench.fill",
-                    color: Color(hex: "#d97706"),
-                    filtro: .necesita_mantenimiento
-                )
-            }
-        }
-    }
-
-    private func alertaCard(count: Int, singular: String, plural: String, icono: String, color: Color, filtro: EstadoEstructura) -> some View {
-        Button {
-            HapticService.impacto(.medium)
-            filtroNavegacion = filtro
-            navegarEstructuras = true
-        } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: icono)
-                        .font(.title2)
-                        .foregroundStyle(color)
-                        .symbolEffect(.pulse)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(color.opacity(0.4))
-                }
-                Text("\(count)")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(color)
-                Text(count == 1 ? singular : plural)
-                    .font(.subheadline)
-                    .foregroundStyle(color.opacity(0.8))
-                    .lineLimit(2)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(color.opacity(0.25), lineWidth: 1.5))
-        }
-        .buttonStyle(.plain)
-    }
 
     // MARK: - Coroplast del mes
 
@@ -251,6 +185,21 @@ struct DashboardView: View {
     @ViewBuilder
     private func cardView(for id: DashboardCardID) -> some View {
         switch id {
+        case .alertaEstructuras:
+            AlertaEstructurasCard(
+                dañadas: vm.kpi.dañadas,
+                mantenimiento: vm.kpi.necesitaMantenimiento,
+                onDañadas: {
+                    HapticService.impacto(.medium)
+                    filtroNavegacion = .dañada
+                    navegarEstructuras = true
+                },
+                onMantenimiento: {
+                    HapticService.impacto(.medium)
+                    filtroNavegacion = .necesita_mantenimiento
+                    navegarEstructuras = true
+                }
+            )
         case .cobertura:
             CoberturaRingCard(kpi: vm.kpi)
         case .semana:
@@ -712,5 +661,77 @@ private struct CoberturaRingCard: View {
         .onChange(of: kpi.visitasMes) { _, _ in
             withAnimation(.spring(duration: 1.2)) { progreso = pct }
         }
+    }
+}
+
+// MARK: - Alerta estructuras card
+
+private struct AlertaEstructurasCard: View {
+    let dañadas: Int
+    let mantenimiento: Int
+    let onDañadas: () -> Void
+    let onMantenimiento: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Estructuras con alertas")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider().padding(.horizontal, 20)
+
+            HStack(spacing: 0) {
+                columna(
+                    valor: dañadas,
+                    label: "Dañadas",
+                    icono: "exclamationmark.triangle.fill",
+                    color: Color(hex: "#dc2626"),
+                    accion: onDañadas
+                )
+                Rectangle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 1, height: 72)
+                columna(
+                    valor: mantenimiento,
+                    label: "Mantenimiento",
+                    icono: "wrench.fill",
+                    color: Color(hex: "#d97706"),
+                    accion: onMantenimiento
+                )
+            }
+            .padding(.vertical, 20)
+        }
+        .buttonStyle(.glass(.regular))
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .glassEffect(.regular)
+        }
+    }
+
+    private func columna(valor: Int, label: String, icono: String, color: Color, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            VStack(spacing: 8) {
+                Image(systemName: icono)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
+                Text("\(valor)")
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
+                    .contentTransition(.numericText())
+                    .monospacedDigit()
+                Text(label)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color("TextMuted"))
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .disabled(valor == 0)
     }
 }
