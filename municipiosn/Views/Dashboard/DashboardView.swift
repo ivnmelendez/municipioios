@@ -711,23 +711,22 @@ private struct AlertaEstructurasCard: View {
     }
 
     private func columna(valor: Int, label: String, icono: String, color: Color, accion: @escaping () -> Void) -> some View {
-        Button(action: accion) {
-            VStack(spacing: 8) {
-                Image(systemName: icono)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
-                Text("\(valor)")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
-                    .contentTransition(.numericText())
-                    .monospacedDigit()
-                Text(label)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color("TextMuted"))
-            }
-            .frame(maxWidth: .infinity)
+        VStack(spacing: 8) {
+            Image(systemName: icono)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
+            Text("\(valor)")
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
+                .contentTransition(.numericText())
+                .monospacedDigit()
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
         }
-        .buttonStyle(.plain)
-        .disabled(valor == 0)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { if valor > 0 { accion() } }
     }
 }
