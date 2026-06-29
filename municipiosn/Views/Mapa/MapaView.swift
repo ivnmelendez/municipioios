@@ -582,9 +582,10 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
         }
 
-        let existingByID = Dictionary(uniqueKeysWithValues:
-            mapView.annotations.compactMap { $0 as? EstructuraMKAnnotation }.map { ($0.estructura.id, $0) }
-        )
+        var existingByID: [UUID: EstructuraMKAnnotation] = [:]
+        mapView.annotations.compactMap { $0 as? EstructuraMKAnnotation }.forEach {
+            existingByID[$0.estructura.id] = $0
+        }
 
         if currentIds != newIds {
             let toRemove = mapView.annotations.filter {
