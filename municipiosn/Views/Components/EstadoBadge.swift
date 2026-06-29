@@ -8,7 +8,7 @@ extension EstadoEstructura {
         case .destruida: Color(hex: "#7c3aed")
         case .en_reparacion: Color(hex: "#d97706")
         case .inactiva: Color(hex: "#94a3b8")
-        case .necesita_mantenimiento: Color(hex: "#0891b2")
+        case .necesita_mantenimiento: Color(hex: "#d97706")
         }
     }
 

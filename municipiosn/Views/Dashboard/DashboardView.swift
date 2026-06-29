@@ -199,7 +199,7 @@ struct DashboardView: View {
                     singular: "con mantenimiento",
                     plural: "con mantenimiento",
                     icono: "wrench.fill",
-                    color: Color(hex: "#0891b2"),
+                    color: Color(hex: "#d97706"),
                     filtro: .necesita_mantenimiento
                 )
             }

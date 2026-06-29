@@ -119,7 +119,7 @@ struct ReportarMantenimientoView: View {
     private var exitoOverlay: some View {
         exitoView(
             icono: "checkmark.circle.fill",
-            color: .cyan,
+            color: .orange,
             titulo: "Mantenimiento reportado",
             detalle: "La estructura fue marcada como necesita mantenimiento.",
             delay: 1.8

@@ -651,7 +651,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             case .en_reparacion:           return UIColor(named: "Navy")?.withAlphaComponent(0.5) ?? .systemOrange
             case .inactiva:                return UIColor.systemGray4
             case .activa:                  return UIColor(named: "Navy") ?? .systemBlue
-            case .necesita_mantenimiento:  return UIColor.systemCyan
+            case .necesita_mantenimiento:  return UIColor.systemOrange
             }
         }
 
@@ -1213,7 +1213,7 @@ struct EstructuraDetalleSheet: View {
                             .padding(.vertical, 4)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.cyan)
+                    .tint(.orange)
                     .controlSize(.large)
                     .accessibilityLabel("Reportar necesidad de mantenimiento en esta estructura")
                 }

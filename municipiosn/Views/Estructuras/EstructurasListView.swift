@@ -744,7 +744,7 @@ private struct HistorialRow: View {
         case .instalacion:             return ("plus.circle.fill",             "Instalación",               Color("Navy"))
         case .cambio_campana:          return ("megaphone.fill",               "Cambio de campaña",         Color("Navy"))
         case .reparacion:              return ("hammer.fill",                  "Reparación",                Color("Navy"))
-        case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#0891b2"))
+        case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#d97706"))
         case .mantenimiento_realizado: return ("checkmark.seal.fill",          "Mantenimiento realizado",   Color(hex: "#16a34a"))
         }
     }
@@ -820,7 +820,7 @@ private struct EventoDetalleView: View {
         case .instalacion:             return ("plus.circle.fill",             "Instalación",               Color("Navy"))
         case .cambio_campana:          return ("megaphone.fill",               "Cambio de campaña",         Color("Navy"))
         case .reparacion:              return ("hammer.fill",                  "Reparación",                Color("Navy"))
-        case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#0891b2"))
+        case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#d97706"))
         case .mantenimiento_realizado: return ("checkmark.seal.fill",          "Mantenimiento realizado",   Color(hex: "#16a34a"))
         }
     }
