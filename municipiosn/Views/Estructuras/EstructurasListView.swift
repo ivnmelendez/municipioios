@@ -467,8 +467,8 @@ struct EstructuraDetalleView: View {
                     }
                 }
         }
-        .sheet(item: $eventoSeleccionado) { evento in
-            EventoDetalleSheet(evento: evento)
+        .navigationDestination(item: $eventoSeleccionado) { evento in
+            EventoDetalleView(evento: evento)
         }
         .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
@@ -808,9 +808,9 @@ private struct HistorialRow: View {
     }
 }
 
-// MARK: - Evento detalle sheet
+// MARK: - Evento detalle view (full navigation push)
 
-private struct EventoDetalleSheet: View {
+private struct EventoDetalleView: View {
     let evento: IntervencionCompleta
     @Environment(\.dismiss) private var dismiss
     @State private var fotoFullscreen: IdentifiableURL?
@@ -830,107 +830,152 @@ private struct EventoDetalleSheet: View {
         }
     }
 
+    private var fotoUrl: URL? {
+        guard let s = evento.fotoAntesUrl ?? evento.fotoDespuesUrl else { return nil }
+        return URL(string: s)
+    }
+
     var body: some View {
         let info = accionInfo
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    fotoSection
-                    VStack(alignment: .leading, spacing: 20) {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(info.color.opacity(0.12))
-                                    .frame(width: 52, height: 52)
-                                Image(systemName: info.icono)
-                                    .font(.title2.weight(.semibold))
-                                    .foregroundStyle(info.color)
-                            }
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(info.label)
-                                    .font(.title3.bold())
-                                Text(evento.createdAt.formatted(date: .long, time: .omitted))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if let nombre = evento.rondines?.perfiles?.nombre {
-                            Label(nombre, systemImage: "person.fill")
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        if let notas = evento.notas, !notas.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Notas")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                Text(notas)
-                                    .font(.body)
-                            }
-                            .padding(16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(.secondarySystemGroupedBackground),
-                                        in: RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
-                    .padding(20)
-                }
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                            .font(.title3)
-                    }
-                }
-            }
-            .fullScreenCover(item: $fotoFullscreen) { item in
-                FotoFullscreenView(url: item.url, titulo: item.titulo)
+        ScrollView {
+            VStack(spacing: 0) {
+                heroImage(info: info)
+                contentSection(info: info)
             }
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        .ignoresSafeArea(edges: .top)
+        .background {
+            Color(.systemGray6).ignoresSafeArea()
+            if let url = fotoUrl {
+                CachedAsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .scaleEffect(1.4)
+                            .blur(radius: 60)
+                            .opacity(0.4)
+                            .ignoresSafeArea()
+                            .transition(.opacity.animation(.easeInOut(duration: 0.8)))
+                    }
+                }
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { dismiss() } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "chevron.left").fontWeight(.semibold)
+                        Text("Historial").fontWeight(.semibold)
+                    }
+                }
+                .foregroundStyle(Color("Navy"))
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Image(systemName: info.icono)
+                    .foregroundStyle(info.color)
+                    .font(.footnote)
+            }
+        }
+        .fullScreenCover(item: $fotoFullscreen) { item in
+            FotoFullscreenView(url: item.url, titulo: item.titulo)
+        }
     }
 
     @ViewBuilder
-    private var fotoSection: some View {
-        let fotoUrl = evento.fotoAntesUrl ?? evento.fotoDespuesUrl
-        if let urlStr = fotoUrl, let url = URL(string: urlStr) {
-            CachedAsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    Button {
-                        fotoFullscreen = IdentifiableURL(url: url, titulo: accionInfo.label)
-                    } label: {
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 260)
-                            .clipped()
-                            .overlay(alignment: .bottomTrailing) {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(6)
-                                    .background(.black.opacity(0.4), in: Circle())
-                                    .padding(12)
-                            }
+    private func heroImage(info: (icono: String, label: String, color: Color)) -> some View {
+        if let url = fotoUrl {
+            ZStack {
+                Color(.systemGray5).frame(maxWidth: .infinity).frame(height: 500)
+                CachedAsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        Button {
+                            fotoFullscreen = IdentifiableURL(url: url, titulo: info.label)
+                        } label: {
+                            image.resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 500)
+                                .clipped()
+                                .overlay(alignment: .bottomTrailing) {
+                                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(6)
+                                        .background(.black.opacity(0.4), in: Circle())
+                                        .padding(12)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.opacity.animation(.easeOut(duration: 0.5)))
+                    } else if case .empty = phase {
+                        Color(.systemGray5).frame(height: 500).overlay { ProgressView() }
                     }
-                    .buttonStyle(.plain)
-                case .failure:
-                    EmptyView()
-                default:
-                    Color.secondary.opacity(0.1)
-                        .frame(height: 260)
-                        .overlay { ProgressView() }
                 }
             }
+        } else {
+            ZStack {
+                info.color.opacity(0.12)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 260)
+                Image(systemName: info.icono)
+                    .font(.system(size: 72))
+                    .foregroundStyle(info.color.opacity(0.5))
+            }
+            .padding(.top, 100)
         }
+    }
+
+    private func contentSection(info: (icono: String, label: String, color: Color)) -> some View {
+        VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle().fill(info.color.opacity(0.12)).frame(width: 52, height: 52)
+                        Image(systemName: info.icono)
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(info.color)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(info.label)
+                            .font(.title3.bold())
+                        Text(evento.createdAt.formatted(date: .long, time: .omitted))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let nombre = evento.rondines?.perfiles?.nombre {
+                    Label(nombre, systemImage: "person.fill")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .padding(.horizontal, 16)
+
+            if let notas = evento.notas, !notas.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Notas", systemImage: "note.text")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(notas)
+                        .font(.body)
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .padding(.horizontal, 16)
+            }
+
+            Spacer().frame(height: 32)
+        }
+        .padding(.top, 16)
     }
 }

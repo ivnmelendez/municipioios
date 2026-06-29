@@ -5,7 +5,9 @@ enum FiltroFecha {
     case semana, mes, todo
 }
 
-struct IntervencionCompleta: Codable, Identifiable {
+struct IntervencionCompleta: Codable, Identifiable, Hashable {
+    static func == (lhs: IntervencionCompleta, rhs: IntervencionCompleta) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
     let id: UUID
     let rondinId: UUID
     let estructuraId: UUID
