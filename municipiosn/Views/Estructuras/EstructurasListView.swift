@@ -932,20 +932,12 @@ private struct EventoDetalleView: View {
     private func contentSection(info: (icono: String, label: String, color: Color)) -> some View {
         VStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle().fill(info.color.opacity(0.12)).frame(width: 52, height: 52)
-                        Image(systemName: info.icono)
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(info.color)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(info.label)
-                            .font(.title3.bold())
-                        Text(evento.createdAt.formatted(date: .long, time: .omitted))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(info.label)
+                        .font(.title3.bold())
+                    Text(evento.createdAt.formatted(date: .long, time: .omitted))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
 
                 if let nombre = evento.rondines?.perfiles?.nombre {
