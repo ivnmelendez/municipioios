@@ -707,11 +707,7 @@ private struct AlertaEstructurasCard: View {
             }
             .padding(.vertical, 20)
         }
-        .buttonStyle(.glass(.regular))
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .glassEffect(.regular)
-        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private func columna(valor: Int, label: String, icono: String, color: Color, accion: @escaping () -> Void) -> some View {
