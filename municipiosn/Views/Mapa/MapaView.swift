@@ -582,6 +582,10 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             }
         }
 
+        let existingByID = Dictionary(uniqueKeysWithValues:
+            mapView.annotations.compactMap { $0 as? EstructuraMKAnnotation }.map { ($0.estructura.id, $0) }
+        )
+
         if currentIds != newIds {
             let toRemove = mapView.annotations.filter {
                 guard let a = $0 as? EstructuraMKAnnotation else { return false }
@@ -591,6 +595,14 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 .map { EstructuraMKAnnotation(from: $0) }
             mapView.removeAnnotations(toRemove)
             if !toAdd.isEmpty { mapView.addAnnotations(toAdd) }
+        }
+
+        // Re-render annotations whose estado changed (e.g. dañada loaded from network after activa from cache)
+        let estadoChanged = anotaciones.filter { existingByID[$0.id]?.estado != $0.estado }
+        if !estadoChanged.isEmpty {
+            let toRemove = estadoChanged.compactMap { existingByID[$0.id] }
+            mapView.removeAnnotations(toRemove)
+            mapView.addAnnotations(estadoChanged.map { EstructuraMKAnnotation(from: $0) })
         }
 
         let newResaltado = pinResaltado

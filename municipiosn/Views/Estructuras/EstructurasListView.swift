@@ -431,11 +431,6 @@ struct EstructuraDetalleView: View {
                 }
                 .foregroundStyle(Color("Navy"))
             }
-            ToolbarItem(placement: .primaryAction) {
-                Image(systemName: estructura.estado.icono)
-                    .foregroundStyle(estructura.estado.color)
-                    .font(.footnote)
-            }
             if let lat = estructura.lat, let lng = estructura.lng {
                 ToolbarItem(placement: .primaryAction) {
                     Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
