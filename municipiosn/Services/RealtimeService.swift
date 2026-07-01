@@ -140,4 +140,5 @@ extension Notification.Name {
     static let abrirRondines = Notification.Name("abrirRondines")
     static let mostrarSeccionVisitas = Notification.Name("mostrarSeccionVisitas")
     static let abrirMapaEnEstructura = Notification.Name("abrirMapaEnEstructura")
+    static let avatarActualizado = Notification.Name("avatarActualizado")
 }

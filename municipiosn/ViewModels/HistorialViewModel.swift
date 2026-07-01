@@ -4,6 +4,7 @@ import Foundation
 final class HistorialViewModel {
     var diasSemana: [DiaVisita] = []
     var diasMes: [DiaVisita] = []
+    var diasMesElegido: [DiaVisita] = []
     var cargando = false
     var error: String?
 
@@ -30,6 +31,20 @@ final class HistorialViewModel {
             diasMes = m
             LocalDataCache.shared.guardar(s, clave: "historial_semana")
             LocalDataCache.shared.guardar(m, clave: "historial_mes")
+        } catch {
+            self.error = error.localizedDescription
+        }
+        cargando = false
+    }
+
+    func cargarMesElegido(fecha: Date) async {
+        let calendar = Calendar.current
+        let comps = calendar.dateComponents([.year, .month], from: fecha)
+        let start = calendar.date(from: comps)!
+        let end = calendar.date(byAdding: .month, value: 1, to: start)!
+        cargando = true
+        do {
+            diasMesElegido = try await HistorialService.shared.fetchDias(userId: nil, desde: start, hasta: end)
         } catch {
             self.error = error.localizedDescription
         }

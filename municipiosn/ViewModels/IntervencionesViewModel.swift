@@ -11,7 +11,7 @@ final class IntervencionesViewModel {
     func cargar() async {
         guard !isLoading else { return }
 
-        let claveCache = "intervenciones_\(filtro)"
+        let claveCache = "intervenciones_\(filtro.cacheKey)"
         if intervenciones.isEmpty, let cached = LocalDataCache.shared.cargar([IntervencionCompleta].self, clave: claveCache) {
             intervenciones = cached
         }

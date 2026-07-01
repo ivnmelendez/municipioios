@@ -32,8 +32,12 @@ struct DañosView: View {
         .background(Color("Background"))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                FiltroMenu(filtroActual: vm.filtro) { f in
-                    Task { await vm.aplicarFiltro(f) }
+                Menu {
+                    Button("Esta semana") { Task { await vm.aplicarFiltro(.semana) } }
+                    Button("Este mes")    { Task { await vm.aplicarFiltro(.mes) } }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .foregroundStyle(Color("Navy"))
                 }
             }
         }

@@ -6,17 +6,18 @@ struct CampoAdminView: View {
     @State private var resumen = CampoAdminViewModel()
     @State private var reporteTexto: String? = nil
     @State private var generandoReporte = false
+    @State private var periodo: FiltroFecha = .semana
+    @State private var mostrarPickerMes = false
+    @State private var fechaPickerMes = Date()
 
     enum Seccion: String, CaseIterable {
         case visitas   = "Visitas"
         case coroplast = "Coroplast"
-        case danos     = "Daños"
 
         var icono: String {
             switch self {
             case .visitas:   "checkmark.circle.fill"
             case .coroplast: "arrow.2.squarepath"
-            case .danos:     "exclamationmark.triangle.fill"
             }
         }
     }
@@ -59,15 +60,12 @@ struct CampoAdminView: View {
 
                 // MARK: Contenido
                 ZStack {
-                    HistorialCampoView()
+                    HistorialCampoView(periodo: periodo)
                         .opacity(seccion == .visitas   ? 1 : 0)
                         .allowsHitTesting(seccion == .visitas)
-                    IntervencionesView()
+                    IntervencionesView(periodo: periodo)
                         .opacity(seccion == .coroplast ? 1 : 0)
                         .allowsHitTesting(seccion == .coroplast)
-                    DañosView()
-                        .opacity(seccion == .danos     ? 1 : 0)
-                        .allowsHitTesting(seccion == .danos)
                 }
                 .animation(.easeInOut(duration: 0.2), value: seccion)
             }
@@ -75,6 +73,26 @@ struct CampoAdminView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button { periodo = .semana } label: {
+                            Label("Esta semana", systemImage: periodo == .semana ? "checkmark" : "")
+                        }
+                        Button { periodo = .mes } label: {
+                            Label("Este mes", systemImage: periodo == .mes ? "checkmark" : "")
+                        }
+                        Button { mostrarPickerMes = true } label: {
+                            Label(mesElegidoLabel, systemImage: "calendar")
+                        }
+                    } label: {
+                        Label(periodoLabel, systemImage: "line.3.horizontal.decrease.circle")
+                            .symbolVariant(
+                                { if case .mesElegido = periodo { return true }; return false }()
+                                ? .fill : .none
+                            )
+                            .foregroundStyle(Color("Navy"))
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         Task { await generarReporte() }
@@ -89,6 +107,34 @@ struct CampoAdminView: View {
                 }
             }
         }
+        .sheet(isPresented: $mostrarPickerMes) {
+            NavigationStack {
+                DatePicker(
+                    "",
+                    selection: $fechaPickerMes,
+                    in: ...Date(),
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .tint(Color("Navy"))
+                .padding(.horizontal)
+                .navigationTitle("Elegir mes")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancelar") { mostrarPickerMes = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Listo") {
+                            periodo = .mesElegido(fechaPickerMes)
+                            mostrarPickerMes = false
+                        }
+                        .fontWeight(.semibold)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
         .sheet(isPresented: Binding(get: { reporteTexto != nil }, set: { if !$0 { reporteTexto = nil } })) {
             if let texto = reporteTexto {
                 ShareLink(item: texto) {
@@ -100,78 +146,11 @@ struct CampoAdminView: View {
                 .presentationDetents([.height(140)])
             }
         }
-        .onChange(of: seccion) { _, new in
-            if new == .coroplast { badge = 0 }
-            HapticService.seleccion()
-        }
+        .onChange(of: seccion) { _, _ in HapticService.seleccion() }
         .onReceive(NotificationCenter.default.publisher(for: .mostrarSeccionVisitas)) { _ in
             seccion = .visitas
         }
         .task { await resumen.cargar() }
-    }
-
-    // MARK: - Stats bar
-
-    private var statsBar: some View {
-        VStack(spacing: 0) {
-            Text("Esta semana")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color("TextMuted"))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-                .padding(.bottom, 4)
-
-            HStack(spacing: 0) {
-            statCol(
-                valor: resumen.cargado ? "\(resumen.visitas)" : "—",
-                label: "Visitas",
-                icono: "checkmark.circle.fill",
-                color: Color(hex: "#16a34a"),
-                borde: true
-            )
-            statCol(
-                valor: resumen.cargado ? "\(resumen.cambios)" : "—",
-                label: "Coroplast",
-                icono: "arrow.2.squarepath",
-                color: Color("Navy"),
-                borde: true
-            )
-            statCol(
-                valor: resumen.cargado ? "\(resumen.danos)" : "—",
-                label: "Daños",
-                icono: "exclamationmark.triangle.fill",
-                color: resumen.danos > 0 ? Color(hex: "#dc2626") : Color("TextMuted"),
-                borde: false
-            )
-            }
-        }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-
-    private func statCol(valor: String, label: String, icono: String, color: Color, borde: Bool) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: icono)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(color)
-            Text(valor)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(Color("Navy"))
-                .contentTransition(.numericText())
-                .monospacedDigit()
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color("TextMuted"))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 18)
-        .overlay(alignment: .trailing) {
-            if borde {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.07))
-                    .frame(width: 1)
-            }
-        }
     }
 
     // MARK: - Tab chips
@@ -203,6 +182,25 @@ struct CampoAdminView: View {
             .padding(.horizontal, 20)
         }
         .scrollBounceBehavior(.basedOnSize)
+    }
+
+    private var periodoLabel: String {
+        switch periodo {
+        case .semana:        return "Esta semana"
+        case .mes:           return "Este mes"
+        case .mesElegido:    return mesElegidoLabel
+        case .todo:          return "Todo"
+        }
+    }
+
+    private var mesElegidoLabel: String {
+        if case .mesElegido(let d) = periodo {
+            let fmt = DateFormatter()
+            fmt.dateFormat = "MMM yyyy"
+            fmt.locale = Locale(identifier: "es_MX")
+            return fmt.string(from: d).capitalized
+        }
+        return "Elegir mes"
     }
 
     // MARK: - Reporte

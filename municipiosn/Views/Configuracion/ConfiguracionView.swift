@@ -1,12 +1,15 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import Supabase
 
 struct ConfiguracionView: View {
     var vm: DashboardViewModel
     @AppStorage("notificacionesHabilitadas") private var notificaciones = true
     @State private var photoItem: PhotosPickerItem?
     @State private var fotoPerfil: Image?
+    @State private var subiendoFoto = false
+    @AppStorage("perfil_avatar_url_cache") private var avatarUrlCached = ""
     @State private var confirmarCerrarSesion = false
     @State private var mostrarEditorDashboard = false
     @Environment(\.dismiss) private var dismiss
@@ -55,8 +58,17 @@ struct ConfiguracionView: View {
                                    let uiImage = UIImage(data: data),
                                    let compressed = uiImage.jpegData(compressionQuality: 0.7) {
                                     fotoPerfil = Image(uiImage: uiImage)
-                                    guardarFoto(data: compressed)
+                                    guardarFotoLocal(data: compressed)
+                                    await subirFoto(data: compressed)
                                 }
+                            }
+                        }
+                        .overlay {
+                            if subiendoFoto {
+                                ProgressView()
+                                    .tint(.white)
+                                    .frame(width: 72, height: 72)
+                                    .background(.black.opacity(0.4), in: Circle())
                             }
                         }
 
@@ -183,14 +195,70 @@ struct ConfiguracionView: View {
 
     // MARK: Persistencia foto
 
-    private func guardarFoto(data: Data) {
+    private func guardarFotoLocal(data: Data) {
         try? data.write(to: fotoURL())
     }
 
+    private func subirFoto(data: Data) async {
+        print("[Avatar] iniciando upload, perfilId=\(String(describing: auth.perfilId))")
+        guard let userId = auth.perfilId else {
+            print("[Avatar] perfilId nil — abortando")
+            return
+        }
+        subiendoFoto = true
+        defer { subiendoFoto = false }
+        do {
+            let client = SupabaseService.shared.client
+            let path = "\(userId.uuidString.lowercased()).jpg"
+            print("[Avatar] subiendo a avatars/\(path)")
+            try await client.storage
+                .from("avatars")
+                .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
+            let publicUrl = try client.storage.from("avatars").getPublicURL(path: path)
+            print("[Avatar] url pública: \(publicUrl.absoluteString)")
+            try await client
+                .from("perfiles")
+                .update(["avatar_url": publicUrl.absoluteString])
+                .eq("id", value: userId.uuidString)
+                .execute()
+            auth.avatarUrl = publicUrl.absoluteString
+            NotificationCenter.default.post(name: .avatarActualizado, object: nil)
+            print("[Avatar] avatar_url guardado en DB")
+        } catch {
+            print("[Avatar] error: \(error)")
+        }
+    }
+
     private func cargarFoto() {
-        guard let data = try? Data(contentsOf: fotoURL()),
-              let uiImage = UIImage(data: data) else { return }
-        fotoPerfil = Image(uiImage: uiImage)
+        let localUrl = fotoURL()
+        let remoteUrlStr = auth.avatarUrl ?? ""
+
+        // URL no cambió → usar caché local directamente, sin red
+        if remoteUrlStr == avatarUrlCached,
+           let data = try? Data(contentsOf: localUrl),
+           let uiImage = UIImage(data: data) {
+            fotoPerfil = Image(uiImage: uiImage)
+            return
+        }
+
+        // URL cambió o no hay caché → descargar
+        if let url = URL(string: remoteUrlStr), !remoteUrlStr.isEmpty {
+            Task {
+                if let (data, _) = try? await URLSession.shared.data(from: url),
+                   let uiImage = UIImage(data: data) {
+                    fotoPerfil = Image(uiImage: uiImage)
+                    try? data.write(to: localUrl)
+                    avatarUrlCached = remoteUrlStr
+                }
+            }
+            return
+        }
+
+        // Sin URL remota → archivo local si existe
+        if let data = try? Data(contentsOf: localUrl),
+           let uiImage = UIImage(data: data) {
+            fotoPerfil = Image(uiImage: uiImage)
+        }
     }
 
     private func pedirPermisoNotificaciones() async {

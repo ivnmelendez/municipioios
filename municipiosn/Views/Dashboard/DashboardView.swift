@@ -43,12 +43,39 @@ struct DashboardView: View {
         return fmt.string(from: fecha)
     }
 
-    private func cargarFotoPerfil() {
-        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    @AppStorage("perfil_avatar_url_cache") private var avatarUrlCached = ""
+
+    private func cargarFotoPerfil(forzar: Bool = false) {
+        let localUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("perfil.jpg")
-        guard let data = try? Data(contentsOf: url),
-              let uiImage = UIImage(data: data) else { return }
-        fotoPerfil = Image(uiImage: uiImage)
+        let remoteUrlStr = auth.avatarUrl ?? ""
+
+        if !forzar && remoteUrlStr == avatarUrlCached,
+           let data = try? Data(contentsOf: localUrl),
+           let uiImage = UIImage(data: data) {
+            fotoPerfil = Image(uiImage: uiImage)
+            return
+        }
+
+        if !remoteUrlStr.isEmpty,
+           let url = URL(string: remoteUrlStr + "?v=\(Int(Date().timeIntervalSince1970))") {
+            Task {
+                var request = URLRequest(url: url)
+                request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+                if let (data, _) = try? await URLSession.shared.data(for: request),
+                   let uiImage = UIImage(data: data) {
+                    fotoPerfil = Image(uiImage: uiImage)
+                    try? data.write(to: localUrl)
+                    avatarUrlCached = remoteUrlStr
+                }
+            }
+            return
+        }
+
+        if let data = try? Data(contentsOf: localUrl),
+           let uiImage = UIImage(data: data) {
+            fotoPerfil = Image(uiImage: uiImage)
+        }
     }
 
     var body: some View {
@@ -108,13 +135,14 @@ struct DashboardView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .avatarActualizado)) { _ in
+            avatarUrlCached = ""
+            cargarFotoPerfil(forzar: true)
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $navegarEstructuras) {
             EstructurasListView(filtroInicial: filtroNavegacion)
-                .navigationDestination(for: EstructuraConParque.self) { e in
-                    EstructuraDetalleView(estructura: e)
-                }
         }
         }
     }
@@ -122,7 +150,7 @@ struct DashboardView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(saludo)
                     .font(.body.weight(.medium))
@@ -143,22 +171,20 @@ struct DashboardView: View {
 
             VStack(alignment: .trailing, spacing: 8) {
                 Button { mostrarConfiguracion = true } label: {
-                    Group {
-                        if let foto = fotoPerfil {
-                            foto.resizable().scaledToFill()
-                                .frame(width: 48, height: 48)
-                                .clipShape(Circle())
-                        } else {
-                            Text(auth.initiales.isEmpty ? "?" : auth.initiales)
-                                .font(.system(size: 17, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color("Navy"))
-                                .frame(width: 48, height: 48)
-                        }
+                    if let foto = fotoPerfil {
+                        foto.resizable()
+                            .scaledToFill()
+                            .frame(width: 64, height: 64)
+                            .clipShape(Circle())
+                    } else {
+                        Text(auth.initiales.isEmpty ? "?" : auth.initiales)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color("Navy"))
+                            .frame(width: 64, height: 64)
                     }
                 }
-                .buttonStyle(.glass(.regular))
-                .buttonBorderShape(.circle)
-                .controlSize(.large)
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: Circle())
                 .onAppear { cargarFotoPerfil() }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willEnterForegroundNotification)) { _ in cargarFotoPerfil() }
@@ -286,11 +312,10 @@ private extension View {
 
 private struct SemanaCard: View {
     let kpi: KPIData
-    @AppStorage("semanaCard_periodo") private var esMes = false
+    @AppStorage("semanaCard_periodo") private var esMes = true
 
-    private var visitas: Int  { esMes ? kpi.visitasMes   : kpi.visitasSemana }
-    private var cambios: Int  { esMes ? kpi.coroplastMes : kpi.cambiosSemana }
-    private var danos: Int    { esMes ? kpi.danosMes     : kpi.danosSemana }
+    private var visitas: Int  { esMes ? kpi.visitasSemana : kpi.visitasMes }
+    private var cambios: Int  { esMes ? kpi.cambiosSemana : kpi.coroplastMes }
 
     var body: some View {
         Button {
@@ -299,7 +324,7 @@ private struct SemanaCard: View {
         } label: {
             VStack(spacing: 0) {
                 HStack {
-                    Text(esMes ? "Este mes" : "Esta semana")
+                    Text(esMes ? "Esta semana" : "Este mes")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color("TextMuted"))
                         .contentTransition(.identity)
@@ -326,15 +351,6 @@ private struct SemanaCard: View {
                         label: "Coroplast",
                         icono: "arrow.2.squarepath",
                         color: Color("Navy")
-                    )
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.08))
-                        .frame(width: 1, height: 72)
-                    columna(
-                        valor: danos,
-                        label: "Daños",
-                        icono: "exclamationmark.triangle.fill",
-                        color: Color(hex: "#dc2626")
                     )
                 }
                 .padding(.vertical, 20)
@@ -717,7 +733,7 @@ private struct AlertaEstructurasCard: View {
                 .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
             Text("\(valor)")
                 .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
+                .foregroundStyle(valor > 0 ? Color("Navy") : Color("TextMuted").opacity(0.4))
                 .contentTransition(.numericText())
                 .monospacedDigit()
             Text(label)

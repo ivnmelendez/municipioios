@@ -24,12 +24,23 @@ private struct EstructuraDetalleLoader: View {
 }
 
 struct HistorialCampoView: View {
+    let periodo: FiltroFecha
     @State private var vm = HistorialViewModel()
-    @State private var periodo: Periodo = .semana
 
-    enum Periodo: String, CaseIterable {
-        case semana = "Esta semana"
-        case mes = "Este mes"
+    private var dias: [DiaVisita] {
+        switch periodo {
+        case .semana:        return vm.diasSemana
+        case .mes:           return vm.diasMes
+        case .mesElegido:    return vm.diasMesElegido
+        case .todo:          return vm.diasMes
+        }
+    }
+
+    private var mostrarResumenMes: Bool {
+        switch periodo {
+        case .mes, .mesElegido: return true
+        default: return false
+        }
     }
 
     var body: some View {
@@ -37,41 +48,31 @@ struct HistorialCampoView: View {
             if vm.cargando {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if dias.isEmpty {
+                ContentUnavailableView(
+                    "Sin visitas",
+                    systemImage: "calendar.badge.exclamationmark",
+                    description: Text("No hay estructuras visitadas en este periodo.")
+                )
             } else {
-                let dias = periodo == .semana ? vm.diasSemana : vm.diasMes
-                if dias.isEmpty {
-                    ContentUnavailableView(
-                        "Sin visitas",
-                        systemImage: "calendar.badge.exclamationmark",
-                        description: Text("No hay estructuras visitadas \(periodo == .semana ? "esta semana" : "este mes").")
-                    )
-                } else {
-                    List {
-                        if periodo == .mes {
-                            resumenMesSection(dias: dias)
-                        }
-                        ForEach(dias) { dia in
-                            diaSection(dia: dia)
-                        }
+                List {
+                    if mostrarResumenMes {
+                        resumenMesSection(dias: dias)
                     }
-                    .listStyle(.insetGrouped)
-                }
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    ForEach(Periodo.allCases, id: \.self) { p in
-                        Button(p.rawValue) { periodo = p }
+                    ForEach(dias) { dia in
+                        diaSection(dia: dia)
                     }
-                } label: {
-                    Label(periodo.rawValue, systemImage: "calendar")
-                        .symbolVariant(.fill)
                 }
+                .listStyle(.insetGrouped)
             }
         }
         .task { await vm.cargar() }
         .refreshable { await vm.cargar() }
+        .onChange(of: periodo) { (_: FiltroFecha, new: FiltroFecha) in
+            if case .mesElegido(let d) = new {
+                Task { await vm.cargarMesElegido(fecha: d) }
+            }
+        }
     }
 
     private func diaSection(dia: DiaVisita) -> some View {

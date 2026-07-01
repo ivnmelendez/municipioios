@@ -1,8 +1,29 @@
 import Foundation
 import Supabase
 
-enum FiltroFecha {
+enum FiltroFecha: Equatable {
     case semana, mes, todo
+    case mesElegido(Date)
+
+    static func == (lhs: FiltroFecha, rhs: FiltroFecha) -> Bool {
+        switch (lhs, rhs) {
+        case (.semana, .semana), (.mes, .mes), (.todo, .todo): return true
+        case (.mesElegido(let a), .mesElegido(let b)):
+            return Calendar.current.isDate(a, equalTo: b, toGranularity: .month)
+        default: return false
+        }
+    }
+
+    var cacheKey: String {
+        switch self {
+        case .semana:          return "semana"
+        case .mes:             return "mes"
+        case .todo:            return "todo"
+        case .mesElegido(let d):
+            let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM"
+            return "mes_\(fmt.string(from: d))"
+        }
+    }
 }
 
 struct IntervencionCompleta: Codable, Identifiable, Hashable {
@@ -152,6 +173,15 @@ final class IntervencionesService {
                 .execute().value
         case .todo:
             return try await baseQuery
+                .order("created_at", ascending: false)
+                .execute().value
+        case .mesElegido(let fecha):
+            let comps = calendar.dateComponents([.year, .month], from: fecha)
+            let start = calendar.date(from: comps)!
+            let end = calendar.date(byAdding: .month, value: 1, to: start)!
+            return try await baseQuery
+                .gte("created_at", value: formatter.string(from: start))
+                .lt("created_at", value: formatter.string(from: end))
                 .order("created_at", ascending: false)
                 .execute().value
         }

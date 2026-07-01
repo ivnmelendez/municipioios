@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct IntervencionesView: View {
+    let periodo: FiltroFecha
     @State private var vm = IntervencionesViewModel()
 
     var body: some View {
@@ -35,45 +36,17 @@ struct IntervencionesView: View {
             }
         }
         .background(Color("Background"))
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                FiltroMenu(filtroActual: vm.filtro) { nuevoFiltro in
-                    Task { await vm.aplicarFiltro(nuevoFiltro) }
-                }
-            }
-        }
         .refreshable { await vm.cargar() }
-        .task { await vm.cargar() }
+        .task { await vm.aplicarFiltro(periodo) }
+        .onChange(of: periodo) { _, new in
+            Task { await vm.aplicarFiltro(new) }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in
             Task { await vm.cargar() }
         }
     }
 }
 
-struct FiltroMenu: View {
-    let filtroActual: FiltroFecha
-    let onSelect: (FiltroFecha) -> Void
-
-    var body: some View {
-        Menu {
-            Button("Esta semana") { onSelect(.semana) }
-            Button("Este mes") { onSelect(.mes) }
-            Button("Todo") { onSelect(.todo) }
-        } label: {
-            Label(etiquetaFiltro, systemImage: "line.3.horizontal.decrease.circle")
-                .symbolVariant(filtroActual != .todo ? .fill : .none)
-                .foregroundStyle(Color("Navy"))
-        }
-    }
-
-    private var etiquetaFiltro: String {
-        switch filtroActual {
-        case .semana: "Esta semana"
-        case .mes: "Este mes"
-        case .todo: "Todo"
-        }
-    }
-}
 
 struct IntervencionRow: View {
     let intervencion: IntervencionCompleta

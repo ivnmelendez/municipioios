@@ -35,6 +35,12 @@ struct Perfil: Codable, Identifiable {
     let id: UUID
     let nombre: String
     let rol: String
+    let avatarUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, nombre, rol
+        case avatarUrl = "avatar_url"
+    }
 }
 
 struct Rondin: Codable, Identifiable {

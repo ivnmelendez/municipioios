@@ -49,7 +49,7 @@ final class EstructurasListViewModel {
 
 // MARK: - Main View (no NavigationStack — parent provides it)
 
-private let estadosFiltro: [EstadoEstructura] = [.activa, .dañada, .inactiva]
+private let estadosFiltro: [EstadoEstructura] = [.activa, .dañada, .necesita_mantenimiento, .inactiva]
 
 struct EstructurasListView: View {
     var filtroInicial: EstadoEstructura? = nil
@@ -74,13 +74,15 @@ struct EstructurasListView: View {
                     .id("searchBar")
                     .onChange(of: vm.busqueda) { vm.filtrar() }
 
-                    FiltroChips(
-                        filtroActivo: vm.filtroEstado,
-                        onSelect: { estado in
-                            vm.filtroEstado = vm.filtroEstado == estado ? nil : estado
-                            vm.filtrar()
-                        }
-                    )
+                    if filtroInicial == nil {
+                        FiltroChips(
+                            filtroActivo: vm.filtroEstado,
+                            onSelect: { estado in
+                                vm.filtroEstado = vm.filtroEstado == estado ? nil : estado
+                                vm.filtrar()
+                            }
+                        )
+                    }
 
                     if !vm.estructuras.isEmpty {
                         HStack {
@@ -99,7 +101,7 @@ struct EstructurasListView: View {
                     ListaEstructuras(filtradas: vm.filtradas, isLoading: vm.isLoading,
                                      busqueda: vm.busqueda, filtroEstado: vm.filtroEstado)
                 }
-                .padding(.top, 12)
+                .padding(.top, filtroInicial == nil ? 12 : 4)
                 .padding(.bottom, 32)
             }
             .background(Color("Background"))
@@ -122,19 +124,12 @@ struct EstructurasListView: View {
             }
         }
         .navigationTitle(tituloNavegacion)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(filtroInicial == nil ? .large : .inline)
         .task { await vm.cargar() }
         .refreshable { await vm.cargar() }
     }
 
-    private var tituloNavegacion: String {
-        switch filtroInicial {
-        case .dañada:    return "Estructuras dañadas"
-        case .activa:    return "Estructuras activas"
-        case .inactiva:  return "Estructuras inactivas"
-        default:         return ""
-        }
-    }
+    private var tituloNavegacion: String { "" }
 }
 
 // MARK: - Buscador
@@ -238,7 +233,7 @@ private struct ListaEstructuras: View {
         } else {
             LazyVStack(spacing: 0) {
                 ForEach(Array(filtradas.enumerated()), id: \.element.id) { index, estructura in
-                    NavigationLink(value: estructura) {
+                    NavigationLink(destination: EstructuraDetalleView(estructura: estructura)) {
                         EstructuraRow(estructura: estructura)
                     }
                     .buttonStyle(RowButtonStyle())
@@ -381,17 +376,17 @@ struct EstructuraDetalleView: View {
     @State private var campanas: [CampanaBasica] = []
     @State private var caraParaCambio: CaraDetalle? = nil
     @State private var campanaSeleccionada: CampanaBasica? = nil
-    @State private var mostrarMapaCompleto = false
+
     @State private var eventoSeleccionado: IntervencionCompleta? = nil
 
     var body: some View {
         Group {
             if sizeClass == .regular && isLandscape {
-                iPadLayout          // landscape iPad: dos columnas
+                iPadLayout
             } else if sizeClass == .regular {
-                iPadPortraitLayout  // portrait iPad: columna única ampliada
+                iPadPortraitLayout
             } else {
-                iPhoneLayout        // iPhone: layout actual
+                iPhoneLayout
             }
         }
         .background(
@@ -401,22 +396,6 @@ struct EstructuraDetalleView: View {
                     .onChange(of: geo.size) { _, size in isLandscape = size.width > size.height }
             }
         )
-        .background {
-            Color(.systemGray6).ignoresSafeArea()
-            if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-                CachedAsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .scaleEffect(1.4)
-                            .blur(radius: 60)
-                            .opacity(0.45)
-                            .ignoresSafeArea()
-                            .transition(.opacity.animation(.easeInOut(duration: 0.8)))
-                    }
-                }
-            }
-        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -468,14 +447,7 @@ struct EstructuraDetalleView: View {
         .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
             FotoFullscreenView(url: item.url, titulo: item.titulo)
         }
-        .fullScreenCover(isPresented: $mostrarMapaCompleto) {
-            if let lat = estructura.lat, let lng = estructura.lng {
-                MapaEstructuraFullView(
-                    numero: estructura.numero,
-                    coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)
-                )
-            }
-        }
+
     }
 
     // MARK: - iPhone layout (vertical, hero arriba)
@@ -558,7 +530,7 @@ struct EstructuraDetalleView: View {
 
     // MARK: - Content cards (compartidos iPhone / iPad)
     private var contentCards: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(spacing: 20) {
             // Info card — tappable, va al mapa
             if let parque = estructura.parques {
                 Button {
@@ -571,23 +543,20 @@ struct EstructuraDetalleView: View {
                         dismiss()
                     }
                 } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if let colonia = parque.colonias {
-                                Label(colonia.nombre, systemImage: "map.fill")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.primary)
-                            }
-                            Label(parque.nombre, systemImage: "tree.fill")
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let colonia = parque.colonias {
+                            Label(colonia.nombre, systemImage: "map.fill")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                        }
+                        Label(parque.nombre, systemImage: "tree.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if let fecha = estructura.fechaInstalacion {
+                            Label(fecha.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            if let fecha = estructura.fechaInstalacion {
-                                Label(fecha.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
                         }
-                        Spacer()
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -595,15 +564,13 @@ struct EstructuraDetalleView: View {
                 }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
-                .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
+                .cardShadow()
                 .padding(.horizontal, 16)
-                .padding(.top, 10)
             }
 
             // Campañas
             if isLoading {
-                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 32)
+                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 16)
             } else {
                 if !caras.isEmpty {
                     CampanasSideBySideView(
@@ -616,35 +583,36 @@ struct EstructuraDetalleView: View {
                             caraParaCambio = cara
                         } : nil
                     )
-                    .padding(.top, 8)
+                    .cardShadow()
                 }
 
+                // Historial
                 if !historial.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Historial")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 24)
-                            .padding(.bottom, 8)
-                        VStack(spacing: 0) {
-                            ForEach(historial) { item in
-                                Button { eventoSeleccionado = item } label: {
-                                    HistorialRow(item: item)
-                                }
-                                .buttonStyle(.plain)
-                                if item.id != historial.last?.id {
-                                    Divider().padding(.leading, 52)
-                                }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .padding(.bottom, 6)
+                        ForEach(historial) { item in
+                            Button { eventoSeleccionado = item } label: {
+                                HistorialRow(item: item)
+                            }
+                            .buttonStyle(.plain)
+                            if item.id != historial.last?.id {
+                                Divider().padding(.leading, 52)
                             }
                         }
-                        .background(Color(.secondarySystemGroupedBackground),
-                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .padding(.horizontal, 16)
+                        .padding(.bottom, 4)
                     }
+                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .cardShadow()
+                    .padding(.horizontal, 16)
                 }
             }
 
+            // Notas
             if let notas = estructura.notas, !notas.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Notas")
@@ -654,37 +622,14 @@ struct EstructuraDetalleView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemGroupedBackground),
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-            }
-
-            if let lat = estructura.lat, let lng = estructura.lng {
-                let coord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-                Button { mostrarMapaCompleto = true } label: {
-                    Map(initialPosition: .region(MKCoordinateRegion(
-                        center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
-                    ))) {
-                        Marker(estructura.numero, coordinate: coord)
-                            .tint(Color("Navy"))
-                    }
-                    .frame(height: 200)
-                    .allowsHitTesting(false)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
-                .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
+                .cardShadow()
                 .padding(.horizontal, 16)
-                .padding(.top, 16)
             }
 
-            Spacer().frame(height: 32)
         }
+        .padding(.top, 16)
+        .padding(.bottom, 40)
         .frame(maxWidth: .infinity)
     }
 
@@ -699,35 +644,6 @@ struct EstructuraDetalleView: View {
 
 // MARK: - Fullscreen map
 
-private struct MapaEstructuraFullView: View {
-    let numero: String
-    let coordinate: CLLocationCoordinate2D
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Map(initialPosition: .region(MKCoordinateRegion(
-                center: coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
-            ))) {
-                Marker(numero, coordinate: coordinate)
-                    .tint(Color("Navy"))
-            }
-            .ignoresSafeArea(edges: .bottom)
-            .navigationTitle(numero)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                            .font(.title3)
-                    }
-                }
-            }
-        }
-    }
-}
 
 // MARK: - Historial Row
 
@@ -964,5 +880,13 @@ private struct EventoDetalleView: View {
             Spacer().frame(height: 32)
         }
         .padding(.top, 16)
+    }
+}
+
+private extension View {
+    func cardShadow() -> some View {
+        self
+            .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
     }
 }

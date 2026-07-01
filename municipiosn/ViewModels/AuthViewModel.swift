@@ -16,6 +16,7 @@ final class AuthViewModel {
     var initiales: String = ""
     var rol: String = "admin"
     var perfilId: UUID?
+    var avatarUrl: String?
 
     private let auth = SupabaseService.shared.client.auth
 
@@ -53,13 +54,14 @@ final class AuthViewModel {
         do {
             let perfil: Perfil = try await SupabaseService.shared.client
                 .from("perfiles")
-                .select("id, nombre, rol")
+                .select("id, nombre, rol, avatar_url")
                 .eq("id", value: userId.uuidString)
                 .single()
                 .execute()
                 .value
             rol = perfil.rol
             perfilId = perfil.id
+            avatarUrl = perfil.avatarUrl
         } catch {
             rol = "admin"
         }
@@ -105,6 +107,7 @@ final class AuthViewModel {
         authState = .unauthenticated
         rol = "admin"
         perfilId = nil
+        avatarUrl = nil
         displayName = ""
         initiales = ""
     }
