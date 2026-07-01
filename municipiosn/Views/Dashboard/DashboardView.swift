@@ -240,6 +240,19 @@ struct DashboardView: View {
             }
         case .pagos:
             PagosGastosCard(vm: pagosVm)
+        case .alcancePoblacional:
+            if vm.alcanceTotal > 0 {
+                AlcanceTotalCard(
+                    total: vm.alcanceTotal,
+                    fem: vm.alcanceFem,
+                    mas: vm.alcanceMas,
+                    mayores18: vm.alcance18mas
+                )
+            }
+        case .alcanceColonias:
+            if !vm.alcancePorColonia.isEmpty {
+                AlcanceColoniasCard(colonias: vm.alcancePorColonia)
+            }
         }
     }
 }
@@ -298,6 +311,198 @@ struct EditorDashboardSheet: View {
 }
 
 // MARK: - Animación helper
+
+// MARK: - Alcance Poblacional Card
+
+// MARK: - Card 1: Alcance total
+
+private struct AlcanceTotalCard: View {
+    let total: Int
+    let fem: Int
+    let mas: Int
+    let mayores18: Int
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Alcance estimado")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color("TextMuted"))
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(total.formatted())
+                            .font(.system(size: 42, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color("Navy"))
+                            .contentTransition(.numericText())
+                        Text("habitantes")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color("TextMuted"))
+                            .padding(.bottom, 4)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Image(systemName: "person.3.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color("Navy").opacity(0.7))
+                    Text("INEGI 2020")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color("TextMuted").opacity(0.5))
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider().padding(.horizontal, 20)
+
+            HStack(spacing: 0) {
+                statCol("Mujeres", valor: fem, color: Color(hex: "#db2777"))
+                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 60)
+                statCol("Hombres", valor: mas, color: Color("Navy"))
+                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 60)
+                statCol("+18 años", valor: mayores18, color: Color(hex: "#16a34a"))
+            }
+            .padding(.vertical, 20)
+        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private func statCol(_ label: String, valor: Int, color: Color) -> some View {
+        VStack(spacing: 6) {
+            Text(valor.formatted())
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .contentTransition(.numericText())
+                .monospacedDigit()
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Card 2: Alcance por colonia
+
+private struct AlcanceColoniasCard: View {
+    let colonias: [ColoniaAlcance]
+    @State private var mostrarTodo = false
+    @State private var animado = false
+
+    private var top: [ColoniaAlcance] { Array(colonias.prefix(5)) }
+
+    var body: some View {
+        Button { mostrarTodo = true } label: {
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Alcance por colonia")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color("TextMuted"))
+                    Spacer()
+                    Text("INEGI 2020")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color("Navy").opacity(0.5))
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color("Navy").opacity(0.07), in: Capsule())
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+
+                let maxVal = top.first?.poblacion ?? 1
+                ForEach(Array(top.enumerated()), id: \.element.id) { index, item in
+                    fila(item: item, max: maxVal, posicion: index + 1)
+                    if item.id != top.last?.id {
+                        Divider().padding(.leading, 20)
+                    }
+                }
+                Spacer().frame(height: 8)
+            }
+        }
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 24))
+        .onAppear {
+            withAnimation(.spring(duration: 0.9, bounce: 0.05).delay(0.3)) { animado = true }
+        }
+        .sheet(isPresented: $mostrarTodo) {
+            AlcanceColoniasLista(colonias: colonias)
+        }
+    }
+
+    private func fila(item: ColoniaAlcance, max: Int, posicion: Int) -> some View {
+        HStack(spacing: 12) {
+            Text("\(posicion)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(posicion == 1 ? Color(hex: "#f59e0b") : Color("TextMuted").opacity(0.5))
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(item.nombre)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(item.poblacion.formatted())
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color("Navy"))
+                        .monospacedDigit()
+                }
+                GeometryReader { geo in
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color("Navy").opacity(0.08))
+                        .overlay(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    posicion == 1
+                                    ? LinearGradient(colors: [Color("Navy"), Color("Navy").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+                                    : LinearGradient(colors: [Color("Navy").opacity(0.6), Color("Navy").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
+                                )
+                                .frame(width: animado ? geo.size.width * CGFloat(item.poblacion) / CGFloat(max) : 0)
+                        }
+                }
+                .frame(height: 6)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+    }
+}
+
+private struct AlcanceColoniasLista: View {
+    let colonias: [ColoniaAlcance]
+    @Environment(\.dismiss) private var dismiss
+    @State private var busqueda = ""
+
+    private var filtrados: [ColoniaAlcance] {
+        busqueda.isEmpty ? colonias : colonias.filter { $0.nombre.localizedCaseInsensitiveContains(busqueda) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(filtrados) { item in
+                    HStack {
+                        Text(item.nombre).font(.body)
+                        Spacer()
+                        Text(item.poblacion.formatted())
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color("Navy"))
+                            .monospacedDigit()
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .searchable(text: $busqueda, prompt: "Buscar colonia")
+            .navigationTitle("Alcance por colonia")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Listo") { dismiss() } }
+            }
+        }
+    }
+}
 
 private extension View {
     func intro(_ aparecer: Bool, delay: Double) -> some View {

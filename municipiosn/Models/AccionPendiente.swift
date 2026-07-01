@@ -8,6 +8,7 @@ struct AccionPendiente: Codable, Identifiable {
         case reporteDano
         case reporteMantenimiento
         case mantenimientoRealizado
+        case reparacionDano
     }
 
     struct CaraPendiente: Codable {

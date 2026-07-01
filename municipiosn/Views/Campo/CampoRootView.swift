@@ -12,17 +12,10 @@ struct CampoRootView: View {
                     mostrarCampanas: false,
                     userId: authVM.perfilId,
                     campanas: vm.campanas,
-                    puedeCrearEstructuras: true
+                    puedeCrearEstructuras: true,
+                    esCampo: true
                 )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
-            }
-            Tab("Estructuras", systemImage: "square.stack.fill", value: "estructuras") {
-                NavigationStack {
-                    EstructurasListView()
-                        .navigationDestination(for: EstructuraConParque.self) { e in
-                            EstructuraDetalleView(estructura: e, esCampo: true)
-                        }
-                }
             }
             Tab("Configuración", systemImage: "gearshape.fill", value: "config") {
                 configTab

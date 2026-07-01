@@ -166,6 +166,7 @@ struct MapaView: View {
     var userId: UUID? = nil
     var campanas: [CampanaBasica] = []
     var puedeCrearEstructuras: Bool = false
+    var esCampo: Bool = false
 
     @State private var vm = MapaViewModel()
     @State private var coloniasPolygons: [GeoPolygon] = []
@@ -183,6 +184,8 @@ struct MapaView: View {
     @State private var estructuraParaDano: EstructuraConParque? = nil
     @State private var estructuraParaMantenimiento: EstructuraConParque? = nil
     @State private var estructuraParaMantenimientoRealizado: EstructuraConParque? = nil
+    @State private var estructuraParaReparacion: EstructuraConParque? = nil
+    @State private var estructuraParaDetalleCampo: EstructuraConParque? = nil
     @State private var pinResaltado: UUID? = nil
     @State private var visitadasVersion: Int = 0
     @State private var mostrarNuevaEstructura = false
@@ -383,7 +386,10 @@ struct MapaView: View {
             EstructuraDetalleView(estructura: e)
         }
         .onChange(of: vm.mostrarDetalle) { _, mostrar in
-            if mostrar, !puedeCrearEstructuras, let e = vm.estructuraSeleccionada {
+            if mostrar, esCampo, let e = vm.estructuraSeleccionada {
+                estructuraParaDetalleCampo = e
+                vm.mostrarDetalle = false
+            } else if mostrar, !puedeCrearEstructuras, let e = vm.estructuraSeleccionada {
                 estructuraNavegada = e
                 vm.mostrarDetalle = false
             }
@@ -428,13 +434,13 @@ struct MapaView: View {
                             estructuraParaAccion = estructura
                         }
                     } : nil,
-                    onReportarDano: userId != nil ? {
+                    onReportarDano: userId != nil && estructura.estado != .dañada ? {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             estructuraParaDano = estructura
                         }
                     } : nil,
-                    onReportarMantenimiento: userId != nil && estructura.estado != .necesita_mantenimiento ? {
+                    onReportarMantenimiento: userId != nil && estructura.estado != .necesita_mantenimiento && estructura.estado != .dañada ? {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             estructuraParaMantenimiento = estructura
@@ -444,6 +450,12 @@ struct MapaView: View {
                         vm.mostrarDetalle = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             estructuraParaMantenimientoRealizado = estructura
+                        }
+                    } : nil,
+                    onReparacionRealizada: userId != nil && estructura.estado == .dañada ? {
+                        vm.mostrarDetalle = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            estructuraParaReparacion = estructura
                         }
                     } : nil
                 )
@@ -478,6 +490,23 @@ struct MapaView: View {
                 rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
             )
         }
+        .sheet(item: $estructuraParaReparacion) { estructura in
+            ReparacionRealizadaView(
+                estructura: estructura,
+                userId: userId,
+                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
+            )
+        }
+        .fullScreenCover(item: $estructuraParaDetalleCampo) { estructura in
+            CampoEstructuraDetalleView(
+                estructura: estructura,
+                userId: userId,
+                campanas: campanas,
+                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id,
+                yaVisitada: vm.visitadasHoy.contains(estructura.id),
+                onMarcarRevision: { marcarRevision(estructura: estructura) }
+            )
+        }
         .sheet(isPresented: $mostrarNuevaEstructura) {
             NuevaEstructuraView { _ in
                 Task { await vm.cargar() }
@@ -494,6 +523,32 @@ struct MapaView: View {
         } message: {
             Text(vm.errorAccion ?? "")
         }
+        }
+    }
+
+    private func marcarRevision(estructura: EstructuraConParque) {
+        guard let uid = userId else { return }
+        let semanaId = estructuraSemanaMap[estructura.id]?.id
+        vm.visitadasHoy.insert(estructura.id)
+        Task {
+            guard OfflineQueueService.shared.isConnected else {
+                OfflineQueueService.shared.encolar(AccionPendiente(
+                    tipo: .revision,
+                    estructuraId: estructura.id,
+                    rutaSemanaId: semanaId,
+                    userId: uid
+                ))
+                return
+            }
+            do {
+                try await RutasService.shared.marcarRevision(
+                    estructuraId: estructura.id,
+                    rutaSemanaId: semanaId,
+                    userId: uid
+                )
+            } catch {
+                vm.errorAccion = error.localizedDescription
+            }
         }
     }
 }
@@ -1013,6 +1068,7 @@ struct EstructuraDetalleSheet: View {
     var onReportarDano: (() -> Void)? = nil
     var onReportarMantenimiento: (() -> Void)? = nil
     var onMantenimientoRealizado: (() -> Void)? = nil
+    var onReparacionRealizada: (() -> Void)? = nil
     @State private var fotoFullscreen: IdentifiableURL?
     @State private var contentHeight: CGFloat = 420
 
@@ -1165,7 +1221,7 @@ struct EstructuraDetalleSheet: View {
                 Label("Sin parque asignado", systemImage: "tree")
                     .font(.subheadline).foregroundStyle(Color("TextMuted"))
             }
-            if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil || onReportarMantenimiento != nil || onMantenimientoRealizado != nil {
+            if onOk != nil || onRegistrarCambio != nil || onReportarDano != nil || onReportarMantenimiento != nil || onMantenimientoRealizado != nil || onReparacionRealizada != nil {
                 Divider().padding(.top, 8)
                 if let ok = onOk {
                     Button { ok() } label: {
@@ -1228,6 +1284,18 @@ struct EstructuraDetalleSheet: View {
                     .tint(.green)
                     .controlSize(.large)
                     .accessibilityLabel("Registrar que el mantenimiento fue completado")
+                }
+                if let reparacion = onReparacionRealizada {
+                    Button { reparacion() } label: {
+                        Label("Reparación realizada", systemImage: "hammer.fill")
+                            .font(.headline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .controlSize(.large)
+                    .accessibilityLabel("Registrar que el daño fue reparado")
                 }
             }
         }

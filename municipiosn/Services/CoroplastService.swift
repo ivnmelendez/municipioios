@@ -337,6 +337,34 @@ final class CoroplastService {
             .execute()
     }
 
+    func registrarReparacionDano(
+        estructuraId: UUID,
+        userId: UUID,
+        rutaSemanaId: UUID? = nil,
+        fotoUrl: String?,
+        notas: String?
+    ) async throws {
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "reparacion",
+                tipo_dano: nil,
+                tipo_mantenimiento: nil,
+                foto_antes_url: fotoUrl,
+                foto_despues_url: nil,
+                notas: notas
+            ))
+            .execute()
+        try await client
+            .from("estructuras")
+            .update(EstadoUpdate(estado: "activa"))
+            .eq("id", value: estructuraId.uuidString)
+            .execute()
+    }
+
     func registrarRevision(estructuraId: UUID, rutaSemanaId: UUID? = nil, userId: UUID) async throws {
         let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client

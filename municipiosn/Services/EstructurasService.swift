@@ -22,6 +22,23 @@ struct EstructuraConParque: Codable, Identifiable, Hashable {
         case fechaInstalacion = "fecha_instalacion"
         case parques
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id               = try c.decode(UUID.self, forKey: .id)
+        numero           = try c.decode(String.self, forKey: .numero)
+        numeroLocal      = try c.decodeIfPresent(String.self, forKey: .numeroLocal)
+        parqueId         = try c.decodeIfPresent(UUID.self, forKey: .parqueId)
+        estado           = try c.decode(EstadoEstructura.self, forKey: .estado)
+        fotoUrl          = try c.decodeIfPresent(String.self, forKey: .fotoUrl)
+        notas            = try c.decodeIfPresent(String.self, forKey: .notas)
+        fechaInstalacion = try c.decodeIfPresent(Date.self, forKey: .fechaInstalacion)
+        parques          = try c.decodeIfPresent(ParqueConColonia.self, forKey: .parques)
+        lat = (try? c.decodeIfPresent(Double.self, forKey: .lat))
+            ?? (try? c.decodeIfPresent(String.self, forKey: .lat)).flatMap(Double.init)
+        lng = (try? c.decodeIfPresent(Double.self, forKey: .lng))
+            ?? (try? c.decodeIfPresent(String.self, forKey: .lng)).flatMap(Double.init)
+    }
 }
 
 struct ParqueConColonia: Codable, Identifiable, Hashable {

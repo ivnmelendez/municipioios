@@ -12,6 +12,11 @@ final class DashboardViewModel {
     var coloniasSinEstructuras: Int = 0
     var totalColoniasGeo: Int = 0
     var coloniasDetalle: [ColoniaConCampanas] = []
+    var alcancePorColonia: [ColoniaAlcance] = []
+    var alcanceTotal: Int = 0
+    var alcanceFem: Int = 0
+    var alcanceMas: Int = 0
+    var alcance18mas: Int = 0
     var errorMessage: String?
     var isLoading = false
 
@@ -56,6 +61,7 @@ final class DashboardViewModel {
         defer { isLoading = false }
 
         do {
+            async let estructurasTask = EstructurasService.shared.fetchEstructuras()
             async let kpiTask = EstructurasService.shared.fetchKPIs()
             async let campanasTask = EstructurasService.shared.fetchUsoCampanas()
             async let coloniasTask = EstructurasService.shared.fetchUsoColonias()
@@ -76,10 +82,50 @@ final class DashboardViewModel {
             coloniasConEstructuras = usoColonias.count
             totalColoniasGeo = totalColonias
             coloniasSinEstructuras = max(0, totalColonias - usoColonias.count)
+
+            let estructuras = (try? await estructurasTask) ?? []
+            computarAlcance(estructuras: estructuras)
         } catch is CancellationError {
         } catch {
             if !kpi.isLoaded { errorMessage = error.localizedDescription }
         }
+    }
+
+    private func computarAlcance(estructuras: [EstructuraConParque]) {
+        let polygons = loadGeoPolygons(named: "colonias_san_nicolas")
+        guard !polygons.isEmpty else { return }
+
+        var porColonia: [UUID: (nombre: String, coords: [CLLocationCoordinate2D])] = [:]
+        for e in estructuras {
+            guard let colonia = e.parques?.colonias,
+                  let lat = e.lat, let lng = e.lng else { continue }
+            var entry = porColonia[colonia.id] ?? (colonia.nombre, [])
+            entry.coords.append(CLLocationCoordinate2D(latitude: lat, longitude: lng))
+            porColonia[colonia.id] = entry
+        }
+
+        alcancePorColonia = porColonia.map { id, val in
+            let d = alcanceDetallado(polygons: polygons, coordenadas: val.coords)
+            return ColoniaAlcance(
+                id: id,
+                nombre: val.nombre,
+                estructuras: val.coords.count,
+                poblacion: d.pobtot,
+                pobFem: d.pobFem,
+                pobMas: d.pobMas,
+                p18ymas: d.p18ymas
+            )
+        }.sorted { $0.poblacion > $1.poblacion }
+
+        let todasCoords = estructuras.compactMap { e -> CLLocationCoordinate2D? in
+            guard let lat = e.lat, let lng = e.lng else { return nil }
+            return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        }
+        let total = alcanceDetallado(polygons: polygons, coordenadas: todasCoords)
+        alcanceTotal  = total.pobtot
+        alcanceFem    = total.pobFem
+        alcanceMas    = total.pobMas
+        alcance18mas  = total.p18ymas
     }
 
 }

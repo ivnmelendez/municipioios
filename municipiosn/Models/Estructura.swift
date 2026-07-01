@@ -6,6 +6,16 @@ struct UsoColonia: Identifiable {
     let totalEstructuras: Int
 }
 
+struct ColoniaAlcance: Identifiable {
+    let id: UUID
+    let nombre: String
+    let estructuras: Int
+    let poblacion: Int
+    let pobFem: Int
+    let pobMas: Int
+    let p18ymas: Int
+}
+
 struct ColoniaConCampanas: Identifiable {
     let id: UUID
     let nombre: String
