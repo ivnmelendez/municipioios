@@ -160,7 +160,10 @@ final class IntervencionesService {
 
         switch filtro {
         case .semana:
-            let start = calendar.date(byAdding: .day, value: -7, to: now)!
+            var cal = Calendar(identifier: .gregorian)
+            cal.timeZone = TimeZone(identifier: "America/Monterrey")!
+            cal.firstWeekday = 2
+            let start = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? now
             return try await baseQuery
                 .gte("created_at", value: formatter.string(from: start))
                 .order("created_at", ascending: false)

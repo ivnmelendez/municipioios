@@ -253,6 +253,22 @@ struct DashboardView: View {
             if !vm.alcancePorColonia.isEmpty {
                 AlcanceColoniasCard(colonias: vm.alcancePorColonia)
             }
+        case .piramideEdad:
+            if vm.alcanceTotal > 0 {
+                PiramideEdadCard(dem: vm.demografia)
+            }
+        case .sinInternet:
+            if vm.alcanceTotal > 0 {
+                ConectividadCard(dem: vm.demografia)
+            }
+        case .segmentosPorColonia:
+            if !vm.alcancePorColonia.isEmpty {
+                SegmentosColoniaCard(colonias: vm.alcancePorColonia)
+            }
+        case .seguroMedico:
+            if vm.alcanceTotal > 0 {
+                SeguroMedicoCard(dem: vm.demografia)
+            }
         }
     }
 }

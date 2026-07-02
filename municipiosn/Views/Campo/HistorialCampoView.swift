@@ -125,7 +125,9 @@ struct HistorialCampoView: View {
     }
 
     private func agruparPorSemana(dias: [DiaVisita]) -> [SemanaResumen] {
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Monterrey")!
+        calendar.firstWeekday = 2 // lunes
         var porSemana: [Int: Int] = [:]
         var semanaFecha: [Int: Date] = [:]
         for dia in dias {

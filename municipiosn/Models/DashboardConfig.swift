@@ -10,6 +10,10 @@ enum DashboardCardID: String, Codable, CaseIterable {
     case pagos            = "pagos"
     case alcancePoblacional = "alcance_poblacional"
     case alcanceColonias    = "alcance_colonias"
+    case piramideEdad       = "piramide_edad"
+    case sinInternet        = "sin_internet"
+    case segmentosPorColonia = "segmentos_colonia"
+    case seguroMedico        = "seguro_medico"
 
     var titulo: String {
         switch self {
@@ -20,22 +24,30 @@ enum DashboardCardID: String, Codable, CaseIterable {
         case .campanasChart:      "Estadísticas campañas"
         case .coloniasChart:      "Estadísticas colonias"
         case .pagos:              "Gastos mano de obra"
-        case .alcancePoblacional: "Alcance estimado"
-        case .alcanceColonias:    "Alcance por colonia"
+        case .alcancePoblacional:   "Alcance estimado"
+        case .alcanceColonias:      "Alcance por colonia"
+        case .piramideEdad:         "Pirámide de edad"
+        case .sinInternet:          "Conectividad digital"
+        case .segmentosPorColonia:  "Segmentos por colonia"
+        case .seguroMedico:         "Acceso a salud"
         }
     }
 
     var icono: String {
         switch self {
-        case .alertaEstructuras:  "exclamationmark.triangle.fill"
-        case .cobertura:          "chart.pie.fill"
-        case .semana:             "calendar.badge.clock"
-        case .resumenMunicipal:   "building.2.fill"
-        case .campanasChart:      "megaphone.fill"
-        case .coloniasChart:      "map.fill"
-        case .pagos:              "banknote.fill"
-        case .alcancePoblacional: "person.3.fill"
-        case .alcanceColonias:    "map.circle.fill"
+        case .alertaEstructuras:    "exclamationmark.triangle.fill"
+        case .cobertura:            "chart.pie.fill"
+        case .semana:               "calendar.badge.clock"
+        case .resumenMunicipal:     "building.2.fill"
+        case .campanasChart:        "megaphone.fill"
+        case .coloniasChart:        "map.fill"
+        case .pagos:                "banknote.fill"
+        case .alcancePoblacional:   "person.3.fill"
+        case .alcanceColonias:      "map.circle.fill"
+        case .piramideEdad:         "chart.bar.xaxis"
+        case .sinInternet:          "wifi.slash"
+        case .segmentosPorColonia:  "chart.bar.fill"
+        case .seguroMedico:         "cross.circle.fill"
         }
     }
 }

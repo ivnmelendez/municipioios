@@ -267,15 +267,18 @@ final class EstructurasService {
     }
 
     func fetchResumenSemana() async throws -> (visitas: Int, cambios: Int, danos: Int) {
-        let calendar = Calendar.current
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Monterrey")!
+        cal.firstWeekday = 2 // lunes
         let hoy = Date()
-        let inicioSemana = calendar.dateInterval(of: .weekOfYear, for: hoy)?.start ?? hoy
+        let inicioSemana = cal.dateInterval(of: .weekOfYear, for: hoy)?.start ?? hoy
         return try await fetchResumenEntre(desde: inicioSemana, hasta: hoy)
     }
 
     private func fetchResumenEntre(desde: Date, hasta: Date) async throws -> (visitas: Int, cambios: Int, danos: Int) {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withFullDate]
+        isoFormatter.timeZone = TimeZone(identifier: "America/Monterrey")!
         let desdeStr = isoFormatter.string(from: desde)
         let hastaStr = isoFormatter.string(from: hasta)
 

@@ -24,6 +24,7 @@ final class HistorialService {
     func fetchDias(userId: UUID? = nil, desde: Date, hasta: Date) async throws -> [DiaVisita] {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
+        formatter.timeZone = TimeZone(identifier: "America/Monterrey")!
         let desdeStr = formatter.string(from: desde)
         let hastaStr = formatter.string(from: hasta)
 

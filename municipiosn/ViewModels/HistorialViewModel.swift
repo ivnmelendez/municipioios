@@ -18,7 +18,9 @@ final class HistorialViewModel {
 
         cargando = true
         error = nil
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Monterrey")!
+        calendar.firstWeekday = 2 // lunes
         let hoy = Date()
         let inicioSemana = calendar.dateInterval(of: .weekOfYear, for: hoy)?.start ?? hoy
         let inicioMes = calendar.dateInterval(of: .month, for: hoy)?.start ?? hoy

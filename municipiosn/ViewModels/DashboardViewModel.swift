@@ -17,6 +17,7 @@ final class DashboardViewModel {
     var alcanceFem: Int = 0
     var alcanceMas: Int = 0
     var alcance18mas: Int = 0
+    var demografia = DemografiaAlcance()
     var errorMessage: String?
     var isLoading = false
 
@@ -107,13 +108,9 @@ final class DashboardViewModel {
         alcancePorColonia = porColonia.map { id, val in
             let d = alcanceDetallado(polygons: polygons, coordenadas: val.coords)
             return ColoniaAlcance(
-                id: id,
-                nombre: val.nombre,
-                estructuras: val.coords.count,
-                poblacion: d.pobtot,
-                pobFem: d.pobFem,
-                pobMas: d.pobMas,
-                p18ymas: d.p18ymas
+                id: id, nombre: val.nombre, estructuras: val.coords.count,
+                poblacion: d.pobtot, pobFem: d.pobFem, pobMas: d.pobMas, p18ymas: d.p18ymas,
+                pob0a14: d.pob0a14, pob15a64: d.pob15a64, p60ymas: d.p60ymas
             )
         }.sorted { $0.poblacion > $1.poblacion }
 
@@ -126,6 +123,7 @@ final class DashboardViewModel {
         alcanceFem    = total.pobFem
         alcanceMas    = total.pobMas
         alcance18mas  = total.p18ymas
+        demografia    = total.dem
     }
 
 }

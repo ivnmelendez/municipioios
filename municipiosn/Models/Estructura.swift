@@ -14,6 +14,24 @@ struct ColoniaAlcance: Identifiable {
     let pobFem: Int
     let pobMas: Int
     let p18ymas: Int
+    let pob0a14: Int
+    let pob15a64: Int
+    let p60ymas: Int
+}
+
+struct DemografiaAlcance {
+    // Pirámide de edad (F=femenino, M=masculino)
+    var p0a5F = 0;  var p0a5M = 0
+    var p6a11F = 0; var p6a11M = 0
+    var p12a17F = 0; var p12a17M = 0
+    var p18a24F = 0; var p18a24M = 0
+    var p25a59F = 0; var p25a59M = 0
+    var p60masF = 0; var p60masM = 0
+    // Segmentos
+    var pob0a14 = 0; var pob15a64 = 0; var p60ymas = 0
+    // Servicios
+    var psinder = 0; var pderSS = 0
+    var vphInter = 0; var vphSinInter = 0; var tvivhab = 0
 }
 
 struct ColoniaConCampanas: Identifiable {

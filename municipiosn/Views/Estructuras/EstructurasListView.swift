@@ -741,10 +741,14 @@ private struct EventoDetalleView: View {
         }
     }
 
-    private var fotoUrl: URL? {
-        guard let s = evento.fotoAntesUrl ?? evento.fotoDespuesUrl else { return nil }
-        return URL(string: s)
+    private var fotos: [(url: URL, label: String)] {
+        var result: [(URL, String)] = []
+        if let s = evento.fotoAntesUrl,   let u = URL(string: s) { result.append((u, "Antes")) }
+        if let s = evento.fotoDespuesUrl, let u = URL(string: s) { result.append((u, "Después")) }
+        return result
     }
+
+    private var fotoUrl: URL? { fotos.first?.url }
 
     var body: some View {
         let info = accionInfo
@@ -798,35 +802,60 @@ private struct EventoDetalleView: View {
 
     @ViewBuilder
     private func heroImage(info: (icono: String, label: String, color: Color)) -> some View {
-        if let url = fotoUrl {
-            ZStack {
-                Color(.systemGray5).frame(maxWidth: .infinity).frame(height: 500)
-                CachedAsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        Button {
-                            fotoFullscreen = IdentifiableURL(url: url, titulo: info.label)
-                        } label: {
-                            image.resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 500)
-                                .clipped()
-                                .overlay(alignment: .bottomTrailing) {
+        if !fotos.isEmpty {
+            TabView {
+                ForEach(fotos, id: \.url) { foto in
+                    ZStack {
+                        Color(.systemGray5)
+                        CachedAsyncImage(url: foto.url) { phase in
+                            if case .success(let image) = phase {
+                                Button {
+                                    fotoFullscreen = IdentifiableURL(url: foto.url, titulo: foto.label)
+                                } label: {
+                                    image.resizable()
+                                        .scaledToFill()
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 500)
+                                        .clipped()
+                                }
+                                .buttonStyle(.plain)
+                                .transition(.opacity.animation(.easeOut(duration: 0.4)))
+                            } else {
+                                ProgressView()
+                            }
+                        }
+                        // Label Antes/Después
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Text(foto.label)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(.black.opacity(0.45), in: Capsule())
+                                    .padding(14)
+                                Spacer()
+                                // Expandir
+                                Button {
+                                    fotoFullscreen = IdentifiableURL(url: foto.url, titulo: foto.label)
+                                } label: {
                                     Image(systemName: "arrow.up.left.and.arrow.down.right")
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(.white)
                                         .padding(6)
                                         .background(.black.opacity(0.4), in: Circle())
-                                        .padding(12)
                                 }
+                                .padding(14)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .transition(.opacity.animation(.easeOut(duration: 0.5)))
-                    } else if case .empty = phase {
-                        Color(.systemGray5).frame(height: 500).overlay { ProgressView() }
                     }
+                    .frame(height: 500)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: fotos.count > 1 ? .always : .never))
+            .indexViewStyle(.page(backgroundDisplayMode: .always))
+            .frame(height: 500)
         } else {
             ZStack {
                 info.color.opacity(0.12)
