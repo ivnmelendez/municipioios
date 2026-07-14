@@ -1005,7 +1005,7 @@ private struct AvisoCoroplastCard: View {
                     valor: sinCoroplast,
                     label: "Sin coroplast",
                     icono: "square.slash.fill",
-                    color: Color(hex: "#ea580c") ?? .orange
+                    color: Color(hex: "#ea580c")
                 )
                 Rectangle()
                     .fill(Color.primary.opacity(0.08))
@@ -1014,7 +1014,7 @@ private struct AvisoCoroplastCard: View {
                     valor: coroplastRoto,
                     label: "Dañado",
                     icono: "exclamationmark.square.fill",
-                    color: Color(hex: "#d97706") ?? .yellow
+                    color: Color(hex: "#d97706")
                 )
             }
             .padding(.vertical, 20)

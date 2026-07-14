@@ -84,14 +84,14 @@ struct AvisoCoroplastView: View {
                     titulo: "Sin coroplast",
                     subtitulo: "No tiene panel",
                     icono: "square.slash.fill",
-                    color: Color(hex: "#ea580c") ?? .orange
+                    color: Color(hex: "#ea580c")
                 )
                 tipoCard(
                     tipo: "coroplast_roto",
                     titulo: "Dañado",
                     subtitulo: "Roto o salido",
                     icono: "exclamationmark.square.fill",
-                    color: Color(hex: "#d97706") ?? .yellow
+                    color: Color(hex: "#d97706")
                 )
             }
             .padding(.horizontal, 20)
@@ -154,7 +154,7 @@ struct AvisoCoroplastView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
-                tipoSeleccionado != nil ? Color(hex: "#ea580c") ?? .orange : Color.secondary.opacity(0.35),
+                tipoSeleccionado != nil ? Color(hex: "#ea580c") : Color.secondary.opacity(0.35),
                 in: RoundedRectangle(cornerRadius: 14)
             )
         }

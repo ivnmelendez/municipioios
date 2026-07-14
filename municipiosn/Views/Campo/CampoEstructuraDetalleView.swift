@@ -229,7 +229,7 @@ struct CampoEstructuraDetalleView: View {
             if let coroplastEstado = estructura.coroplastEstado {
                 coroplastBadge(estado: coroplastEstado)
             } else if estructura.estado != .inactiva && estructura.estado != .destruida {
-                accionBtn(titulo: "Aviso coroplast", icono: "bell.fill", color: Color(hex: "#ea580c") ?? .orange) {
+                accionBtn(titulo: "Aviso coroplast", icono: "bell.fill", color: Color(hex: "#ea580c")) {
                     mostrarAvisoCoroplast = true
                 }
             }
@@ -268,7 +268,7 @@ struct CampoEstructuraDetalleView: View {
         let esSin = estado == "sin_coroplast"
         return HStack(spacing: 10) {
             Image(systemName: esSin ? "square.slash.fill" : "exclamationmark.square.fill")
-                .foregroundStyle(esSin ? Color(hex: "#ea580c") ?? .orange : Color(hex: "#d97706") ?? .yellow)
+                .foregroundStyle(esSin ? Color(hex: "#ea580c") : Color(hex: "#d97706"))
             VStack(alignment: .leading, spacing: 2) {
                 Text(esSin ? "Sin coroplast" : "Coroplast dañado")
                     .font(.headline.weight(.bold))
@@ -281,13 +281,13 @@ struct CampoEstructuraDetalleView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(
-            (esSin ? Color(hex: "#ea580c") ?? .orange : Color(hex: "#d97706") ?? .yellow).opacity(0.12),
+            (esSin ? Color(hex: "#ea580c") : Color(hex: "#d97706")).opacity(0.12),
             in: RoundedRectangle(cornerRadius: 12)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(
-                    (esSin ? Color(hex: "#ea580c") ?? .orange : Color(hex: "#d97706") ?? .yellow).opacity(0.4),
+                    (esSin ? Color(hex: "#ea580c") : Color(hex: "#d97706")).opacity(0.4),
                     lineWidth: 1
                 )
         )
