@@ -81,6 +81,10 @@ private struct EstadoUpdate: Encodable {
     let estado: String
 }
 
+private struct CoroplastEstadoUpdate: Encodable {
+    let coroplast_estado: String?
+}
+
 final class CoroplastService {
     static let shared = CoroplastService()
     private var client: SupabaseClient { SupabaseService.shared.client }
@@ -128,6 +132,7 @@ final class CoroplastService {
                 notas: notas
             ))
             .execute()
+        try await limpiarCoroplastEstado(estructuraId: estructuraId)
     }
 
     func registrarCambio(
@@ -179,7 +184,7 @@ final class CoroplastService {
                 notas: notas
             ))
             .execute()
-
+        try await limpiarCoroplastEstado(estructuraId: estructuraId)
     }
 
     func reportarDano(
@@ -380,6 +385,45 @@ final class CoroplastService {
                 notas: nil
             ))
             .execute()
+    }
+
+    func reportarCoroplast(
+        estructuraId: UUID,
+        userId: UUID,
+        rutaSemanaId: UUID? = nil,
+        tipo: String,
+        fotoUrl: String?,
+        notas: String?
+    ) async throws {
+        let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
+        try await client
+            .from("rondines_estructuras")
+            .insert(RondinEstructuraInsert(
+                rondin_id: rondinId.uuidString,
+                estructura_id: estructuraId.uuidString,
+                accion: "reporte_coroplast",
+                tipo_dano: tipo,
+                tipo_mantenimiento: nil,
+                foto_antes_url: fotoUrl,
+                foto_despues_url: nil,
+                notas: notas
+            ))
+            .execute()
+        try await client
+            .from("estructuras")
+            .update(CoroplastEstadoUpdate(coroplast_estado: tipo))
+            .eq("id", value: estructuraId.uuidString)
+            .execute()
+        EstructurasService.shared.invalidarCacheEstructuras()
+    }
+
+    private func limpiarCoroplastEstado(estructuraId: UUID) async throws {
+        try await client
+            .from("estructuras")
+            .update(CoroplastEstadoUpdate(coroplast_estado: nil))
+            .eq("id", value: estructuraId.uuidString)
+            .execute()
+        EstructurasService.shared.invalidarCacheEstructuras()
     }
 
     private func crearRondin(userId: UUID, rutaSemanaId: UUID? = nil) async throws -> UUID {

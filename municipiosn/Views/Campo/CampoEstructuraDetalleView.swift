@@ -13,6 +13,7 @@ struct CampoEstructuraDetalleView: View {
     @State private var isLandscape = false
     @State private var fotoFullscreen: IdentifiableURL?
     @State private var mostrarRegistrarCoroplast = false
+    @State private var mostrarAvisoCoroplast = false
     @State private var mostrarReportarDano = false
     @State private var mostrarReportarMantenimiento = false
     @State private var mostrarMantenimientoRealizado = false
@@ -72,6 +73,9 @@ struct CampoEstructuraDetalleView: View {
                         userId: userId,
                         rutaSemanaId: rutaSemanaId
                     )
+                }
+                .sheet(isPresented: $mostrarAvisoCoroplast) {
+                    AvisoCoroplastView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
                 }
                 .sheet(isPresented: $mostrarReportarDano) {
                     ReportarDanoView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
@@ -222,6 +226,14 @@ struct CampoEstructuraDetalleView: View {
                 mostrarRegistrarCoroplast = true
             }
 
+            if let coroplastEstado = estructura.coroplastEstado {
+                coroplastBadge(estado: coroplastEstado)
+            } else if estructura.estado != .inactiva && estructura.estado != .destruida {
+                accionBtn(titulo: "Aviso coroplast", icono: "bell.fill", color: Color(hex: "#ea580c") ?? .orange) {
+                    mostrarAvisoCoroplast = true
+                }
+            }
+
             if estructura.estado != .dañada {
                 accionBtn(titulo: "Reportar daño", icono: "exclamationmark.triangle.fill", color: .red) {
                     mostrarReportarDano = true
@@ -250,6 +262,35 @@ struct CampoEstructuraDetalleView: View {
         .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
         .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
+    }
+
+    private func coroplastBadge(estado: String) -> some View {
+        let esSin = estado == "sin_coroplast"
+        return HStack(spacing: 10) {
+            Image(systemName: esSin ? "square.slash.fill" : "exclamationmark.square.fill")
+                .foregroundStyle(esSin ? Color(hex: "#ea580c") ?? .orange : Color(hex: "#d97706") ?? .yellow)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(esSin ? "Sin coroplast" : "Coroplast dañado")
+                    .font(.headline.weight(.bold))
+                Text("Registra un coroplast para cerrar este aviso")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            (esSin ? Color(hex: "#ea580c") ?? .orange : Color(hex: "#d97706") ?? .yellow).opacity(0.12),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    (esSin ? Color(hex: "#ea580c") ?? .orange : Color(hex: "#d97706") ?? .yellow).opacity(0.4),
+                    lineWidth: 1
+                )
+        )
     }
 
     private func accionBtn(titulo: String, icono: String, color: Color, disabled: Bool = false, action: @escaping () -> Void) -> some View {

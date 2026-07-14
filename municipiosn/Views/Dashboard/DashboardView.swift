@@ -226,6 +226,11 @@ struct DashboardView: View {
                     navegarEstructuras = true
                 }
             )
+        case .avisoCoroplast:
+            AvisoCoroplastCard(
+                sinCoroplast: vm.kpi.sinCoroplast,
+                coroplastRoto: vm.kpi.coroplastRoto
+            )
         case .cobertura:
             CoberturaRingCard(kpi: vm.kpi)
         case .semana:
@@ -965,5 +970,73 @@ private struct AlertaEstructurasCard: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture { if valor > 0 { accion() } }
+    }
+}
+
+// MARK: - Aviso Coroplast Card
+
+private struct AvisoCoroplastCard: View {
+    let sinCoroplast: Int
+    let coroplastRoto: Int
+
+    var total: Int { sinCoroplast + coroplastRoto }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Avisos coroplast")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Spacer()
+                if total > 0 {
+                    Text("\(total) pendientes")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider().padding(.horizontal, 20)
+
+            HStack(spacing: 0) {
+                columna(
+                    valor: sinCoroplast,
+                    label: "Sin coroplast",
+                    icono: "square.slash.fill",
+                    color: Color(hex: "#ea580c") ?? .orange
+                )
+                Rectangle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 1, height: 72)
+                columna(
+                    valor: coroplastRoto,
+                    label: "Dañado",
+                    icono: "exclamationmark.square.fill",
+                    color: Color(hex: "#d97706") ?? .yellow
+                )
+            }
+            .padding(.vertical, 20)
+        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private func columna(valor: Int, label: String, icono: String, color: Color) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icono)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(valor > 0 ? color : Color("TextMuted").opacity(0.4))
+            Text("\(valor)")
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundStyle(valor > 0 ? Color("Navy") : Color("TextMuted").opacity(0.4))
+                .contentTransition(.numericText())
+                .monospacedDigit()
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color("TextMuted"))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
     }
 }

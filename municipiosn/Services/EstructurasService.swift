@@ -13,6 +13,7 @@ struct EstructuraConParque: Codable, Identifiable, Hashable {
     let notas: String?
     let fechaInstalacion: Date?
     let parques: ParqueConColonia?
+    let coroplastEstado: String?   // "sin_coroplast" | "coroplast_roto" | nil
 
     enum CodingKeys: String, CodingKey {
         case id, numero, estado, lat, lng, notas
@@ -21,6 +22,7 @@ struct EstructuraConParque: Codable, Identifiable, Hashable {
         case fotoUrl = "foto_url"
         case fechaInstalacion = "fecha_instalacion"
         case parques
+        case coroplastEstado = "coroplast_estado"
     }
 
     init(from decoder: Decoder) throws {
@@ -34,6 +36,7 @@ struct EstructuraConParque: Codable, Identifiable, Hashable {
         notas            = try c.decodeIfPresent(String.self, forKey: .notas)
         fechaInstalacion = try c.decodeIfPresent(Date.self, forKey: .fechaInstalacion)
         parques          = try c.decodeIfPresent(ParqueConColonia.self, forKey: .parques)
+        coroplastEstado  = try c.decodeIfPresent(String.self, forKey: .coroplastEstado)
         lat = (try? c.decodeIfPresent(Double.self, forKey: .lat))
             ?? (try? c.decodeIfPresent(String.self, forKey: .lat)).flatMap(Double.init)
         lng = (try? c.decodeIfPresent(Double.self, forKey: .lng))
@@ -249,6 +252,8 @@ final class EstructurasService {
         kpi.enReparacion = e.filter { $0.estado == .en_reparacion }.count
         kpi.inactivas = e.filter { $0.estado == .inactiva }.count
         kpi.necesitaMantenimiento = e.filter { $0.estado == .necesita_mantenimiento }.count
+        kpi.sinCoroplast  = e.filter { $0.coroplastEstado == "sin_coroplast" }.count
+        kpi.coroplastRoto = e.filter { $0.coroplastEstado == "coroplast_roto" }.count
         kpi.campanasActivas = c.count
         kpi.coroplastMes = cm
         kpi.visitasSemana = visitas

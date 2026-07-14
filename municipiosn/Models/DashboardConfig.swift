@@ -2,6 +2,7 @@ import Foundation
 
 enum DashboardCardID: String, Codable, CaseIterable {
     case alertaEstructuras = "alerta_estructuras"
+    case avisoCoroplast    = "aviso_coroplast"
     case cobertura        = "cobertura"
     case semana           = "semana"
     case resumenMunicipal = "resumen_municipal"
@@ -18,6 +19,7 @@ enum DashboardCardID: String, Codable, CaseIterable {
     var titulo: String {
         switch self {
         case .alertaEstructuras:  "Estructuras con alertas"
+        case .avisoCoroplast:     "Avisos coroplast"
         case .cobertura:          "Cobertura mensual"
         case .semana:             "Esta semana"
         case .resumenMunicipal:   "Datos del municipio"
@@ -36,6 +38,7 @@ enum DashboardCardID: String, Codable, CaseIterable {
     var icono: String {
         switch self {
         case .alertaEstructuras:    "exclamationmark.triangle.fill"
+        case .avisoCoroplast:       "bell.fill"
         case .cobertura:            "chart.pie.fill"
         case .semana:               "calendar.badge.clock"
         case .resumenMunicipal:     "building.2.fill"

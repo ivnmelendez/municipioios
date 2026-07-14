@@ -314,17 +314,6 @@ struct MapaView: View {
                     .buttonBorderShape(.circle)
                 }
                 Button {
-                    let newValue = !mostrarColonias
-                    mostrarColonias = newValue
-                    mapController.updateColoniasVisibility(
-                        mostrar: newValue,
-                        tieneEstructuras: coloniasConEstructuras
-                    )
-                } label: {
-                    Image(systemName: mostrarColonias ? "map.fill" : "map")
-                        .foregroundStyle(mostrarColonias ? Color("Navy") : .secondary)
-                }
-                Button {
                     mostrarRutas.toggle()
                     rutasVersion += 1
                 } label: {
@@ -765,16 +754,20 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         func markerImage(for annotation: EstructuraMKAnnotation) -> UIImage {
             let visitada = visitadasHoy.contains(annotation.estructura.id)
             let rutaColor = mostrarRutas ? (estructuraSemanaMap[annotation.estructura.id]?.color ?? "") : ""
-            let key = "\(annotation.estado.rawValue)_\(visitada)_\(rutaColor)"
+            let coroplastFlag = annotation.estructura.coroplastEstado ?? ""
+            let key = "\(annotation.estado.rawValue)_\(visitada)_\(rutaColor)_\(coroplastFlag)"
             if let cached = markerCache[key] { return cached }
-            let image = Self.renderMarker(color: markerColor(for: annotation), visitada: visitada)
+            let hasCoroplastIssue = annotation.estructura.coroplastEstado != nil && !visitada
+            let image = Self.renderMarker(color: markerColor(for: annotation), visitada: visitada, hasCoroplastIssue: hasCoroplastIssue)
             markerCache[key] = image
             return image
         }
 
-        private static func renderMarker(color: UIColor, visitada: Bool) -> UIImage {
+        private static func renderMarker(color: UIColor, visitada: Bool, hasCoroplastIssue: Bool = false) -> UIImage {
             let size: CGFloat = visitada ? 14 : 20
-            let canvas = CGSize(width: size + 3, height: size + 3)
+            let dotSize: CGFloat = 8
+            let extra: CGFloat = hasCoroplastIssue ? dotSize * 0.6 : 0
+            let canvas = CGSize(width: size + 3 + extra, height: size + 3 + extra)
             return UIGraphicsImageRenderer(size: canvas).image { ctx in
                 let rect = CGRect(x: 1.5, y: 1.5, width: size, height: size)
                 ctx.cgContext.setShadow(
@@ -788,6 +781,17 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                 ctx.cgContext.setLineWidth(visitada ? 1.5 : 2.5)
                 ctx.cgContext.strokeEllipse(in: rect.insetBy(dx: visitada ? 0.75 : 1.25,
                                                               dy: visitada ? 0.75 : 1.25))
+                if hasCoroplastIssue {
+                    let dotRect = CGRect(
+                        x: rect.maxX - dotSize * 0.55,
+                        y: rect.maxY - dotSize * 0.55,
+                        width: dotSize, height: dotSize
+                    )
+                    UIColor.white.setFill()
+                    ctx.cgContext.fillEllipse(in: dotRect.insetBy(dx: -1.5, dy: -1.5))
+                    UIColor.systemOrange.setFill()
+                    ctx.cgContext.fillEllipse(in: dotRect)
+                }
             }
         }
 

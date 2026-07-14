@@ -15,5 +15,7 @@ struct KPIData: Codable {
     var visitasMes: Int = 0
     var danosMes: Int = 0
 
+    var sinCoroplast: Int = 0
+    var coroplastRoto: Int = 0
     var isLoaded: Bool = false
 }
