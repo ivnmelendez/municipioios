@@ -10,6 +10,7 @@ struct CampoEstructuraDetalleView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var isLandscape = false
     @State private var fotoFullscreen: IdentifiableURL?
     @State private var mostrarRegistrarCoroplast = false
     @State private var mostrarReportarDano = false
@@ -23,79 +24,126 @@ struct CampoEstructuraDetalleView: View {
             Color(.systemGray6).ignoresSafeArea()
 
             NavigationStack {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        heroImage
-                        contentSection
-                    }
-                    .frame(maxWidth: sizeClass == .regular ? 700 : .infinity)
-                    .frame(maxWidth: .infinity)
-                }
-                .ignoresSafeArea(edges: .top)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Color.clear)
-                .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button { dismiss() } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "chevron.left").fontWeight(.semibold)
-                            Text(estructura.numero).fontWeight(.semibold)
-                        }
-                    }
-                    .foregroundStyle(Color("Navy"))
-                }
-                if let lat = estructura.lat, let lng = estructura.lng {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
-                            Image("google_logo")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 18, height: 18)
-                        }
+                Group {
+                    if sizeClass == .regular && isLandscape {
+                        iPadLandscapeLayout
+                    } else if sizeClass == .regular {
+                        iPadPortraitLayout
+                    } else {
+                        iPhoneLayout
                     }
                 }
-            }
-            .sheet(isPresented: $mostrarRegistrarCoroplast) {
-                RegistrarCoroplastView(
-                    estructura: estructura,
-                    campanas: campanas,
-                    userId: userId,
-                    rutaSemanaId: rutaSemanaId
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { isLandscape = geo.size.width > geo.size.height }
+                            .onChange(of: geo.size) { _, size in isLandscape = size.width > size.height }
+                    }
                 )
+                .navigationTitle("")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarBackButtonHidden(true)
+                .toolbarBackground(.hidden, for: .navigationBar)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button { dismiss() } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "chevron.left").fontWeight(.semibold)
+                                Text(estructura.numero).fontWeight(.semibold)
+                            }
+                        }
+                        .foregroundStyle(Color("Navy"))
+                    }
+                    if let lat = estructura.lat, let lng = estructura.lng {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button { abrirGoogleMaps(lat: lat, lng: lng) } label: {
+                                Image("google_logo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 18, height: 18)
+                            }
+                        }
+                    }
+                }
+                .sheet(isPresented: $mostrarRegistrarCoroplast) {
+                    RegistrarCoroplastView(
+                        estructura: estructura,
+                        campanas: campanas,
+                        userId: userId,
+                        rutaSemanaId: rutaSemanaId
+                    )
+                }
+                .sheet(isPresented: $mostrarReportarDano) {
+                    ReportarDanoView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
+                }
+                .sheet(isPresented: $mostrarReportarMantenimiento) {
+                    ReportarMantenimientoView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
+                }
+                .sheet(isPresented: $mostrarMantenimientoRealizado) {
+                    MantenimientoRealizadoView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
+                }
+                .sheet(isPresented: $mostrarReparacionRealizada) {
+                    ReparacionRealizadaView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
+                }
+                .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
+                    FotoFullscreenView(url: item.url, titulo: item.titulo)
+                }
             }
-            .sheet(isPresented: $mostrarReportarDano) {
-                ReportarDanoView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
-            }
-            .sheet(isPresented: $mostrarReportarMantenimiento) {
-                ReportarMantenimientoView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
-            }
-            .sheet(isPresented: $mostrarMantenimientoRealizado) {
-                MantenimientoRealizadoView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
-            }
-            .sheet(isPresented: $mostrarReparacionRealizada) {
-                ReparacionRealizadaView(estructura: estructura, userId: userId, rutaSemanaId: rutaSemanaId)
-            }
-            .fullScreenCover(item: $fotoFullscreen) { (item: IdentifiableURL) in
-                FotoFullscreenView(url: item.url, titulo: item.titulo)
+            .background(Color.clear)
+        } // ZStack
+    }
+
+    // MARK: - Layouts
+
+    private var iPhoneLayout: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                heroImage(height: 500)
+                contentSection
             }
         }
-        .background(Color.clear)
-        } // ZStack
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
+    }
+
+    private var iPadPortraitLayout: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                heroImage(height: 700)
+                contentSection
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
+    }
+
+    private var iPadLandscapeLayout: some View {
+        GeometryReader { geo in
+            HStack(spacing: 0) {
+                heroImage(height: nil)
+                    .frame(width: geo.size.width * 0.45)
+                    .frame(maxHeight: .infinity)
+                    .clipped()
+                    .ignoresSafeArea(edges: .vertical)
+
+                ScrollView {
+                    contentSection
+                        .padding(.top, 12)
+                }
+                .frame(width: geo.size.width * 0.55)
+            }
+        }
+        .ignoresSafeArea(edges: .bottom)
     }
 
     // MARK: - Hero image
 
     @ViewBuilder
-    private var heroImage: some View {
+    private func heroImage(height: CGFloat?) -> some View {
         if let fotoUrl = estructura.fotoUrl, let url = URL(string: fotoUrl) {
-            let h: CGFloat = sizeClass == .regular ? 420 : 500
             ZStack {
                 Color(.systemGray5)
-                    .frame(maxWidth: .infinity, maxHeight: h)
+                    .frame(maxWidth: .infinity, maxHeight: height ?? .infinity)
                 CachedAsyncImage(url: url) { phase in
                     if case .success(let image) = phase {
                         Button {
@@ -103,7 +151,7 @@ struct CampoEstructuraDetalleView: View {
                         } label: {
                             image.resizable()
                                 .scaledToFill()
-                                .frame(maxWidth: .infinity, maxHeight: h)
+                                .frame(maxWidth: .infinity, maxHeight: height ?? .infinity)
                                 .clipped()
                                 .contentShape(Rectangle())
                         }
@@ -116,7 +164,7 @@ struct CampoEstructuraDetalleView: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height ?? .infinity)
         }
     }
 

@@ -15,5 +15,9 @@
 	<string>Estructuras</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Estructuras necesita acceso para guardar imágenes en tu galería.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+	</array>
 </dict>
 </plist>

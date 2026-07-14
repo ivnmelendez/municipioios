@@ -1,6 +1,14 @@
 import Foundation
 import SwiftUI
 
+struct RutaInfo: Identifiable {
+    var id: UUID { ruta.id }
+    let ruta: RutaSemana
+    let visitadas: Int
+    let total: Int
+    var progreso: Double { total > 0 ? Double(visitadas) / Double(total) : 0 }
+}
+
 @MainActor
 @Observable
 final class CampoViewModel {
@@ -9,6 +17,9 @@ final class CampoViewModel {
     var isLoading = false
     var errorMessage: String?
     var busqueda: String = ""
+
+    var rutasInfo: [RutaInfo] = []
+    var isLoadingRutas = false
 
     var estructurasFiltradas: [EstructuraConParque] {
         guard !busqueda.isEmpty else { return estructuras }
@@ -21,8 +32,31 @@ final class CampoViewModel {
         }
     }
 
+    func cargarRutas(userId: UUID?) async {
+        isLoadingRutas = true
+        defer { isLoadingRutas = false }
+        do {
+            let semanas = try await RutasService.shared.fetchSemanasRecientes()
+            guard let uid = userId else {
+                rutasInfo = semanas.map { RutaInfo(ruta: $0, visitadas: 0, total: 0) }
+                return
+            }
+            var infos: [RutaInfo] = []
+            for semana in semanas {
+                let items = try await RutasService.shared.fetchEstructurasEnRuta(
+                    rutaSemanaId: semana.id, userId: uid
+                )
+                infos.append(RutaInfo(
+                    ruta: semana,
+                    visitadas: items.filter(\.visitada).count,
+                    total: items.count
+                ))
+            }
+            rutasInfo = infos
+        } catch {}
+    }
+
     func cargar() async {
-        // Serve cached data immediately — UI usable even offline
         if campanas.isEmpty, let cached = LocalDataCache.shared.cargar([CampanaBasica].self, clave: "campanas") {
             campanas = cached
         }

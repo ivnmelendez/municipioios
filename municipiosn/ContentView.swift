@@ -9,6 +9,8 @@ struct ContentView: View {
         if authVM.rol == "campo" {
             CampoRootView(authVM: authVM)
                 .overlay(alignment: .top) { NetworkStatusBanner() }
+        } else if authVM.rol == "oficina" {
+            OficinaRootView(authVM: authVM)
         } else {
             iPhoneLayout
                 .overlay(alignment: .top) { NetworkStatusBanner() }

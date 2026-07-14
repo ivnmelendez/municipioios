@@ -7,6 +7,9 @@ struct CampoRootView: View {
 
     var body: some View {
         TabView(selection: $tabSeleccionada) {
+            Tab("Ruta", systemImage: "figure.walk", value: "ruta") {
+                RutaSeleccionView(vm: vm, userId: authVM.perfilId)
+            }
             Tab("Mapa", systemImage: "map.fill", value: "mapa") {
                 MapaView(
                     mostrarCampanas: false,

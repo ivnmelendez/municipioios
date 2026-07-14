@@ -145,6 +145,16 @@ private final class MapController {
     }
 }
 
+private func uiColorFromHex(_ hex: String) -> UIColor {
+    let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+    var int: UInt64 = 0
+    Scanner(string: hex).scanHexInt64(&int)
+    let r = CGFloat((int >> 16) & 0xFF) / 255
+    let g = CGFloat((int >> 8) & 0xFF) / 255
+    let b = CGFloat(int & 0xFF) / 255
+    return UIColor(red: r, green: g, blue: b, alpha: 1)
+}
+
 // MARK: - MKAnnotation wrapper
 
 private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
@@ -178,7 +188,10 @@ struct MapaView: View {
     @FocusState private var searchFocused: Bool
 
     @State private var estructuraSemanaMap: [UUID: RutaSemana] = [:]
+    @State private var coloniasConSemana: [String: String] = [:]
     @State private var mostrarColonias: Bool = true
+    @State private var mostrarRutas: Bool = false
+    @State private var rutasVersion: Int = 0
     @State private var estructuraNavegada: EstructuraConParque? = nil
     @State private var estructuraParaAccion: EstructuraConParque? = nil
     @State private var estructuraParaDano: EstructuraConParque? = nil
@@ -223,9 +236,13 @@ struct MapaView: View {
                 coloniasPolygons: coloniasPolygons,
                 municipioPolygons: municipioPolygons,
                 coloniasConEstructuras: coloniasConEstructuras,
+                coloniasConSemana: coloniasConSemana,
                 anotaciones: anotacionesFiltradas,
                 visitadasHoy: vm.visitadasHoy,
                 visitadasVersion: visitadasVersion,
+                estructuraSemanaMap: estructuraSemanaMap,
+                mostrarRutas: mostrarRutas,
+                rutasVersion: rutasVersion,
                 mapController: mapController,
                 pinResaltado: pinResaltado,
                 onSelect: { estructura in
@@ -307,6 +324,13 @@ struct MapaView: View {
                     Image(systemName: mostrarColonias ? "map.fill" : "map")
                         .foregroundStyle(mostrarColonias ? Color("Navy") : .secondary)
                 }
+                Button {
+                    mostrarRutas.toggle()
+                    rutasVersion += 1
+                } label: {
+                    Image(systemName: "circle.grid.2x2.fill")
+                        .foregroundStyle(mostrarRutas ? Color("Navy") : .secondary)
+                }
                 .buttonStyle(.glass(.regular))
                 .controlSize(.large)
                 .buttonBorderShape(.circle)
@@ -378,6 +402,11 @@ struct MapaView: View {
                 estructuras: vm.estructuras
             )
             estructuraSemanaMap = (try? await RutasService.shared.fetchEstructuraSemanaMap()) ?? [:]
+            coloniasConSemana = computarColoniasConSemana(
+                polygons: coloniasPolygons,
+                estructuras: vm.estructuras,
+                semanaMap: estructuraSemanaMap
+            )
             withAnimation(.easeOut(duration: 0.6)) {
                 mapaListo = true
             }
@@ -559,9 +588,13 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let coloniasPolygons: [GeoPolygon]
     let municipioPolygons: [GeoPolygon]
     let coloniasConEstructuras: Set<String>
+    let coloniasConSemana: [String: String]
     let anotaciones: [EstructuraAnnotation]
     let visitadasHoy: Set<UUID>
     let visitadasVersion: Int
+    let estructuraSemanaMap: [UUID: RutaSemana]
+    let mostrarRutas: Bool
+    let rutasVersion: Int
     let mapController: MapController
     let pinResaltado: UUID?
     let onSelect: (EstructuraConParque) -> Void
@@ -588,13 +621,18 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         }
 
         context.coordinator.coloniasConEstructuras = coloniasConEstructuras
+        context.coordinator.coloniasConSemana = coloniasConSemana
+        context.coordinator.estructuraSemanaMap = estructuraSemanaMap
+        context.coordinator.mostrarRutas = mostrarRutas
 
         let needsOverlayReload = context.coordinator.loadedPolygonCount != coloniasPolygons.count
             || context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
+            || context.coordinator.loadedSemanaCount != coloniasConSemana.count
 
         if needsOverlayReload {
             context.coordinator.loadedPolygonCount = coloniasPolygons.count
             context.coordinator.loadedHighlightCount = coloniasConEstructuras.count
+            context.coordinator.loadedSemanaCount = coloniasConSemana.count
             mapView.removeOverlays(mapView.overlays)
 
             // Exterior dim using even-odd renderer
@@ -627,9 +665,12 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         let currentIds = Set(mapView.annotations.compactMap { ($0 as? EstructuraMKAnnotation)?.estructura.id })
         let newIds = Set(anotaciones.map { $0.id })
         let visitadasVersionChanged = context.coordinator.loadedVisitadasVersion != visitadasVersion
+        let rutasVersionChanged = context.coordinator.loadedRutasVersion != rutasVersion
 
-        if visitadasVersionChanged {
+        if visitadasVersionChanged || rutasVersionChanged {
             context.coordinator.loadedVisitadasVersion = visitadasVersion
+            context.coordinator.loadedRutasVersion = rutasVersion
+            context.coordinator.markerCache.removeAll()
             for annotation in mapView.annotations {
                 guard let ann = annotation as? EstructuraMKAnnotation,
                       let view = mapView.view(for: annotation) else { continue }
@@ -682,14 +723,19 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         let onSelect: (EstructuraConParque) -> Void
         let onClearPin: () -> Void
         var coloniasConEstructuras: Set<String> = []
+        var coloniasConSemana: [String: String] = [:]
+        var estructuraSemanaMap: [UUID: RutaSemana] = [:]
+        var mostrarRutas: Bool = false
         var visitadasHoy: Set<UUID> = []
         var loadedPolygonCount = 0
         var loadedHighlightCount = 0
+        var loadedSemanaCount = 0
         var loadedVisitadasVersion = -1
+        var loadedRutasVersion = -1
         var initialRegionSet = false
         var overlaysRevealed = false
         var pinResaltadoId: UUID? = nil
-        private var markerCache: [String: UIImage] = [:]
+        var markerCache: [String: UIImage] = [:]
 
         init(onSelect: @escaping (EstructuraConParque) -> Void, onClearPin: @escaping () -> Void) {
             self.onSelect = onSelect
@@ -699,6 +745,12 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         func markerColor(for annotation: EstructuraMKAnnotation) -> UIColor {
             if visitadasHoy.contains(annotation.estructura.id) {
                 return UIColor.systemGray3
+            }
+            if mostrarRutas,
+               annotation.estado != .inactiva,
+               annotation.estado != .destruida,
+               let semana = estructuraSemanaMap[annotation.estructura.id] {
+                return uiColorFromHex(semana.color)
             }
             switch annotation.estado {
             case .dañada:                  return UIColor.systemRed
@@ -712,7 +764,8 @@ private struct MKMapViewWrapper: UIViewRepresentable {
 
         func markerImage(for annotation: EstructuraMKAnnotation) -> UIImage {
             let visitada = visitadasHoy.contains(annotation.estructura.id)
-            let key = "\(annotation.estado.rawValue)_\(visitada)"
+            let rutaColor = mostrarRutas ? (estructuraSemanaMap[annotation.estructura.id]?.color ?? "") : ""
+            let key = "\(annotation.estado.rawValue)_\(visitada)_\(rutaColor)"
             if let cached = markerCache[key] { return cached }
             let image = Self.renderMarker(color: markerColor(for: annotation), visitada: visitada)
             markerCache[key] = image
