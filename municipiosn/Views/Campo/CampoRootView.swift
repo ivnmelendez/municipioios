@@ -24,7 +24,7 @@ struct CampoRootView: View {
                 configTab
             }
         }
-        .tint(Color("Navy"))
+        .tint(Color("Azul"))
         .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { _ in
             tabSeleccionada = "mapa"
         }
@@ -37,7 +37,7 @@ struct CampoRootView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(Color("Navy"))
+                                .fill(Color("Azul"))
                                 .frame(width: 56, height: 56)
                             Text(authVM.initiales)
                                 .font(.title2.bold())

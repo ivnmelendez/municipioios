@@ -123,8 +123,8 @@ struct PagosView: View {
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(width: 56, height: 56)
-                    .background(Color("Navy"), in: Circle())
-                    .shadow(color: Color("Navy").opacity(0.4), radius: 8, x: 0, y: 4)
+                    .background(Color("Azul"), in: Circle())
+                    .shadow(color: Color("Azul").opacity(0.4), radius: 8, x: 0, y: 4)
             }
             .padding(.trailing, 20)
             .padding(.bottom, 24)
@@ -156,7 +156,7 @@ struct PagosView: View {
                     Label(etiquetaPeriodo, systemImage: "calendar")
                         .symbolVariant(.fill)
                 }
-                .tint(Color("Navy"))
+                .tint(Color("Azul"))
             }
         }
         .task { await vm.cargar() }
@@ -353,7 +353,7 @@ private struct NuevoPagoSheet: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            puedeGuardar ? Color("Navy") : Color.secondary.opacity(0.35),
+                            puedeGuardar ? Color("Azul") : Color.secondary.opacity(0.35),
                             in: RoundedRectangle(cornerRadius: 14)
                         )
                     }
@@ -405,7 +405,7 @@ private struct NuevoPagoSheet: View {
             }
             .padding(18)
             .background(
-                seleccionado ? Color("Navy") : Color(.secondarySystemGroupedBackground),
+                seleccionado ? Color("Azul") : Color(.secondarySystemGroupedBackground),
                 in: RoundedRectangle(cornerRadius: 16)
             )
         }
@@ -508,7 +508,7 @@ private struct PagoConfirmadoView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color("Navy"), in: RoundedRectangle(cornerRadius: 14))
+                        .background(Color("Azul"), in: RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)

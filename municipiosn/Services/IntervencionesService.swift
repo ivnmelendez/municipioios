@@ -135,6 +135,34 @@ final class IntervencionesService {
         return rows.count
     }
 
+    func fetchTodasIntervencionesDelPeriodo(filtro: FiltroFecha) async throws -> [IntervencionCompleta] {
+        let acciones = ["cambio_coroplast", "reparacion_coroplast", "reporte_dano",
+                        "reactivacion", "reparacion", "reporte_mantenimiento",
+                        "mantenimiento_realizado", "reporte_coroplast"]
+        return try await fetchIntervenciones(acciones: acciones, filtro: filtro)
+    }
+
+    func fetchIntervencionesDelDia(fecha: Date, estructuraIds: [UUID]) async throws -> [IntervencionCompleta] {
+        guard !estructuraIds.isEmpty else { return [] }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Monterrey")!
+        let start = cal.startOfDay(for: fecha)
+        let end = cal.date(byAdding: .day, value: 1, to: start)!
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime]
+        let all: [IntervencionCompleta] = try await client
+            .from("rondines_estructuras")
+            .select(selectFields)
+            .in("estructura_id", values: estructuraIds.map { $0.uuidString })
+            .gte("created_at", value: fmt.string(from: start))
+            .lt("created_at", value: fmt.string(from: end))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        let excluidas: Set<String> = ["revision", "cambio_campana", "instalacion"]
+        return all.filter { !excluidas.contains($0.accion.rawValue) }
+    }
+
     func fetchHistorial(estructuraId: UUID) async throws -> [IntervencionCompleta] {
         let accionesExcluidas = ["revision", "cambio_campana", "instalacion"]
         let all: [IntervencionCompleta] = try await client

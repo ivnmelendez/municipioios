@@ -2,7 +2,6 @@ import SwiftUI
 
 struct CampoAdminView: View {
     @Binding var badge: Int
-    @State private var seccion: Seccion = .visitas
     @State private var resumen = CampoAdminViewModel()
     @State private var reporteTexto: String? = nil
     @State private var generandoReporte = false
@@ -10,68 +9,13 @@ struct CampoAdminView: View {
     @State private var mostrarPickerMes = false
     @State private var fechaPickerMes = Date()
 
-    enum Seccion: String, CaseIterable {
-        case visitas   = "Visitas"
-        case coroplast = "Coroplast"
-
-        var icono: String {
-            switch self {
-            case .visitas:   "checkmark.circle.fill"
-            case .coroplast: "arrow.2.squarepath"
-            }
-        }
-    }
-
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-
-                // MARK: Pagos card
-                NavigationLink(destination: PagosView()) {
-                    HStack(spacing: 16) {
-                        Image(systemName: "banknote.fill")
-                            .font(.title2)
-                            .foregroundStyle(Color("Navy"))
-                            .frame(width: 44)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Pagos de mano de obra")
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            Text("Historial y registro de pagos")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(18)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
-
-                // MARK: Tab chips
-                tabChips
-                    .padding(.bottom, 12)
-
-                // MARK: Contenido
-                ZStack {
-                    HistorialCampoView(periodo: periodo)
-                        .opacity(seccion == .visitas   ? 1 : 0)
-                        .allowsHitTesting(seccion == .visitas)
-                    IntervencionesView(periodo: periodo)
-                        .opacity(seccion == .coroplast ? 1 : 0)
-                        .allowsHitTesting(seccion == .coroplast)
-                }
-                .animation(.easeInOut(duration: 0.2), value: seccion)
-            }
+            HistorialCampoView(periodo: periodo)
             .background(Color("Background"))
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -90,7 +34,7 @@ struct CampoAdminView: View {
                                 { if case .mesElegido = periodo { return true }; return false }()
                                 ? .fill : .none
                             )
-                            .foregroundStyle(Color("Navy"))
+                            .foregroundStyle(Color("Azul"))
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -116,7 +60,7 @@ struct CampoAdminView: View {
                     displayedComponents: .date
                 )
                 .datePickerStyle(.graphical)
-                .tint(Color("Navy"))
+                .tint(Color("Azul"))
                 .padding(.horizontal)
                 .navigationTitle("Elegir mes")
                 .navigationBarTitleDisplayMode(.inline)
@@ -146,42 +90,7 @@ struct CampoAdminView: View {
                 .presentationDetents([.height(140)])
             }
         }
-        .onChange(of: seccion) { _, _ in HapticService.seleccion() }
-        .onReceive(NotificationCenter.default.publisher(for: .mostrarSeccionVisitas)) { _ in
-            seccion = .visitas
-        }
         .task { await resumen.cargar() }
-    }
-
-    // MARK: - Tab chips
-
-    private var tabChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Seccion.allCases, id: \.self) { s in
-                    Button {
-                        withAnimation(.spring(duration: 0.3, bounce: 0.2)) { seccion = s }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: s.icono)
-                                .font(.subheadline.weight(.medium))
-                            Text(s.rawValue)
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .foregroundStyle(seccion == s ? .white : Color("Navy"))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 9)
-                        .background(
-                            seccion == s ? Color("Navy") : Color("Navy").opacity(0.08),
-                            in: Capsule()
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     private var periodoLabel: String {

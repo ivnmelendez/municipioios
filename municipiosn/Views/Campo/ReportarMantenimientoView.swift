@@ -56,7 +56,7 @@ struct ReportarMantenimientoView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                        isLoading || fotoUI == nil ? Color.secondary.opacity(0.35) : Color("Navy"),
+                        isLoading || fotoUI == nil ? Color.secondary.opacity(0.35) : Color("Azul"),
                         in: RoundedRectangle(cornerRadius: 14)
                     )
                     }

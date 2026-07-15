@@ -8,11 +8,13 @@ final class EstructurasListViewModel {
     var filtradas: [EstructuraConParque] = []
     var busqueda = ""
     var filtroEstado: EstadoEstructura?
+    var filtroCoroplast: String?
     var isLoading = false
     var errorMessage: String?
 
-    init(filtroInicial: EstadoEstructura? = nil) {
+    init(filtroInicial: EstadoEstructura? = nil, filtroCoroplast: String? = nil) {
         self.filtroEstado = filtroInicial
+        self.filtroCoroplast = filtroCoroplast
     }
 
     func cargar() async {
@@ -37,6 +39,7 @@ final class EstructurasListViewModel {
     func filtrar() {
         var base = estructuras.sorted { $0.numero.localizedStandardCompare($1.numero) == .orderedAscending }
         if let filtro = filtroEstado { base = base.filter { $0.estado == filtro } }
+        if let filtro = filtroCoroplast { base = base.filter { $0.coroplastEstado == filtro } }
         guard !busqueda.isEmpty else { filtradas = base; return }
         filtradas = base.filter {
             $0.numero.localizedCaseInsensitiveContains(busqueda) ||
@@ -53,13 +56,17 @@ private let estadosFiltro: [EstadoEstructura] = [.activa, .dañada, .necesita_ma
 
 struct EstructurasListView: View {
     var filtroInicial: EstadoEstructura? = nil
+    var filtroCoroplast: String? = nil
     @State private var vm: EstructurasListViewModel
     @FocusState private var searchFocused: Bool
     @State private var showFloatingSearch = false
+    @State private var generandoPDF = false
+    @State private var pdfURL: URL? = nil
 
-    init(filtroInicial: EstadoEstructura? = nil) {
+    init(filtroInicial: EstadoEstructura? = nil, filtroCoroplast: String? = nil) {
         self.filtroInicial = filtroInicial
-        self._vm = State(wrappedValue: EstructurasListViewModel(filtroInicial: filtroInicial))
+        self.filtroCoroplast = filtroCoroplast
+        self._vm = State(wrappedValue: EstructurasListViewModel(filtroInicial: filtroInicial, filtroCoroplast: filtroCoroplast))
     }
 
     var body: some View {
@@ -74,7 +81,7 @@ struct EstructurasListView: View {
                     .id("searchBar")
                     .onChange(of: vm.busqueda) { vm.filtrar() }
 
-                    if filtroInicial == nil {
+                    if filtroInicial == nil && filtroCoroplast == nil {
                         FiltroChips(
                             filtroActivo: vm.filtroEstado,
                             onSelect: { estado in
@@ -101,7 +108,7 @@ struct EstructurasListView: View {
                     ListaEstructuras(filtradas: vm.filtradas, isLoading: vm.isLoading,
                                      busqueda: vm.busqueda, filtroEstado: vm.filtroEstado)
                 }
-                .padding(.top, filtroInicial == nil ? 12 : 4)
+                .padding(.top, 4)
                 .padding(.bottom, 32)
             }
             .background(Color("Background"))
@@ -124,12 +131,188 @@ struct EstructurasListView: View {
             }
         }
         .navigationTitle(tituloNavegacion)
-        .navigationBarTitleDisplayMode(filtroInicial == nil ? .large : .inline)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task { await vm.cargar() }
         .refreshable { await vm.cargar() }
+        .toolbar {
+            if filtroInicial == nil && filtroCoroplast == nil {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        Task { await generarPDF() }
+                    } label: {
+                        if generandoPDF {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "doc.text")
+                        }
+                    }
+                    .disabled(generandoPDF || vm.estructuras.isEmpty)
+                }
+            }
+        }
+        .sheet(item: Binding(
+            get: { pdfURL.map { IdentifiablePDFURL(url: $0) } },
+            set: { if $0 == nil { pdfURL = nil } }
+        )) { item in
+            ShareLink(
+                item: item.url,
+                preview: SharePreview("Estructuras municipio.pdf", image: Image(systemName: "doc.text.fill"))
+            )
+            .presentationDetents([.height(160)])
+        }
     }
 
     private var tituloNavegacion: String { "" }
+
+    private func generarPDF() async {
+        generandoPDF = true
+        defer { generandoPDF = false }
+
+        let estructuras = vm.estructuras.sorted {
+            let p0 = $0.parques?.nombre ?? "ZZZ"
+            let p1 = $1.parques?.nombre ?? "ZZZ"
+            if p0 != p1 { return p0 < p1 }
+            return $0.numero.localizedStandardCompare($1.numero) == .orderedAscending
+        }
+
+        let porParque: [(parque: String, colonia: String?, items: [EstructuraConParque])] = {
+            var orden: [String] = []
+            var grupos: [String: (colonia: String?, items: [EstructuraConParque])] = [:]
+            for e in estructuras {
+                let key = e.parques?.nombre ?? "Sin parque"
+                if grupos[key] == nil {
+                    orden.append(key)
+                    grupos[key] = (e.parques?.colonias?.nombre, [])
+                }
+                grupos[key]!.items.append(e)
+            }
+            return orden.map { k in (k, grupos[k]!.colonia, grupos[k]!.items) }
+        }()
+
+        let pageW: CGFloat = 612
+        let pageH: CGFloat = 792
+        let margin: CGFloat = 50
+        let lineH: CGFloat = 20
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageW, height: pageH))
+
+        let data = renderer.pdfData { ctx in
+            var y: CGFloat = margin
+            var pageNumber = 1
+            let pageNumAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 9),
+                .foregroundColor: UIColor.systemGray2
+            ]
+
+            func drawPageNumber() {
+                let label = "Página \(pageNumber)"
+                let size = label.size(withAttributes: pageNumAttrs)
+                label.draw(at: CGPoint(x: (pageW - size.width) / 2, y: pageH - margin / 2), withAttributes: pageNumAttrs)
+            }
+
+            func nuevaPagina() {
+                if pageNumber > 0 { drawPageNumber() }
+                ctx.beginPage()
+                pageNumber += 1
+                y = margin
+            }
+
+            func espacio(_ h: CGFloat) -> Bool {
+                y + h > pageH - margin
+            }
+
+            ctx.beginPage()
+            y = margin
+
+            // Encabezado
+            let titulo = "Municipio de San Nicolás de los Garza"
+            let subtitulo = "Listado de estructuras por parque"
+            let fecha: String = {
+                let f = DateFormatter()
+                f.locale = Locale(identifier: "es_MX")
+                f.dateFormat = "d 'de' MMMM 'de' yyyy"
+                return f.string(from: Date())
+            }()
+
+            titulo.draw(at: CGPoint(x: margin, y: y), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 16, weight: .bold),
+                .foregroundColor: UIColor.black
+            ])
+            y += 22
+            subtitulo.draw(at: CGPoint(x: margin, y: y), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+                .foregroundColor: UIColor.systemGray
+            ])
+            y += 16
+            fecha.draw(at: CGPoint(x: margin, y: y), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 10),
+                .foregroundColor: UIColor.systemGray2
+            ])
+            y += 24
+
+            // Línea separadora
+            let linePath = UIBezierPath()
+            linePath.move(to: CGPoint(x: margin, y: y))
+            linePath.addLine(to: CGPoint(x: pageW - margin, y: y))
+            UIColor.systemGray4.setStroke()
+            linePath.lineWidth = 0.5
+            linePath.stroke()
+            y += 16
+
+            // Resumen
+            "\(estructuras.count) estructuras · \(porParque.count) parques".draw(
+                at: CGPoint(x: margin, y: y),
+                withAttributes: [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.systemGray]
+            )
+            y += 24
+
+            for grupo in porParque {
+                if espacio(lineH * 3) { nuevaPagina() }
+
+                // Nombre del parque + total
+                let parqueLabel = "\(grupo.parque): \(grupo.items.count) estructura\(grupo.items.count == 1 ? "" : "s")"
+                parqueLabel.draw(at: CGPoint(x: margin, y: y), withAttributes: [
+                    .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
+                    .foregroundColor: UIColor.black
+                ])
+                y += 16
+
+                if let colonia = grupo.colonia {
+                    colonia.draw(at: CGPoint(x: margin, y: y), withAttributes: [
+                        .font: UIFont.systemFont(ofSize: 9),
+                        .foregroundColor: UIColor.systemGray
+                    ])
+                    y += 14
+                }
+
+                // Números en columnas (4 por fila)
+                let colWidth = (pageW - margin * 2) / 4
+                var col = 0
+                for e in grupo.items {
+                    let x = margin + CGFloat(col) * colWidth
+                    if col == 0 && espacio(lineH) { nuevaPagina(); col = 0 }
+                    e.numero.draw(at: CGPoint(x: x, y: y), withAttributes: [
+                        .font: UIFont.monospacedSystemFont(ofSize: 10, weight: .regular),
+                        .foregroundColor: UIColor.darkGray
+                    ])
+                    col += 1
+                    if col == 4 { col = 0; y += lineH }
+                }
+                if col > 0 { y += lineH }
+                y += 12
+            }
+            drawPageNumber()
+        }
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("estructuras_municipio.pdf")
+        try? data.write(to: url)
+        pdfURL = url
+    }
+}
+
+private struct IdentifiablePDFURL: Identifiable {
+    let id = UUID()
+    let url: URL
 }
 
 // MARK: - Buscador
@@ -193,7 +376,7 @@ private struct FiltroChips: View {
                 .foregroundStyle(isActive ? Color("Background") : Color("Navy"))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(isActive ? Color("Navy") : Color("Navy").opacity(0.08), in: Capsule())
+                .background(isActive ? Color("Azul") : Color("Navy").opacity(0.08), in: Capsule())
                 .scaleEffect(isActive ? 1.04 : 1.0)
                 .animation(.spring(duration: 0.3, bounce: 0.4), value: isActive)
         }
@@ -662,6 +845,12 @@ private struct HistorialRow: View {
         case .reparacion:              return ("hammer.fill",                  "Reparación",                Color("Navy"))
         case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#d97706"))
         case .mantenimiento_realizado: return ("checkmark.seal.fill",          "Mantenimiento realizado",   Color(hex: "#16a34a"))
+        case .reporte_coroplast:
+            switch item.tipoDano {
+            case .sin_coroplast:  return ("square.slash",              "Sin coroplast",       Color(hex: "#d97706"))
+            case .coroplast_roto: return ("exclamationmark.square.fill","Coroplast dañado",   Color(hex: "#d97706"))
+            default:              return ("exclamationmark.square.fill","Aviso coroplast",    Color(hex: "#d97706"))
+            }
         }
     }
 
@@ -738,12 +927,19 @@ private struct EventoDetalleView: View {
         case .reparacion:              return ("hammer.fill",                  "Reparación",                Color("Navy"))
         case .reporte_mantenimiento:   return ("wrench.fill",                  "Mantenimiento reportado",   Color(hex: "#d97706"))
         case .mantenimiento_realizado: return ("checkmark.seal.fill",          "Mantenimiento realizado",   Color(hex: "#16a34a"))
+        case .reporte_coroplast:
+            switch evento.tipoDano {
+            case .sin_coroplast:  return ("square.slash",              "Sin coroplast",       Color(hex: "#d97706"))
+            case .coroplast_roto: return ("exclamationmark.square.fill","Coroplast dañado",   Color(hex: "#d97706"))
+            default:              return ("exclamationmark.square.fill","Aviso coroplast",    Color(hex: "#d97706"))
+            }
         }
     }
 
     private var fotos: [(url: URL, label: String)] {
         var result: [(URL, String)] = []
-        if let s = evento.fotoAntesUrl,   let u = URL(string: s) { result.append((u, "Antes")) }
+        let esCoroplast = evento.accion == .reporte_coroplast
+        if let s = evento.fotoAntesUrl,   let u = URL(string: s) { result.append((u, esCoroplast ? "" : "Antes")) }
         if let s = evento.fotoDespuesUrl, let u = URL(string: s) { result.append((u, "Después")) }
         return result
     }
@@ -828,13 +1024,15 @@ private struct EventoDetalleView: View {
                         VStack {
                             Spacer()
                             HStack {
-                                Text(foto.label)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(.black.opacity(0.45), in: Capsule())
-                                    .padding(14)
+                                if !foto.label.isEmpty {
+                                    Text(foto.label)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(.black.opacity(0.45), in: Capsule())
+                                        .padding(14)
+                                }
                                 Spacer()
                                 // Expandir
                                 Button {

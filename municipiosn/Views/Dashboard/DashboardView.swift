@@ -11,6 +11,11 @@ struct DashboardView: View {
     @State private var fotoPerfil: Image? = nil
     @State private var filtroNavegacion: EstadoEstructura? = nil
     @State private var navegarEstructuras = false
+    @State private var filtroCoroplast: String? = nil
+    @State private var navegarCoroplast = false
+    @State private var navegarResumenPeriodo = false
+    @State private var navegarCampanas = false
+    @AppStorage("semanaCard_periodo") private var semanaCardEsMes = true
 
     private static let monterrey = TimeZone(identifier: "America/Monterrey")!
 
@@ -144,6 +149,15 @@ struct DashboardView: View {
         .navigationDestination(isPresented: $navegarEstructuras) {
             EstructurasListView(filtroInicial: filtroNavegacion)
         }
+        .navigationDestination(isPresented: $navegarCoroplast) {
+            EstructurasListView(filtroCoroplast: filtroCoroplast)
+        }
+        .navigationDestination(isPresented: $navegarResumenPeriodo) {
+            ResumenPeriodoView(esMes: !semanaCardEsMes)
+        }
+        .navigationDestination(isPresented: $navegarCampanas) {
+            CampanasListaCompleta(datos: vm.usoCampanas)
+        }
         }
     }
 
@@ -229,16 +243,41 @@ struct DashboardView: View {
         case .avisoCoroplast:
             AvisoCoroplastCard(
                 sinCoroplast: vm.kpi.sinCoroplast,
-                coroplastRoto: vm.kpi.coroplastRoto
+                coroplastRoto: vm.kpi.coroplastRoto,
+                onSinCoroplast: {
+                    HapticService.impacto(.medium)
+                    filtroCoroplast = "sin_coroplast"
+                    navegarCoroplast = true
+                },
+                onCoroplastRoto: {
+                    HapticService.impacto(.medium)
+                    filtroCoroplast = "coroplast_roto"
+                    navegarCoroplast = true
+                }
             )
         case .cobertura:
             CoberturaRingCard(kpi: vm.kpi)
         case .semana:
-            SemanaCard(kpi: vm.kpi)
+            SemanaCard(kpi: vm.kpi, onTap: {
+                HapticService.impacto(.medium)
+                navegarResumenPeriodo = true
+            })
         case .resumenMunicipal:
             ResumenMunicipalCard(kpi: vm.kpi, coloniasConEstructuras: vm.coloniasConEstructuras)
+        case .campanasCard:
+            CampañasCard(
+                total: vm.kpi.campanasActivas,
+                top: Array(vm.usoCampanas.prefix(3)),
+                onTap: {
+                    HapticService.impacto(.medium)
+                    navegarCampanas = true
+                }
+            )
         case .campanasChart:
-            CampanasChartCard(datos: vm.usoCampanas)
+            CampanasChartCard(datos: vm.usoCampanas, onVerTodas: {
+                HapticService.impacto(.medium)
+                navegarCampanas = true
+            })
         case .coloniasChart:
             if !vm.usoColonias.isEmpty {
                 ColoniasChartCard(datos: vm.usoColonias)
@@ -257,22 +296,6 @@ struct DashboardView: View {
         case .alcanceColonias:
             if !vm.alcancePorColonia.isEmpty {
                 AlcanceColoniasCard(colonias: vm.alcancePorColonia)
-            }
-        case .piramideEdad:
-            if vm.alcanceTotal > 0 {
-                PiramideEdadCard(dem: vm.demografia)
-            }
-        case .sinInternet:
-            if vm.alcanceTotal > 0 {
-                ConectividadCard(dem: vm.demografia)
-            }
-        case .segmentosPorColonia:
-            if !vm.alcancePorColonia.isEmpty {
-                SegmentosColoniaCard(colonias: vm.alcancePorColonia)
-            }
-        case .seguroMedico:
-            if vm.alcanceTotal > 0 {
-                SeguroMedicoCard(dem: vm.demografia)
             }
         }
     }
@@ -306,7 +329,7 @@ struct EditorDashboardSheet: View {
                                 set: { _ in vm.toggleCard(card.id) }
                             ))
                             .labelsHidden()
-                            .tint(Color("Navy"))
+                            .tint(Color("Azul"))
                         }
                         .padding(.vertical, 2)
                     }
@@ -323,7 +346,7 @@ struct EditorDashboardSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Listo") { dismiss() }
                         .fontWeight(.semibold)
-                        .tint(Color("Navy"))
+                        .tint(Color("Azul"))
                 }
             }
             .environment(\.editMode, .constant(.active))
@@ -345,57 +368,63 @@ private struct AlcanceTotalCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Alcance estimado")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color("TextMuted"))
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(total.formatted())
-                            .font(.system(size: 42, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color("Navy"))
-                            .contentTransition(.numericText())
-                        Text("habitantes")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color("TextMuted"))
-                            .padding(.bottom, 4)
-                    }
-                }
+            // Header
+            HStack {
+                Text("Alcance estimado")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 4) {
                     Image(systemName: "person.3.fill")
-                        .font(.title2)
-                        .foregroundStyle(Color("Navy").opacity(0.7))
+                        .font(.caption.weight(.semibold))
                     Text("INEGI 2020")
                         .font(.caption2.weight(.medium))
-                        .foregroundStyle(Color("TextMuted").opacity(0.5))
                 }
+                .foregroundStyle(Color("TextMuted").opacity(0.5))
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
+            .padding(.bottom, 12)
+
+            // Número grande — ocupa su propia línea, escala si es necesario
+            HStack(alignment: .lastTextBaseline, spacing: 8) {
+                Text(total.formatted())
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("Navy"))
+                    .contentTransition(.numericText())
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                Text("hab.")
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(Color("TextMuted"))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
             .padding(.bottom, 16)
 
             Divider().padding(.horizontal, 20)
 
+            // Columnas
             HStack(spacing: 0) {
                 statCol("Mujeres", valor: fem, color: Color(hex: "#db2777"))
-                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 60)
-                statCol("Hombres", valor: mas, color: Color("Navy"))
-                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 60)
+                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 52)
+                statCol("Hombres", valor: mas, color: Color("Azul"))
+                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 52)
                 statCol("+18 años", valor: mayores18, color: Color(hex: "#16a34a"))
             }
-            .padding(.vertical, 20)
+            .padding(.vertical, 18)
         }
         .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private func statCol(_ label: String, valor: Int, color: Color) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Text(valor.formatted())
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
                 .contentTransition(.numericText())
-                .monospacedDigit()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
             Text(label)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(Color("TextMuted"))
@@ -477,8 +506,8 @@ private struct AlcanceColoniasCard: View {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(
                                     posicion == 1
-                                    ? LinearGradient(colors: [Color("Navy"), Color("Navy").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
-                                    : LinearGradient(colors: [Color("Navy").opacity(0.6), Color("Navy").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
+                                    ? LinearGradient(colors: [Color("Azul"), Color("Azul").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+                                    : LinearGradient(colors: [Color("Azul").opacity(0.6), Color("Azul").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
                                 )
                                 .frame(width: animado ? geo.size.width * CGFloat(item.poblacion) / CGFloat(max) : 0)
                         }
@@ -538,52 +567,57 @@ private extension View {
 
 private struct SemanaCard: View {
     let kpi: KPIData
+    var onTap: () -> Void = {}
     @AppStorage("semanaCard_periodo") private var esMes = true
 
     private var visitas: Int  { esMes ? kpi.visitasSemana : kpi.visitasMes }
     private var cambios: Int  { esMes ? kpi.cambiosSemana : kpi.coroplastMes }
 
     var body: some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) { esMes.toggle() }
-            HapticService.seleccion()
-        } label: {
-            VStack(spacing: 0) {
-                HStack {
-                    Text(esMes ? "Esta semana" : "Este mes")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color("TextMuted"))
-                        .contentTransition(.identity)
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-
-                Divider().padding(.horizontal, 20)
-
-                HStack(spacing: 0) {
-                    columna(
-                        valor: visitas,
-                        label: "Revisadas",
-                        icono: "checkmark.circle.fill",
-                        color: Color(hex: "#16a34a")
-                    )
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.08))
-                        .frame(width: 1, height: 72)
-                    columna(
-                        valor: cambios,
-                        label: "Coroplast",
-                        icono: "arrow.2.squarepath",
-                        color: Color("Navy")
-                    )
-                }
-                .padding(.vertical, 20)
+        VStack(spacing: 0) {
+            HStack {
+                Text(esMes ? "Esta semana" : "Este mes")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                    .contentTransition(.identity)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted").opacity(0.5))
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider().padding(.horizontal, 20)
+
+            HStack(spacing: 0) {
+                columna(
+                    valor: visitas,
+                    label: "Revisadas",
+                    icono: "checkmark.circle.fill",
+                    color: Color(hex: "#16a34a")
+                )
+                Rectangle()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 1, height: 72)
+                columna(
+                    valor: cambios,
+                    label: "Coroplast",
+                    icono: "arrow.2.squarepath",
+                    color: Color("Navy")
+                )
+            }
+            .padding(.vertical, 20)
         }
-        .buttonStyle(.glass(.regular))
-        .buttonBorderShape(.roundedRectangle(radius: 24))
+        .animation(.easeInOut(duration: 0.25), value: esMes)
+        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onTapGesture { onTap() }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            esMes.toggle()
+            HapticService.seleccion()
+        }
     }
 
     private func columna(valor: Int, label: String, icono: String, color: Color) -> some View {
@@ -732,6 +766,92 @@ private struct InventarioCard: View {
 
 // MARK: - Resumen Municipal Card
 
+// MARK: - Campañas Card
+
+private struct CampañasCard: View {
+    let total: Int
+    let top: [UsoCampana]
+    let onTap: () -> Void
+
+    var body: some View {
+        Button { onTap() } label: {
+            VStack(spacing: 0) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Campañas activas")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("\(total)")
+                                .font(.system(size: 42, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color("Navy"))
+                                .contentTransition(.numericText())
+                            Text("campañas")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(Color("TextMuted"))
+                                .padding(.bottom, 4)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color("TextMuted").opacity(0.4))
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+
+                if !top.isEmpty {
+                    Divider().padding(.horizontal, 20)
+                    VStack(spacing: 0) {
+                        ForEach(top) { campana in
+                            HStack(spacing: 14) {
+                                if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
+                                    CachedAsyncImage(url: url) { phase in
+                                        if case .success(let image) = phase {
+                                            image.resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 56, height: 56)
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(Color("Navy").opacity(0.08))
+                                                .frame(width: 56, height: 56)
+                                        }
+                                    }
+                                } else {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color("Navy").opacity(0.08))
+                                        .frame(width: 56, height: 56)
+                                        .overlay {
+                                            Image(systemName: "megaphone.fill")
+                                                .foregroundStyle(Color("Navy").opacity(0.25))
+                                        }
+                                }
+                                Text(campana.nombre)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(2)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            if campana.id != top.last?.id {
+                                Divider().padding(.leading, 90)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 8)
+                }
+            }
+        }
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 24))
+    }
+}
+
+// MARK: - ResumenMunicipal Card
+
 private struct ResumenMunicipalCard: View {
     let kpi: KPIData
     let coloniasConEstructuras: Int
@@ -743,72 +863,56 @@ private struct ResumenMunicipalCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                celda(
-                    valor: "\(kpi.totalEstructuras)",
-                    label: "Estructuras",
-                    icono: "square.stack.fill",
-                    color: Color("Navy"),
-                    borde: [.trailing, .bottom]
-                )
-                celda(
-                    valor: "\(kpi.campanasActivas)",
-                    label: "Campañas activas",
-                    icono: "megaphone.fill",
-                    color: Color("Navy"),
-                    borde: [.bottom]
-                )
+            HStack {
+                Text("Municipio")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Spacer()
+                Image(systemName: "building.2.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(Color("Navy").opacity(0.4))
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider().padding(.horizontal, 20)
+
             HStack(spacing: 0) {
-                celda(
-                    valor: "\(coloniasConEstructuras)",
-                    label: "Colonias cubiertas",
-                    icono: "map.fill",
-                    color: Color("Navy"),
-                    borde: [.trailing]
-                )
-                celda(
-                    valor: "\(pctOperativas)%",
-                    label: "Operativas",
-                    icono: "checkmark.circle.fill",
-                    color: Color(hex: "#16a34a"),
-                    borde: []
-                )
+                statCelda("\(kpi.totalEstructuras)", "Estructuras", "square.stack.fill", Color("Navy"))
+                divisor()
+                statCelda("\(coloniasConEstructuras)", "Colonias", "map.fill", Color("Navy"))
+                divisor()
+                statCelda("\(pctOperativas)%", "Operativas", "checkmark.circle.fill", Color(hex: "#16a34a"))
             }
+            .padding(.vertical, 20)
         }
         .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
-    private func celda(valor: String, label: String, icono: String, color: Color, borde: Edge.Set) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+    private func statCelda(_ valor: String, _ label: String, _ icono: String, _ color: Color) -> some View {
+        VStack(spacing: 6) {
             Image(systemName: icono)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(color.opacity(0.7))
+                .foregroundStyle(color.opacity(0.8))
             Text(valor)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(Color("Navy"))
                 .contentTransition(.numericText())
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
             Text(label)
-                .font(.subheadline.weight(.medium))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(Color("TextMuted"))
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .overlay(alignment: .trailing) {
-            if borde.contains(.trailing) {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.07))
-                    .frame(width: 1)
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if borde.contains(.bottom) {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.07))
-                    .frame(height: 1)
-            }
-        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func divisor() -> some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.07))
+            .frame(width: 1, height: 56)
     }
 }
 
@@ -851,7 +955,7 @@ private struct CoberturaRingCard: View {
                     .stroke(
                         pct >= 1.0
                             ? LinearGradient(colors: [Color(hex: "#16a34a"), Color(hex: "#16a34a").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color("Navy"), Color("Navy").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            : LinearGradient(colors: [Color("Azul"), Color("Azul").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing),
                         style: StrokeStyle(lineWidth: 18, lineCap: .round)
                     )
                     .frame(width: 160, height: 160)
@@ -978,8 +1082,8 @@ private struct AlertaEstructurasCard: View {
 private struct AvisoCoroplastCard: View {
     let sinCoroplast: Int
     let coroplastRoto: Int
-
-    var total: Int { sinCoroplast + coroplastRoto }
+    let onSinCoroplast: () -> Void
+    let onCoroplastRoto: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -988,11 +1092,6 @@ private struct AvisoCoroplastCard: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color("TextMuted"))
                 Spacer()
-                if total > 0 {
-                    Text("\(total) pendientes")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.orange)
-                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -1005,7 +1104,8 @@ private struct AvisoCoroplastCard: View {
                     valor: sinCoroplast,
                     label: "Sin coroplast",
                     icono: "square.slash.fill",
-                    color: Color(hex: "#ea580c")
+                    color: Color(hex: "#ea580c"),
+                    accion: onSinCoroplast
                 )
                 Rectangle()
                     .fill(Color.primary.opacity(0.08))
@@ -1014,7 +1114,8 @@ private struct AvisoCoroplastCard: View {
                     valor: coroplastRoto,
                     label: "Dañado",
                     icono: "exclamationmark.square.fill",
-                    color: Color(hex: "#d97706")
+                    color: Color(hex: "#d97706"),
+                    accion: onCoroplastRoto
                 )
             }
             .padding(.vertical, 20)
@@ -1022,7 +1123,7 @@ private struct AvisoCoroplastCard: View {
         .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
-    private func columna(valor: Int, label: String, icono: String, color: Color) -> some View {
+    private func columna(valor: Int, label: String, icono: String, color: Color, accion: @escaping () -> Void) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icono)
                 .font(.body.weight(.semibold))
@@ -1038,5 +1139,7 @@ private struct AvisoCoroplastCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { if valor > 0 { accion() } }
     }
 }

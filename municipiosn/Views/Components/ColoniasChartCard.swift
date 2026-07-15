@@ -81,8 +81,8 @@ struct ColoniasChartCard: View {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(
                                     posicion == 1
-                                    ? LinearGradient(colors: [Color("Navy"), Color("Navy").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
-                                    : LinearGradient(colors: [Color("Navy").opacity(0.6), Color("Navy").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
+                                    ? LinearGradient(colors: [Color("Azul"), Color("Azul").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+                                    : LinearGradient(colors: [Color("Azul").opacity(0.6), Color("Azul").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
                                 )
                                 .frame(width: animado ? geo.size.width * (Double(item.totalEstructuras) / Double(max)) : 0)
                         }

@@ -307,7 +307,7 @@ struct MapaView: View {
                         mostrarNuevaEstructura = true
                     } label: {
                         Image(systemName: "plus")
-                            .foregroundStyle(Color("Navy"))
+                            .foregroundStyle(Color("Azul"))
                     }
                     .buttonStyle(.glass(.regular))
                     .controlSize(.large)
@@ -317,8 +317,8 @@ struct MapaView: View {
                     mostrarRutas.toggle()
                     rutasVersion += 1
                 } label: {
-                    Image(systemName: "circle.grid.2x2.fill")
-                        .foregroundStyle(mostrarRutas ? Color("Navy") : .secondary)
+                    Image(systemName: "car.fill")
+                        .foregroundStyle(mostrarRutas ? Color("Azul") : .secondary)
                 }
                 .buttonStyle(.glass(.regular))
                 .controlSize(.large)
@@ -329,7 +329,7 @@ struct MapaView: View {
                     mapController.centerOnUser()
                 } label: {
                     Image(systemName: "location.fill")
-                        .foregroundStyle(Color("Navy"))
+                        .foregroundStyle(Color("Azul"))
                 }
                 .buttonStyle(.glass(.regular))
                 .controlSize(.large)
@@ -339,7 +339,7 @@ struct MapaView: View {
                     mapController.resetRegion()
                 } label: {
                     Image(systemName: "mappin.and.ellipse")
-                        .foregroundStyle(Color("Navy"))
+                        .foregroundStyle(Color("Azul"))
                 }
                 .buttonStyle(.glass(.regular))
                 .controlSize(.large)
@@ -744,9 +744,9 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             switch annotation.estado {
             case .dañada:                  return UIColor.systemRed
             case .destruida:               return UIColor.systemGray
-            case .en_reparacion:           return UIColor(named: "Navy")?.withAlphaComponent(0.5) ?? .systemOrange
+            case .en_reparacion:           return UIColor(named: "Azul")?.withAlphaComponent(0.5) ?? .systemOrange
             case .inactiva:                return UIColor.systemGray4
-            case .activa:                  return UIColor(named: "Navy") ?? .systemBlue
+            case .activa:                  return UIColor(named: "Azul") ?? .systemBlue
             case .necesita_mantenimiento:  return UIColor.systemOrange
             }
         }
@@ -1084,8 +1084,17 @@ private struct BusquedaResultados: View {
                 .padding(.horizontal, 4)
             }
             .frame(maxHeight: .infinity)
-            .scrollClipDisabled()
             .scrollBounceBehavior(.basedOnSize)
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.07)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
     }
 }
@@ -1097,7 +1106,7 @@ struct EstructuraMarker: View {
 
     var body: some View {
         Circle()
-            .fill(Color("Navy"))
+            .fill(Color("Azul"))
             .frame(width: 20, height: 20)
             .overlay {
                 Circle().strokeBorder(.white, lineWidth: 2.5)
@@ -1302,7 +1311,7 @@ struct EstructuraDetalleSheet: View {
                             .padding(.vertical, 4)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color("Navy"))
+                    .tint(Color("Azul"))
                     .controlSize(.large)
                     .accessibilityLabel("Registrar cambio o reparación de coroplast")
                 }
@@ -1389,7 +1398,7 @@ struct EstructuraDetalleSheet: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
                 ))) {
                     Marker(estructura.numero, coordinate: coord)
-                        .tint(Color("Navy"))
+                        .tint(Color("Azul"))
                 }
                 .frame(height: 200)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -1399,6 +1408,93 @@ struct EstructuraDetalleSheet: View {
         }
     }
 }
+
+// MARK: - Zoomable image (UIScrollView subclass for proper layout timing)
+
+private final class ZoomScrollView: UIScrollView, UIScrollViewDelegate {
+    let imageView = UIImageView()
+    fileprivate var didSetInitialZoom = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        delegate = self
+        maximumZoomScale = 6
+        showsHorizontalScrollIndicator = false
+        showsVerticalScrollIndicator = false
+        bouncesZoom = true
+        backgroundColor = .clear
+        contentInsetAdjustmentBehavior = .never
+        imageView.contentMode = .scaleAspectFit
+        imageView.isUserInteractionEnabled = true
+        addSubview(imageView)
+
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        addGestureRecognizer(doubleTap)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let image = imageView.image, bounds.width > 0, bounds.height > 0 else { return }
+        if !didSetInitialZoom {
+            didSetInitialZoom = true
+            let fitScale = min(bounds.width / image.size.width, bounds.height / image.size.height)
+            minimumZoomScale = fitScale
+            zoomScale = fitScale
+            imageView.frame = CGRect(origin: .zero, size: CGSize(
+                width: image.size.width * fitScale,
+                height: image.size.height * fitScale
+            ))
+            contentSize = imageView.frame.size
+        }
+        centerImageView()
+    }
+
+    func centerImageView() {
+        var f = imageView.frame
+        f.origin.x = f.width  < bounds.width  ? (bounds.width  - f.width)  / 2 : 0
+        f.origin.y = f.height < bounds.height ? (bounds.height - f.height) / 2 : 0
+        imageView.frame = f
+    }
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) { centerImageView() }
+
+    @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        if zoomScale > minimumZoomScale {
+            setZoomScale(minimumZoomScale, animated: true)
+        } else {
+            let point = gesture.location(in: imageView)
+            let targetScale = min(maximumZoomScale, minimumZoomScale * 3)
+            let w = bounds.width / targetScale
+            let h = bounds.height / targetScale
+            zoom(to: CGRect(x: point.x - w/2, y: point.y - h/2, width: w, height: h), animated: true)
+        }
+    }
+}
+
+private struct ZoomableImageView: UIViewRepresentable {
+    let image: UIImage
+
+    func makeUIView(context: Context) -> ZoomScrollView {
+        let v = ZoomScrollView()
+        v.imageView.image = image
+        return v
+    }
+
+    func updateUIView(_ view: ZoomScrollView, context: Context) {
+        if view.imageView.image !== image {
+            view.imageView.image = image
+            view.didSetInitialZoom = false
+            view.setNeedsLayout()
+        }
+    }
+}
+
+// MARK: - Fullscreen photo viewer
 
 struct FotoFullscreenView: View {
     let url: URL
@@ -1413,10 +1509,8 @@ struct FotoFullscreenView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 if let img = uiImage {
-                    Image(uiImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ZoomableImageView(image: img)
+                        .ignoresSafeArea()
                 } else {
                     ProgressView().tint(.white)
                 }

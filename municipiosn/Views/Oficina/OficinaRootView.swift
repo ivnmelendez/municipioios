@@ -15,7 +15,7 @@ struct OficinaRootView: View {
                 SignOutView(authVM: authVM)
             }
         }
-        .tint(Color("Navy"))
+        .tint(Color("Azul"))
         .overlay(alignment: .top) { NetworkStatusBanner() }
     }
 }

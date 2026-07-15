@@ -287,7 +287,7 @@ struct NuevaEstructuraView: View {
                 Toggle(isOn: $vm.incluirFecha) {
                     Text("Fecha instalación").font(.subheadline)
                 }
-                .tint(Color("Navy"))
+                .tint(Color("Azul"))
                 if vm.incluirFecha {
                     DatePicker("", selection: $vm.fecha, in: ...Date(), displayedComponents: .date)
                         .datePickerStyle(.compact)
@@ -305,7 +305,7 @@ struct NuevaEstructuraView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
-                    vm.puedeAvanzar ? Color("Navy") : Color.secondary.opacity(0.35),
+                    vm.puedeAvanzar ? Color("Azul") : Color.secondary.opacity(0.35),
                     in: RoundedRectangle(cornerRadius: 14)
                 )
             }
@@ -324,7 +324,7 @@ private func progresoIndicador(paso: Int) -> some View {
     HStack(spacing: 8) {
         ForEach(1...3, id: \.self) { n in
             Capsule()
-                .fill(n <= paso ? Color("Navy") : Color.secondary.opacity(0.25))
+                .fill(n <= paso ? Color("Azul") : Color.secondary.opacity(0.25))
                 .frame(width: n == paso ? 28 : 10, height: 8)
                 .animation(.easeInOut(duration: 0.25), value: paso)
         }
@@ -380,7 +380,7 @@ struct FotoEstructuraStep: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color("Navy"), in: RoundedRectangle(cornerRadius: 14))
+                .background(Color("Azul"), in: RoundedRectangle(cornerRadius: 14))
             }
             .disabled(vm.guardando)
             .padding(.horizontal, 20)
@@ -557,7 +557,7 @@ struct AsignarCampanasView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(
-                        (vm.seleccionA != nil || vm.seleccionB != nil) ? Color("Navy") : Color.secondary.opacity(0.35),
+                        (vm.seleccionA != nil || vm.seleccionB != nil) ? Color("Azul") : Color.secondary.opacity(0.35),
                         in: RoundedRectangle(cornerRadius: 14)
                     )
                 }

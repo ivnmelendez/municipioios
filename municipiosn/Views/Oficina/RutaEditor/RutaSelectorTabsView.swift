@@ -14,7 +14,7 @@ struct RutaSelectorTabsView: View {
                 } label: {
                     HStack(spacing: 5) {
                         Circle()
-                            .fill(Color(hex: semana.color) ?? Color("Navy"))
+                            .fill(Color(hex: semana.color))
                             .frame(width: 8, height: 8)
                         Text("Ruta \(semana.numero)")
                             .font(.caption.weight(isSelected ? .semibold : .regular))

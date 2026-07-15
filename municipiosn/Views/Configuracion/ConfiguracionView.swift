@@ -47,7 +47,7 @@ struct ConfiguracionView: View {
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .padding(5)
-                                    .background(Color("Navy"), in: Circle())
+                                    .background(Color("Azul"), in: Circle())
                                     .offset(x: 2, y: 2)
                             }
                         }
@@ -103,7 +103,7 @@ struct ConfiguracionView: View {
                                 .foregroundStyle(Color("Navy"))
                         }
                     }
-                    .tint(Color("Navy"))
+                    .tint(Color("Azul"))
                     .onChange(of: notificaciones) { _, habilitadas in
                         if habilitadas {
                             Task { await pedirPermisoNotificaciones() }
@@ -169,7 +169,7 @@ struct ConfiguracionView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Listo") { dismiss() }
                         .fontWeight(.semibold)
-                        .tint(Color("Navy"))
+                        .tint(Color("Azul"))
                 }
             }
             .sheet(isPresented: $mostrarEditorDashboard) {

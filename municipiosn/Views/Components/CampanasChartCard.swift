@@ -2,14 +2,14 @@ import SwiftUI
 
 struct CampanasChartCard: View {
     let datos: [UsoCampana]
-    @State private var mostrarTodo = false
+    var onVerTodas: (() -> Void)? = nil
     @State private var campanaImagen: UsoCampana? = nil
     @State private var animado = false
 
     private var top5: [UsoCampana] { Array(datos.prefix(5)) }
 
     var body: some View {
-        Button { mostrarTodo = true } label: {
+        Button { onVerTodas?() } label: {
             VStack(spacing: 0) {
                 HStack {
                     Text("Campañas en uso")
@@ -50,9 +50,6 @@ struct CampanasChartCard: View {
         .onAppear {
             withAnimation(.spring(duration: 0.9, bounce: 0.05).delay(0.3)) { animado = true }
         }
-        .sheet(isPresented: $mostrarTodo) {
-            CampanasListaCompleta(datos: datos)
-        }
         .sheet(item: $campanaImagen) { campana in
             if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
                 FotoFullscreenView(url: url, titulo: campana.nombre)
@@ -87,8 +84,8 @@ struct CampanasChartCard: View {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(
                                     posicion == 1
-                                    ? LinearGradient(colors: [Color("Navy"), Color("Navy").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
-                                    : LinearGradient(colors: [Color("Navy").opacity(0.6), Color("Navy").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
+                                    ? LinearGradient(colors: [Color("Azul"), Color("Azul").opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+                                    : LinearGradient(colors: [Color("Azul").opacity(0.6), Color("Azul").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
                                 )
                                 .frame(width: animado ? geo.size.width * (Double(item.totalEstructuras) / Double(max)) : 0)
                         }
@@ -107,52 +104,98 @@ struct CampanasChartCard: View {
     }
 }
 
-// MARK: - Lista completa
+// MARK: - Lista completa (push view)
 
-private struct CampanasListaCompleta: View {
+struct CampanasListaCompleta: View {
     let datos: [UsoCampana]
-    @Environment(\.dismiss) private var dismiss
     @State private var busqueda = ""
-    @State private var campanaImagen: UsoCampana? = nil
+    @State private var fotoFullscreen: (url: URL, titulo: String)? = nil
 
     private var filtrados: [UsoCampana] {
         busqueda.isEmpty ? datos : datos.filter { $0.nombre.localizedCaseInsensitiveContains(busqueda) }
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
-                    HStack {
-                        Text(item.nombre)
-                            .font(.body)
-                        Spacer()
-                        Text("\(item.totalEstructuras)")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color("Navy"))
-                            .monospacedDigit()
-                    }
-                    .padding(.vertical, 4)
-                    .onLongPressGesture {
-                        guard item.fotoUrl != nil else { return }
-                        HapticService.impacto(.medium)
-                        campanaImagen = item
+        ScrollView {
+            VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
+                        CampanaListaRow(item: item, posicion: index + 1) { url in
+                            fotoFullscreen = (url, item.nombre)
+                        }
+                        Divider().padding(.leading, 76)
                     }
                 }
+                .padding(.horizontal, 20)
             }
-            .searchable(text: $busqueda, prompt: "Buscar campaña")
-            .navigationTitle("Campañas en uso")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Listo") { dismiss() }
-                }
-            }
-            .sheet(item: $campanaImagen) { campana in
-                if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
-                    FotoFullscreenView(url: url, titulo: campana.nombre)
-                }
-            }
+            .padding(.vertical, 8)
         }
+        .background(Color("Background"))
+        .searchable(text: $busqueda, prompt: "Buscar campaña")
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(item: Binding(
+            get: { fotoFullscreen.map { IdentifiableFoto(url: $0.url, titulo: $0.titulo) } },
+            set: { if $0 == nil { fotoFullscreen = nil } }
+        )) { item in
+            FotoFullscreenView(url: item.url, titulo: item.titulo)
+        }
+    }
+}
+
+private struct IdentifiableFoto: Identifiable {
+    let id = UUID()
+    let url: URL
+    let titulo: String
+}
+
+private struct CampanaListaRow: View {
+    let item: UsoCampana
+    let posicion: Int
+    let onTapFoto: (URL) -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            // Thumbnail
+            if let urlStr = item.fotoUrl, let url = URL(string: urlStr) {
+                Button { onTapFoto(url) } label: {
+                    CachedAsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 52, height: 52)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        default:
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.secondary.opacity(0.12))
+                                .frame(width: 52, height: 52)
+                                .overlay {
+                                    Image(systemName: "megaphone.fill")
+                                        .foregroundStyle(Color("Navy").opacity(0.3))
+                                }
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.secondary.opacity(0.1))
+                    .frame(width: 52, height: 52)
+                    .overlay {
+                        Image(systemName: "megaphone.fill")
+                            .foregroundStyle(Color("Navy").opacity(0.25))
+                    }
+            }
+
+            Text(item.nombre)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+
+            Spacer()
+        }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 }

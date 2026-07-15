@@ -102,7 +102,7 @@ struct ReparacionRealizadaView: View {
                 let activo = n == (paso == .foto ? 1 : 2)
                 let completado = n < (paso == .foto ? 1 : 2)
                 Capsule()
-                    .fill(activo || completado ? Color("Navy") : Color.secondary.opacity(0.25))
+                    .fill(activo || completado ? Color("Azul") : Color.secondary.opacity(0.25))
                     .frame(width: activo ? 28 : 10, height: 8)
                     .animation(.easeInOut(duration: 0.25), value: paso)
             }
@@ -165,7 +165,7 @@ struct ReparacionRealizadaView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color("Navy"), in: RoundedRectangle(cornerRadius: 14))
+                    .background(Color("Azul"), in: RoundedRectangle(cornerRadius: 14))
                 }
                 .disabled(isLoading)
                 .opacity(isLoading ? 0.6 : 1)
@@ -230,7 +230,7 @@ struct ReparacionRealizadaView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
-                habilitado ? Color("Navy") : Color.secondary.opacity(0.35),
+                habilitado ? Color("Azul") : Color.secondary.opacity(0.35),
                 in: RoundedRectangle(cornerRadius: 14)
             )
         }

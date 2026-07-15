@@ -55,7 +55,7 @@ struct MantenimientoRealizadoView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color("Navy"), in: RoundedRectangle(cornerRadius: 14))
+                        .background(Color("Azul"), in: RoundedRectangle(cornerRadius: 14))
                     }
                     .disabled(isLoading)
                     .opacity(isLoading ? 0.6 : 1)

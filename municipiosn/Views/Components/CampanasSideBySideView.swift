@@ -48,7 +48,7 @@ struct CampanaCelda: View {
                             .font(.caption.weight(.black))
                             .foregroundStyle(.white)
                             .frame(width: 26, height: 26)
-                            .background(Color("Navy"), in: Circle())
+                            .background(Color("Azul"), in: Circle())
                             .padding(8)
                     }
 
@@ -99,7 +99,7 @@ struct CampanaCelda: View {
                 case .failure:
                     placeholderImage
                 default:
-                    placeholderImage.overlay { ProgressView().tint(Color("Navy")) }
+                    placeholderImage.overlay { ProgressView().tint(Color("Azul")) }
                 }
             }
         } else {
