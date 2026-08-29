@@ -6,7 +6,7 @@ struct ContentView: View {
     @State private var campoBadge = 0
 
     var body: some View {
-        if authVM.rol == "campo" {
+        if authVM.rol == "campo" || authVM.rol == "campo_admin" {
             CampoRootView(authVM: authVM)
                 .overlay(alignment: .top) { NetworkStatusBanner() }
         } else if authVM.rol == "oficina" {

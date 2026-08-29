@@ -57,15 +57,17 @@ private let estadosFiltro: [EstadoEstructura] = [.activa, .dañada, .necesita_ma
 struct EstructurasListView: View {
     var filtroInicial: EstadoEstructura? = nil
     var filtroCoroplast: String? = nil
+    var esCampo: Bool = false
     @State private var vm: EstructurasListViewModel
     @FocusState private var searchFocused: Bool
     @State private var showFloatingSearch = false
     @State private var generandoPDF = false
     @State private var pdfURL: URL? = nil
 
-    init(filtroInicial: EstadoEstructura? = nil, filtroCoroplast: String? = nil) {
+    init(filtroInicial: EstadoEstructura? = nil, filtroCoroplast: String? = nil, esCampo: Bool = false) {
         self.filtroInicial = filtroInicial
         self.filtroCoroplast = filtroCoroplast
+        self.esCampo = esCampo
         self._vm = State(wrappedValue: EstructurasListViewModel(filtroInicial: filtroInicial, filtroCoroplast: filtroCoroplast))
     }
 
@@ -106,7 +108,7 @@ struct EstructurasListView: View {
                     }
 
                     ListaEstructuras(filtradas: vm.filtradas, isLoading: vm.isLoading,
-                                     busqueda: vm.busqueda, filtroEstado: vm.filtroEstado)
+                                     busqueda: vm.busqueda, filtroEstado: vm.filtroEstado, esCampo: esCampo)
                 }
                 .padding(.top, 4)
                 .padding(.bottom, 32)
@@ -391,6 +393,7 @@ private struct ListaEstructuras: View {
     let isLoading: Bool
     let busqueda: String
     let filtroEstado: EstadoEstructura?
+    var esCampo: Bool = false
 
     @State private var appeared = false
     @State private var listKey = UUID()
@@ -416,7 +419,7 @@ private struct ListaEstructuras: View {
         } else {
             LazyVStack(spacing: 0) {
                 ForEach(Array(filtradas.enumerated()), id: \.element.id) { index, estructura in
-                    NavigationLink(destination: EstructuraDetalleView(estructura: estructura)) {
+                    NavigationLink(destination: EstructuraDetalleView(estructura: estructura, esCampo: esCampo)) {
                         EstructuraRow(estructura: estructura)
                     }
                     .buttonStyle(RowButtonStyle())

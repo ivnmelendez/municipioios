@@ -10,6 +10,7 @@ struct RegistrarCoroplastView: View {
     let campanas: [CampanaBasica]
     let userId: UUID?
     var rutaSemanaId: UUID? = nil
+    var requiereFoto: Bool = true
     var onCompletion: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -26,9 +27,20 @@ struct RegistrarCoroplastView: View {
     @State private var exitoOffline = false
 
     private var esCambio: Bool { tipoSeleccionado == .cambio }
-    private var totalPasos: Int { esCambio ? 5 : 4 }
+    private var totalPasos: Int {
+        if !requiereFoto { return esCambio ? 3 : 2 }
+        return esCambio ? 5 : 4
+    }
 
     private var pasoNumero: Int {
+        if !requiereFoto {
+            switch paso {
+            case .accion:              return 1
+            case .campanas:            return 2
+            case .confirmar:           return totalPasos
+            case .fotoAntes, .fotoDespues: return 1
+            }
+        }
         switch paso {
         case .accion:      return 1
         case .fotoAntes:   return 2
@@ -161,7 +173,9 @@ struct RegistrarCoroplastView: View {
                     subtitulo: "El coroplast está dañado pero no se cambia completo"
                 ) {
                     tipoSeleccionado = .reparacion
-                    withAnimation(.easeInOut(duration: 0.2)) { paso = .fotoAntes }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        paso = requiereFoto ? .fotoAntes : .confirmar
+                    }
                 }
                 opcionButton(
                     icono: "arrow.2.squarepath",
@@ -170,7 +184,9 @@ struct RegistrarCoroplastView: View {
                 ) {
                     if caras.isEmpty { Task { await cargarCaras() } }
                     tipoSeleccionado = .cambio
-                    withAnimation(.easeInOut(duration: 0.2)) { paso = .fotoAntes }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        paso = requiereFoto ? .fotoAntes : .campanas
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -403,12 +419,21 @@ struct RegistrarCoroplastView: View {
 
     private func retroceder() {
         withAnimation(.easeInOut(duration: 0.2)) {
-            switch paso {
-            case .accion:      break
-            case .fotoAntes:   paso = .accion
-            case .fotoDespues: paso = .fotoAntes
-            case .campanas:    paso = .fotoDespues
-            case .confirmar:   paso = esCambio ? .campanas : .fotoDespues
+            if !requiereFoto {
+                switch paso {
+                case .accion:   break
+                case .campanas: paso = .accion
+                case .confirmar: paso = esCambio ? .campanas : .accion
+                case .fotoAntes, .fotoDespues: paso = .accion
+                }
+            } else {
+                switch paso {
+                case .accion:      break
+                case .fotoAntes:   paso = .accion
+                case .fotoDespues: paso = .fotoAntes
+                case .campanas:    paso = .fotoDespues
+                case .confirmar:   paso = esCambio ? .campanas : .fotoDespues
+                }
             }
         }
     }

@@ -177,6 +177,7 @@ struct MapaView: View {
     var campanas: [CampanaBasica] = []
     var puedeCrearEstructuras: Bool = false
     var esCampo: Bool = false
+    var requiereFoto: Bool = true
 
     @State private var vm = MapaViewModel()
     @State private var coloniasPolygons: [GeoPolygon] = []
@@ -484,7 +485,8 @@ struct MapaView: View {
                 estructura: estructura,
                 campanas: campanas,
                 userId: userId,
-                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id
+                rutaSemanaId: estructuraSemanaMap[estructura.id]?.id,
+                requiereFoto: requiereFoto
             )
         }
         .sheet(item: $estructuraParaDano) { estructura in
@@ -522,6 +524,7 @@ struct MapaView: View {
                 campanas: campanas,
                 rutaSemanaId: estructuraSemanaMap[estructura.id]?.id,
                 yaVisitada: vm.visitadasHoy.contains(estructura.id),
+                requiereFoto: requiereFoto,
                 onMarcarRevision: { marcarRevision(estructura: estructura) }
             )
         }

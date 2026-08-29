@@ -6,6 +6,7 @@ struct CampoEstructuraDetalleView: View {
     let campanas: [CampanaBasica]
     let rutaSemanaId: UUID?
     let yaVisitada: Bool
+    var requiereFoto: Bool = true
     var onMarcarRevision: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -71,7 +72,8 @@ struct CampoEstructuraDetalleView: View {
                         estructura: estructura,
                         campanas: campanas,
                         userId: userId,
-                        rutaSemanaId: rutaSemanaId
+                        rutaSemanaId: rutaSemanaId,
+                        requiereFoto: requiereFoto
                     )
                 }
                 .sheet(isPresented: $mostrarAvisoCoroplast) {

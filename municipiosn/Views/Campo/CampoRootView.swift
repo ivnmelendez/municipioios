@@ -20,6 +20,13 @@ struct CampoRootView: View {
                 )
                 .task { if vm.campanas.isEmpty { await vm.cargar() } }
             }
+            if authVM.rol == "campo_admin" {
+                Tab("Estructuras", systemImage: "square.stack.fill", value: "estructuras") {
+                    NavigationStack {
+                        EstructurasListView(esCampo: true)
+                    }
+                }
+            }
             Tab("Configuración", systemImage: "gearshape.fill", value: "config") {
                 configTab
             }
