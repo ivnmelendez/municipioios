@@ -85,6 +85,7 @@ struct ColoniasChartCard: View {
                                     : LinearGradient(colors: [Color("Azul").opacity(0.6), Color("Azul").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
                                 )
                                 .frame(width: animado ? geo.size.width * (Double(item.totalEstructuras) / Double(max)) : 0)
+                                .animation(.spring(duration: 0.8, bounce: 0.05), value: animado)
                         }
                 }
                 .frame(height: 6)

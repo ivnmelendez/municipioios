@@ -167,6 +167,8 @@ struct ConectividadCard: View {
                 Text(valor.formatted())
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(color)
+                    .contentTransition(.numericText())
+                    .animation(.default, value: valor)
                 Text(label)
                     .font(.caption2)
                     .foregroundStyle(Color("TextMuted"))
@@ -252,6 +254,8 @@ struct SegmentosColoniaCard: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color("TextMuted"))
                     .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.default, value: col.poblacion)
             }
             GeometryReader { geo in
                 HStack(spacing: 1) {
@@ -385,6 +389,8 @@ private struct SegmentosLista: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(color)
                 .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.default, value: valor)
         }
     }
 }

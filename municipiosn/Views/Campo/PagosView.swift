@@ -72,7 +72,7 @@ struct PagosView: View {
                         Section {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Total · \(periodo.rawValue)")
+                                    Text("Total \(etiquetaPeriodo)")
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color("TextMuted"))
                                     Text(formatMonto(totalFiltrado))
@@ -538,7 +538,7 @@ private struct PagoConfirmadoView: View {
     }
 }
 
-private struct MesAnioPickerSheet: View {
+struct MesAnioPickerSheet: View {
     @Binding var seleccion: Date
     let onListo: () -> Void
     let onCancelar: () -> Void

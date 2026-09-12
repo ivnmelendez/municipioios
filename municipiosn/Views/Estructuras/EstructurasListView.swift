@@ -134,25 +134,9 @@ struct EstructurasListView: View {
         }
         .navigationTitle(tituloNavegacion)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .task { await vm.cargar() }
         .refreshable { await vm.cargar() }
-        .toolbar {
-            if filtroInicial == nil && filtroCoroplast == nil {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        Task { await generarPDF() }
-                    } label: {
-                        if generandoPDF {
-                            ProgressView().scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "doc.text")
-                        }
-                    }
-                    .disabled(generandoPDF || vm.estructuras.isEmpty)
-                }
-            }
-        }
         .sheet(item: Binding(
             get: { pdfURL.map { IdentifiablePDFURL(url: $0) } },
             set: { if $0 == nil { pdfURL = nil } }
@@ -374,13 +358,14 @@ private struct FiltroChips: View {
     private func chipButton(_ label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(isActive ? Color("Background") : Color("Navy"))
-                .padding(.horizontal, 14)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isActive ? .white : Color("Navy"))
+                .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isActive ? Color("Azul") : Color("Navy").opacity(0.08), in: Capsule())
+                .background(isActive ? Color("Azul") : Color("Navy").opacity(0.07), in: Capsule())
+                .shadow(color: isActive ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
                 .scaleEffect(isActive ? 1.04 : 1.0)
-                .animation(.spring(duration: 0.3, bounce: 0.4), value: isActive)
+                .animation(.spring(duration: 0.3, bounce: 0.35), value: isActive)
         }
         .buttonStyle(.plain)
     }
@@ -549,6 +534,7 @@ private struct TransparentNavBar: UIViewRepresentable {
 
 // MARK: - Detalle
 
+
 struct EstructuraDetalleView: View {
     let estructura: EstructuraConParque
     var esCampo: Bool = false
@@ -562,8 +548,17 @@ struct EstructuraDetalleView: View {
     @State private var campanas: [CampanaBasica] = []
     @State private var caraParaCambio: CaraDetalle? = nil
     @State private var campanaSeleccionada: CampanaBasica? = nil
-
     @State private var eventoSeleccionado: IntervencionCompleta? = nil
+    @State private var filtroHistorial: AccionIntervencion? = nil
+
+    private var historialFiltrado: [IntervencionCompleta] {
+        guard let filtro = filtroHistorial else { return historial }
+        return historial.filter { $0.accion == filtro }
+    }
+
+    private var accionesEnHistorial: [AccionIntervencion] {
+        Array(Set(historial.map(\.accion))).sorted(by: { $0.rawValue < $1.rawValue })
+    }
 
     var body: some View {
         Group {
@@ -716,9 +711,10 @@ struct EstructuraDetalleView: View {
 
     // MARK: - Content cards (compartidos iPhone / iPad)
     private var contentCards: some View {
-        VStack(spacing: 20) {
-            // Info card — tappable, va al mapa
+        VStack(spacing: 8) {
+            // Ubicación
             if let parque = estructura.parques {
+                seccionTitulo("Ubicación")
                 Button {
                     if let lat = estructura.lat, let lng = estructura.lng {
                         NotificationCenter.default.post(
@@ -759,6 +755,7 @@ struct EstructuraDetalleView: View {
                 ProgressView().frame(maxWidth: .infinity).padding(.vertical, 16)
             } else {
                 if !caras.isEmpty {
+                    seccionTitulo("Campañas")
                     CampanasSideBySideView(
                         caras: caras,
                         onTapFoto: { url, titulo in
@@ -774,23 +771,43 @@ struct EstructuraDetalleView: View {
 
                 // Historial
                 if !historial.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Historial")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-                            .padding(.bottom, 6)
-                        ForEach(historial) { item in
+                    Text("Historial")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .overlay(alignment: .trailing) {
+                            Menu {
+                                Button("Todos") { filtroHistorial = nil }
+                                Divider()
+                                ForEach(accionesEnHistorial, id: \.self) { accion in
+                                    Button(accion.etiqueta) { filtroHistorial = accion }
+                                }
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Text(filtroHistorial?.etiquetaCorta ?? "Todos")
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption2)
+                                }
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            }
+                            .id(filtroHistorial?.rawValue ?? "todos")
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .padding(.bottom, 4)
+
+                    VStack(spacing: 0) {
+                        ForEach(historialFiltrado) { item in
                             Button { eventoSeleccionado = item } label: {
                                 HistorialRow(item: item)
                             }
                             .buttonStyle(.plain)
-                            if item.id != historial.last?.id {
+                            if item.id != historialFiltrado.last?.id {
                                 Divider().padding(.leading, 52)
                             }
                         }
-                        .padding(.bottom, 4)
+                        .padding(.vertical, 4)
                     }
                     .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .cardShadow()
@@ -800,10 +817,8 @@ struct EstructuraDetalleView: View {
 
             // Notas
             if let notas = estructura.notas, !notas.isEmpty {
+                seccionTitulo("Notas")
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Notas")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
                     Text(notas).font(.subheadline)
                 }
                 .padding(16)
@@ -814,9 +829,19 @@ struct EstructuraDetalleView: View {
             }
 
         }
-        .padding(.top, 16)
         .padding(.bottom, 40)
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func seccionTitulo(_ titulo: String) -> some View {
+        Text(titulo)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
     }
 
     private func abrirGoogleMaps(lat: Double, lng: Double) {
@@ -898,13 +923,6 @@ private struct HistorialRow: View {
             }
 
             Spacer()
-
-            if tieneFoto {
-                Image(systemName: "photo.fill")
-                    .font(.caption)
-                    .foregroundStyle(Color("TextMuted").opacity(0.6))
-                    .padding(.top, 4)
-            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

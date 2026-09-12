@@ -37,7 +37,7 @@ struct ContentView: View {
                     EstructurasListView()
                 }
             }
-            Tab("Campo", systemImage: "person.2.fill", value: "campo") {
+            Tab("Historial", systemImage: "clock.fill", value: "campo") {
                 CampoAdminView(badge: $campoBadge)
             }
             .badge(campoBadge > 0 ? campoBadge : 0)

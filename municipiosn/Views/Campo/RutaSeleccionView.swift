@@ -43,7 +43,7 @@ struct RutaSeleccionView: View {
     }
 
     private func rutaCard(info: RutaInfo) -> some View {
-        let color = Color(hex: info.ruta.color)
+        let color = Color("Azul")
         let terminada = info.visitadas == info.total && info.total > 0
 
         return Button {

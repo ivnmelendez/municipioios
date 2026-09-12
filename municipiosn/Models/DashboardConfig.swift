@@ -4,21 +4,21 @@ enum DashboardCardID: String, Codable, CaseIterable {
     // 1. Alertas urgentes
     case alertaEstructuras   = "alerta_estructuras"
     case avisoCoroplast      = "aviso_coroplast"
-    // 2. Actividad del equipo
-    case semana              = "semana"
-    case cobertura           = "cobertura"
-    // 3. Campañas (le preguntan mucho)
-    case campanasCard        = "campanas_card"
-    // 4. Resumen del municipio
-    case resumenMunicipal    = "resumen_municipal"
-    // 5. Alcance demográfico
-    case alcancePoblacional  = "alcance_poblacional"
-    // 6. Detalle estadístico
-    case campanasChart       = "campanas_chart"
-    case alcanceColonias     = "alcance_colonias"
-    case coloniasChart       = "colonias_chart"
-    // 7. Pagos
+    // 2. Dinero
     case pagos               = "pagos"
+    // 3. Progreso
+    case cobertura           = "cobertura"
+    case campanasCard        = "campanas_card"
+    // 4. Actividad
+    case semana              = "semana"
+    case ultimasEstructuras  = "ultimas_estructuras"
+    // 5. Contexto / análisis
+    case resumenMunicipal    = "resumen_municipal"
+    case campanasChart       = "campanas_chart"
+    case coloniasChart       = "colonias_chart"
+    // 6. Alcance demográfico (oculto por defecto)
+    case alcancePoblacional  = "alcance_poblacional"
+    case alcanceColonias     = "alcance_colonias"
 
     var titulo: String {
         switch self {
@@ -33,6 +33,7 @@ enum DashboardCardID: String, Codable, CaseIterable {
         case .alcanceColonias:    "Alcance por colonia"
         case .coloniasChart:      "Estadísticas colonias"
         case .pagos:              "Gastos mano de obra"
+        case .ultimasEstructuras: "Últimas estructuras"
         }
     }
 
@@ -49,6 +50,7 @@ enum DashboardCardID: String, Codable, CaseIterable {
         case .alcanceColonias:    "map.circle.fill"
         case .coloniasChart:      "map.fill"
         case .pagos:              "banknote.fill"
+        case .ultimasEstructuras: "clock.fill"
         }
     }
 }
@@ -57,7 +59,9 @@ struct DashboardCardItem: Codable, Identifiable, Equatable {
     var id: DashboardCardID
     var activa: Bool
 
+    private static let defaultsOff: Set<DashboardCardID> = [.alcancePoblacional, .alcanceColonias, .ultimasEstructuras]
+
     static let defaults: [DashboardCardItem] = DashboardCardID.allCases.map {
-        DashboardCardItem(id: $0, activa: true)
+        DashboardCardItem(id: $0, activa: !defaultsOff.contains($0))
     }
 }

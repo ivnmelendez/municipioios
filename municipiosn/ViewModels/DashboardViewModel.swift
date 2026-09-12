@@ -18,6 +18,7 @@ final class DashboardViewModel {
     var alcanceMas: Int = 0
     var alcance18mas: Int = 0
     var demografia = DemografiaAlcance()
+    var ultimasEstructuras: [EstructuraConParque] = []
     var errorMessage: String?
     var isLoading = false
 
@@ -85,6 +86,11 @@ final class DashboardViewModel {
             coloniasSinEstructuras = max(0, totalColonias - usoColonias.count)
 
             let estructuras = (try? await estructurasTask) ?? []
+            ultimasEstructuras = Array(
+                estructuras
+                    .sorted { ($0.fechaInstalacion ?? .distantPast) > ($1.fechaInstalacion ?? .distantPast) }
+                    .prefix(5)
+            )
             computarAlcance(estructuras: estructuras)
         } catch is CancellationError {
         } catch {

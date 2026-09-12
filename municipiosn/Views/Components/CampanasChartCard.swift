@@ -88,6 +88,7 @@ struct CampanasChartCard: View {
                                     : LinearGradient(colors: [Color("Azul").opacity(0.6), Color("Azul").opacity(0.3)], startPoint: .leading, endPoint: .trailing)
                                 )
                                 .frame(width: animado ? geo.size.width * (Double(item.totalEstructuras) / Double(max)) : 0)
+                                .animation(.spring(duration: 0.8, bounce: 0.05), value: animado)
                         }
                 }
                 .frame(height: 6)
@@ -109,15 +110,70 @@ struct CampanasChartCard: View {
 struct CampanasListaCompleta: View {
     let datos: [UsoCampana]
     @State private var busqueda = ""
+    @State private var categoriaSeleccionada: String? = nil
     @State private var fotoFullscreen: (url: URL, titulo: String)? = nil
+    @FocusState private var searchFocused: Bool
+
+    private var categorias: [String] {
+        Array(Set(datos.compactMap(\.categoria))).sorted()
+    }
 
     private var filtrados: [UsoCampana] {
-        busqueda.isEmpty ? datos : datos.filter { $0.nombre.localizedCaseInsensitiveContains(busqueda) }
+        datos.filter { item in
+            let coincideBusqueda = busqueda.isEmpty || item.nombre.localizedCaseInsensitiveContains(busqueda)
+            let coincideCategoria = categoriaSeleccionada == nil || item.categoria == categoriaSeleccionada
+            return coincideBusqueda && coincideCategoria
+        }
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                Button { searchFocused = true } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.system(size: 15, weight: .medium))
+                        TextField("Buscar campaña", text: $busqueda)
+                            .textFieldStyle(.plain)
+                            .autocorrectionDisabled()
+                            .focused($searchFocused)
+                            .onSubmit { searchFocused = false }
+                        if !busqueda.isEmpty {
+                            Button { busqueda = "" } label: {
+                                Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                }
+                .buttonStyle(.glass(.regular))
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+
+                if !categorias.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            FiltroChip(label: "Todas", seleccionado: categoriaSeleccionada == nil) {
+                                withAnimation(.spring(duration: 0.3, bounce: 0.1)) { categoriaSeleccionada = nil }
+                            }
+                            ForEach(categorias, id: \.self) { cat in
+                                FiltroChip(label: cat.capitalized, seleccionado: categoriaSeleccionada == cat) {
+                                    withAnimation(.spring(duration: 0.3, bounce: 0.1)) {
+                                        categoriaSeleccionada = categoriaSeleccionada == cat ? nil : cat
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        .padding(.bottom, 4)
+                    }
+                    .scrollClipDisabled()
+                }
+
                 LazyVStack(spacing: 0) {
                     ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
                         CampanaListaRow(item: item, posicion: index + 1) { url in
@@ -128,10 +184,10 @@ struct CampanasListaCompleta: View {
                 }
                 .padding(.horizontal, 20)
             }
-            .padding(.vertical, 8)
+            .padding(.top, 4)
+            .padding(.bottom, 32)
         }
         .background(Color("Background"))
-        .searchable(text: $busqueda, prompt: "Buscar campaña")
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(item: Binding(
@@ -197,5 +253,26 @@ private struct CampanaListaRow: View {
         }
         .padding(.vertical, 12)
         .contentShape(Rectangle())
+    }
+}
+
+private struct FiltroChip: View {
+    let label: String
+    let seleccionado: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Text(label)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(seleccionado ? .white : Color("Navy"))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(seleccionado ? Color("Azul") : Color("Navy").opacity(0.07), in: Capsule())
+                .shadow(color: seleccionado ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
+                .scaleEffect(seleccionado ? 1.04 : 1.0)
+                .animation(.spring(duration: 0.3, bounce: 0.35), value: seleccionado)
+        }
+        .buttonStyle(.plain)
     }
 }

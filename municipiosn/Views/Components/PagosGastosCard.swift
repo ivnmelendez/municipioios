@@ -3,7 +3,10 @@ import SwiftUI
 struct PagosGastosCard: View {
     let vm: PagosViewModel
 
+    @AppStorage("pagos_monto_oculto") private var montoOculto = false
+
     private var totalMesFormateado: String {
+        if montoOculto { return "••••••" }
         let fmt = NumberFormatter()
         fmt.numberStyle = .decimal
         fmt.minimumFractionDigits = 2
@@ -34,12 +37,24 @@ struct PagosGastosCard: View {
                 Divider().padding(.horizontal, 20)
 
                 VStack(spacing: 6) {
-                    Text(totalMesFormateado)
-                        .font(.system(size: 42, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color("Navy"))
-                        .contentTransition(.numericText())
-                        .monospacedDigit()
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    HStack(alignment: .center, spacing: 8) {
+                        Text(totalMesFormateado)
+                            .font(.system(size: 42, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color("Navy"))
+                            .contentTransition(.numericText())
+                            .monospacedDigit()
+                            .animation(.default, value: montoOculto)
+
+                        Button {
+                            montoOculto.toggle()
+                        } label: {
+                            Image(systemName: montoOculto ? "eye.slash" : "eye")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Color("Navy").opacity(0.4))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                     Text("total pagado")
                         .font(.caption.weight(.medium))
@@ -62,10 +77,11 @@ struct PagosGastosCard: View {
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text(pago.montoDisplay)
+                            Text(montoOculto ? "•••••" : pago.montoDisplay)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color("Navy"))
                                 .monospacedDigit()
+                                .animation(.default, value: montoOculto)
                             Text(pago.fechaDisplay)
                                 .font(.caption)
                                 .foregroundStyle(Color("TextMuted"))

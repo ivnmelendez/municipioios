@@ -1,9 +1,11 @@
 import SwiftUI
+import CoreLocation
 
 struct CampoRootView: View {
     let authVM: AuthViewModel
     @State private var vm = CampoViewModel()
     @State private var tabSeleccionada = "mapa"
+    @State private var locationManager = CLLocationManager()
 
     var body: some View {
         TabView(selection: $tabSeleccionada) {
@@ -34,6 +36,16 @@ struct CampoRootView: View {
         .tint(Color("Azul"))
         .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { _ in
             tabSeleccionada = "mapa"
+        }
+        .task {
+            guard let userId = authVM.perfilId else { return }
+            locationManager.requestWhenInUseAuthorization()
+            while !Task.isCancelled {
+                if let coord = locationManager.location?.coordinate {
+                    await UbicacionCampoService.shared.actualizar(userId: userId, coord: coord)
+                }
+                try? await Task.sleep(for: .seconds(60))
+            }
         }
     }
 

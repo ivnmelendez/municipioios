@@ -21,7 +21,7 @@ struct CampanasSideBySideView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.bottom, 12)
         }
     }
 }
@@ -54,10 +54,16 @@ struct CampanaCelda: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     if let campana = cara.campana {
+                        if let cat = campana.categoria {
+                            Text(cat.capitalized)
+                                .font(.caption2)
+                                .foregroundStyle(Color("Azul"))
+                        }
                         Text(campana.nombre)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     } else {
                         Text("Sin campaña")
                             .font(.caption)
@@ -65,8 +71,9 @@ struct CampanaCelda: View {
                     }
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(height: 64)
             }
         }
         .buttonStyle(.plain)
@@ -86,6 +93,8 @@ struct CampanaCelda: View {
         )
     }
 
+    private var imageHeight: CGFloat { sizeClass == .regular ? 200 : 120 }
+
     @ViewBuilder
     private var imageArea: some View {
         if let url = fotoURL {
@@ -94,8 +103,10 @@ struct CampanaCelda: View {
                 case .success(let image):
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: sizeClass == .regular ? 200 : 100)
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: imageHeight)
+                        .clipped()
                 case .failure:
                     placeholderImage
                 default:
@@ -109,8 +120,8 @@ struct CampanaCelda: View {
 
     private var placeholderImage: some View {
         Color.secondary.opacity(0.08)
-            .aspectRatio(1.5, contentMode: .fit)
             .frame(maxWidth: .infinity)
+            .frame(height: imageHeight)
             .overlay {
                 Image(systemName: "photo")
                     .font(.title3)

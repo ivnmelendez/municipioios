@@ -5,6 +5,7 @@ struct UsoCampana: Identifiable {
     let nombre: String
     let totalEstructuras: Int
     let fotoUrl: String?
+    let categoria: String?
 }
 
 struct Campana: Codable, Identifiable {

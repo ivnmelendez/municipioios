@@ -212,8 +212,9 @@ struct CampoEstructuraDetalleView: View {
     }
 
     private var accionesCard: some View {
-        VStack(spacing: 10) {
-            accionBtn(
+        VStack(spacing: 12) {
+            // Acción primaria — full width
+            accionPrimaria(
                 titulo: yaVisitada ? "Revisada hoy" : "Está bien",
                 icono: yaVisitada ? "checkmark.circle" : "checkmark.circle.fill",
                 color: .green,
@@ -224,39 +225,40 @@ struct CampoEstructuraDetalleView: View {
                 dismiss()
             }
 
-            accionBtn(titulo: "Registrar coroplast", icono: "square.and.pencil", color: Color("Navy")) {
-                mostrarRegistrarCoroplast = true
-            }
-
-            if let coroplastEstado = estructura.coroplastEstado {
-                coroplastBadge(estado: coroplastEstado)
-            } else if estructura.estado != .inactiva && estructura.estado != .destruida {
-                accionBtn(titulo: "Aviso coroplast", icono: "bell.fill", color: Color(hex: "#ea580c")) {
-                    mostrarAvisoCoroplast = true
+            // Grid 2×2 de acciones secundarias
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                accionCard(titulo: "Registrar coroplast", icono: "square.and.pencil", color: Color("Navy")) {
+                    mostrarRegistrarCoroplast = true
                 }
-            }
 
-            if estructura.estado != .dañada {
-                accionBtn(titulo: "Reportar daño", icono: "exclamationmark.triangle.fill", color: .red) {
-                    mostrarReportarDano = true
+                if let coroplastEstado = estructura.coroplastEstado {
+                    coroplastBadgeCard(estado: coroplastEstado)
+                } else if estructura.estado != .inactiva && estructura.estado != .destruida {
+                    accionCard(titulo: "Aviso coroplast", icono: "bell.fill", color: Color(hex: "#ea580c")) {
+                        mostrarAvisoCoroplast = true
+                    }
                 }
-            }
 
-            if estructura.estado == .dañada {
-                accionBtn(titulo: "Reparación realizada", icono: "hammer.fill", color: .green) {
-                    mostrarReparacionRealizada = true
+                if estructura.estado != .dañada {
+                    accionCard(titulo: "Reportar daño", icono: "exclamationmark.triangle.fill", color: .red) {
+                        mostrarReportarDano = true
+                    }
                 }
-            }
-
-            if estructura.estado != .necesita_mantenimiento && estructura.estado != .dañada {
-                accionBtn(titulo: "Reportar mantenimiento", icono: "wrench.fill", color: .orange) {
-                    mostrarReportarMantenimiento = true
+                if estructura.estado == .dañada {
+                    accionCard(titulo: "Reparación realizada", icono: "hammer.fill", color: .green) {
+                        mostrarReparacionRealizada = true
+                    }
                 }
-            }
 
-            if estructura.estado == .necesita_mantenimiento {
-                accionBtn(titulo: "Mantenimiento realizado", icono: "checkmark.seal.fill", color: .green) {
-                    mostrarMantenimientoRealizado = true
+                if estructura.estado != .necesita_mantenimiento && estructura.estado != .dañada {
+                    accionCard(titulo: "Reportar mantenimiento", icono: "wrench.fill", color: .orange) {
+                        mostrarReportarMantenimiento = true
+                    }
+                }
+                if estructura.estado == .necesita_mantenimiento {
+                    accionCard(titulo: "Mantenimiento realizado", icono: "checkmark.seal.fill", color: .green) {
+                        mostrarMantenimientoRealizado = true
+                    }
                 }
             }
         }
@@ -264,6 +266,27 @@ struct CampoEstructuraDetalleView: View {
         .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
         .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 2)
+    }
+
+    private func coroplastBadgeCard(estado: String) -> some View {
+        let esSin = estado == "sin_coroplast"
+        let color = esSin ? Color(hex: "#ea580c") : Color(hex: "#d97706")
+        let icono = esSin ? "square.slash.fill" : "exclamationmark.square.fill"
+        let titulo = esSin ? "Sin coroplast" : "Coroplast dañado"
+        return VStack(spacing: 10) {
+            Image(systemName: icono)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(color)
+            Text(titulo)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color("Navy"))
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 90)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func coroplastBadge(estado: String) -> some View {
@@ -295,20 +318,50 @@ struct CampoEstructuraDetalleView: View {
         )
     }
 
-    private func accionBtn(titulo: String, icono: String, color: Color, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+    private func accionPrimaria(titulo: String, icono: String, color: Color, disabled: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(titulo, systemImage: icono)
-                .font(.headline.weight(.bold))
+                .font(.title3.weight(.bold))
+                .foregroundStyle(disabled ? Color.secondary : color)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
+                .padding(.vertical, 14)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.glass(.regular))
         .tint(color)
-        .controlSize(.large)
+        .buttonBorderShape(.roundedRectangle(radius: 16))
+        .disabled(disabled)
+    }
+
+    private func accionCard(titulo: String, icono: String, color: Color, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: icono)
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(color)
+                Text(titulo)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("Navy"))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 90)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 12)
+        }
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 16))
         .disabled(disabled)
     }
 
     // MARK: - Helpers
+
+    private func thumbnailURL(_ urlString: String, width: Int) -> URL? {
+        guard urlString.contains("/object/public/") else { return URL(string: urlString) }
+        let render = urlString.replacingOccurrences(of: "/object/public/", with: "/render/image/public/")
+        return URL(string: "\(render)?width=\(width)&quality=72&resize=contain")
+    }
 
     private func abrirGoogleMaps(lat: Double, lng: Double) {
         let gm = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")!

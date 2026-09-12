@@ -294,6 +294,17 @@ struct HistorialCampoView: View {
         }
     }
 
+    private var tituloSeccion: String {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "es_MX")
+        fmt.dateFormat = "MMMM yyyy"
+        switch periodo {
+        case .mes:             return fmt.string(from: Date()).capitalized
+        case .mesElegido(let d): return fmt.string(from: d).capitalized
+        default:               return "Rondines"
+        }
+    }
+
     private var mostrarResumenMes: Bool {
         switch periodo {
         case .mes, .mesElegido: return true
@@ -314,7 +325,7 @@ struct HistorialCampoView: View {
                 )
             } else {
                 List {
-                    Section("Rondines") {
+                    Section(tituloSeccion) {
                         ForEach(dias) { dia in
                             NavigationLink(destination: DiaRondinDetalleView(dia: dia)) {
                                 DiaRondinRow(dia: dia)
@@ -416,7 +427,7 @@ private struct DiaRondinRow: View {
             HStack(spacing: 3) {
                 Text("\(dia.estructuras.count)")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Color("Azul"))
+                    .foregroundStyle(Color("Navy"))
                     .monospacedDigit()
                 Text("revisadas")
                     .font(.caption)

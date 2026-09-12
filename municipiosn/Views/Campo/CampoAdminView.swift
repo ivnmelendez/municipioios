@@ -5,7 +5,7 @@ struct CampoAdminView: View {
     @State private var resumen = CampoAdminViewModel()
     @State private var reporteTexto: String? = nil
     @State private var generandoReporte = false
-    @State private var periodo: FiltroFecha = .semana
+    @State private var periodo: FiltroFecha = .mes
     @State private var mostrarPickerMes = false
     @State private var fechaPickerMes = Date()
 
@@ -19,9 +19,6 @@ struct CampoAdminView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button { periodo = .semana } label: {
-                            Label("Esta semana", systemImage: periodo == .semana ? "checkmark" : "")
-                        }
                         Button { periodo = .mes } label: {
                             Label("Este mes", systemImage: periodo == .mes ? "checkmark" : "")
                         }
@@ -37,47 +34,16 @@ struct CampoAdminView: View {
                             .foregroundStyle(Color("Azul"))
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await generarReporte() }
-                    } label: {
-                        if generandoReporte {
-                            ProgressView().scaleEffect(0.75)
-                        } else {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                    }
-                    .disabled(generandoReporte)
-                }
             }
         }
         .sheet(isPresented: $mostrarPickerMes) {
-            NavigationStack {
-                DatePicker(
-                    "",
-                    selection: $fechaPickerMes,
-                    in: ...Date(),
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.graphical)
-                .tint(Color("Azul"))
-                .padding(.horizontal)
-                .navigationTitle("Elegir mes")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancelar") { mostrarPickerMes = false }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Listo") {
-                            periodo = .mesElegido(fechaPickerMes)
-                            mostrarPickerMes = false
-                        }
-                        .fontWeight(.semibold)
-                    }
-                }
+            MesAnioPickerSheet(seleccion: $fechaPickerMes) {
+                periodo = .mesElegido(fechaPickerMes)
+                mostrarPickerMes = false
+            } onCancelar: {
+                mostrarPickerMes = false
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.height(320)])
         }
         .sheet(isPresented: Binding(get: { reporteTexto != nil }, set: { if !$0 { reporteTexto = nil } })) {
             if let texto = reporteTexto {

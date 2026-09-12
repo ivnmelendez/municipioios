@@ -169,6 +169,68 @@ private final class EstructuraMKAnnotation: NSObject, MKAnnotation {
     }
 }
 
+// MARK: - Worker location annotation
+
+private final class WorkerAnnotation: NSObject, MKAnnotation {
+    let coordinate: CLLocationCoordinate2D
+    let nombre: String
+    let userId: UUID
+
+    init(ubicacion: UbicacionActiva) {
+        self.coordinate = CLLocationCoordinate2D(latitude: ubicacion.lat, longitude: ubicacion.lng)
+        self.nombre = ubicacion.perfiles?.nombre.components(separatedBy: " ").first ?? "Campo"
+        self.userId = ubicacion.userId
+    }
+}
+
+private final class WorkerAnnotationView: MKAnnotationView {
+    static let reuseID = "WorkerAnnotationView"
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        setup()
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func setup() {
+        frame = CGRect(x: 0, y: 0, width: 36, height: 44)
+        backgroundColor = .clear
+        centerOffset = CGPoint(x: 0, y: -22)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        subviews.forEach { $0.removeFromSuperview() }
+
+        let nombre = (annotation as? WorkerAnnotation)?.nombre ?? "?"
+        let inicial = String(nombre.prefix(1)).uppercased()
+
+        let circle = UIView(frame: CGRect(x: 2, y: 2, width: 32, height: 32))
+        circle.backgroundColor = UIColor(red: 0.145, green: 0.388, blue: 0.922, alpha: 1)
+        circle.layer.cornerRadius = 16
+        circle.layer.borderWidth = 2
+        circle.layer.borderColor = UIColor.white.cgColor
+        circle.layer.shadowColor = UIColor.black.cgColor
+        circle.layer.shadowOpacity = 0.25
+        circle.layer.shadowRadius = 4
+        circle.layer.shadowOffset = CGSize(width: 0, height: 2)
+
+        let label = UILabel(frame: circle.bounds)
+        label.text = inicial
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 14, weight: .bold)
+        label.textAlignment = .center
+        circle.addSubview(label)
+
+        let triangle = UIView(frame: CGRect(x: 14, y: 32, width: 8, height: 8))
+        triangle.backgroundColor = UIColor(red: 0.145, green: 0.388, blue: 0.922, alpha: 1)
+        triangle.layer.cornerRadius = 2
+
+        addSubview(triangle)
+        addSubview(circle)
+    }
+}
+
 // MARK: - MapaView
 
 struct MapaView: View {
@@ -204,6 +266,7 @@ struct MapaView: View {
     @State private var visitadasVersion: Int = 0
     @State private var mostrarNuevaEstructura = false
     @State private var mapaListo = false
+    @State private var trabajadoresActivos: [UbicacionActiva] = []
 
     private var anotaciones: [EstructuraAnnotation] {
         vm.estructuras.compactMap { e in
@@ -250,7 +313,8 @@ struct MapaView: View {
                     pinResaltado = nil
                     Task { await vm.seleccionar(estructura) }
                 },
-                onClearPin: { pinResaltado = nil }
+                onClearPin: { pinResaltado = nil },
+                trabajadores: trabajadoresActivos
             )
             .ignoresSafeArea()
             .overlay(alignment: .top) {
@@ -314,16 +378,6 @@ struct MapaView: View {
                     .controlSize(.large)
                     .buttonBorderShape(.circle)
                 }
-                Button {
-                    mostrarRutas.toggle()
-                    rutasVersion += 1
-                } label: {
-                    Image(systemName: "car.fill")
-                        .foregroundStyle(mostrarRutas ? Color("Azul") : .secondary)
-                }
-                .buttonStyle(.glass(.regular))
-                .controlSize(.large)
-                .buttonBorderShape(.circle)
 
                 Button {
                     locationManager.requestWhenInUseAuthorization()
@@ -370,6 +424,15 @@ struct MapaView: View {
         }
         .task(id: userId) {
             if let uid = userId { await vm.cargarVisitadas(userId: uid) }
+        }
+        .task {
+            guard !esCampo else { return }
+            while !Task.isCancelled {
+                if let activas = try? await UbicacionCampoService.shared.fetchActivas() {
+                    trabajadoresActivos = activas
+                }
+                try? await Task.sleep(for: .seconds(60))
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { notif in
             guard let lat = notif.userInfo?["lat"] as? Double,
@@ -591,6 +654,7 @@ private struct MKMapViewWrapper: UIViewRepresentable {
     let pinResaltado: UUID?
     let onSelect: (EstructuraConParque) -> Void
     let onClearPin: () -> Void
+    var trabajadores: [UbicacionActiva] = []
 
     func makeCoordinator() -> Coordinator { Coordinator(onSelect: onSelect, onClearPin: onClearPin) }
 
@@ -706,6 +770,14 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     view.stopPulse()
                 }
             }
+        }
+
+        // Update worker annotations
+        let currentWorkerIds = Set(mapView.annotations.compactMap { ($0 as? WorkerAnnotation)?.userId })
+        let newWorkerIds = Set(trabajadores.map(\.userId))
+        if currentWorkerIds != newWorkerIds {
+            mapView.annotations.compactMap { $0 as? WorkerAnnotation }.forEach { mapView.removeAnnotation($0) }
+            mapView.addAnnotations(trabajadores.map { WorkerAnnotation(ubicacion: $0) })
         }
     }
 
@@ -831,6 +903,13 @@ private struct MKMapViewWrapper: UIViewRepresentable {
             if annotation is MKUserLocation {
                 return mapView.dequeueReusableAnnotationView(withIdentifier: UserLocationAnnotationView.reuseID)
                     ?? UserLocationAnnotationView(annotation: annotation, reuseIdentifier: UserLocationAnnotationView.reuseID)
+            }
+            if let workerAnn = annotation as? WorkerAnnotation {
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: WorkerAnnotationView.reuseID) as? WorkerAnnotationView
+                    ?? WorkerAnnotationView(annotation: workerAnn, reuseIdentifier: WorkerAnnotationView.reuseID)
+                view.annotation = workerAnn
+                view.setNeedsLayout()
+                return view
             }
             guard let ann = annotation as? EstructuraMKAnnotation else { return nil }
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: EstructuraMKAnnotationView.reuseID) as? EstructuraMKAnnotationView

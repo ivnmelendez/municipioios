@@ -33,6 +33,7 @@ final class CampoViewModel {
     }
 
     func cargarRutas(userId: UUID?) async {
+        guard rutasInfo.isEmpty else { return }
         isLoadingRutas = true
         defer { isLoadingRutas = false }
         do {

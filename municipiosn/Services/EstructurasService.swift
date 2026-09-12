@@ -88,6 +88,7 @@ struct CaraDetalle: Identifiable {
         let id: UUID
         let nombre: String
         let fotoUrl: String?
+        let categoria: String?
     }
 }
 
@@ -106,9 +107,10 @@ private struct CaraRaw: Codable {
             let id: UUID
             let nombre: String
             let fotoUrl: String?
+            let categoria: String?
 
             enum CodingKeys: String, CodingKey {
-                case id, nombre
+                case id, nombre, categoria
                 case fotoUrl = "foto_url"
             }
         }
@@ -169,9 +171,10 @@ private struct CaraCampanaItem: Codable {
         let id: UUID
         let nombre: String
         let fotoUrl: String?
+        let categoria: String?
 
         enum CodingKeys: String, CodingKey {
-            case id, nombre
+            case id, nombre, categoria
             case fotoUrl = "foto_url"
         }
     }
@@ -350,7 +353,7 @@ final class EstructurasService {
     func fetchCarasDetalle(estructuraId: UUID) async throws -> [CaraDetalle] {
         let raw: [CaraRaw] = try await client
             .from("caras")
-            .select("id, tipo, foto_url, caras_campanas(activa, foto_url, campanas(id, nombre, foto_url))")
+            .select("id, tipo, foto_url, caras_campanas(activa, foto_url, campanas(id, nombre, foto_url, categoria))")
             .eq("estructura_id", value: estructuraId.uuidString)
             .execute()
             .value
@@ -362,7 +365,7 @@ final class EstructurasService {
                 tipo: cara.tipo,
                 fotoUrl: cara.fotoUrl,
                 campana: activa?.campanas.map { c in
-                    CaraDetalle.CampanaDetalle(id: c.id, nombre: c.nombre, fotoUrl: c.fotoUrl)
+                    CaraDetalle.CampanaDetalle(id: c.id, nombre: c.nombre, fotoUrl: c.fotoUrl, categoria: c.categoria)
                 },
                 fotoCampana: activa?.fotoUrl
             )
@@ -454,21 +457,21 @@ final class EstructurasService {
     func fetchUsoCampanas() async throws -> [UsoCampana] {
         let items: [CaraCampanaItem] = try await client
             .from("caras_campanas")
-            .select("campana_id, campanas(id, nombre, foto_url), caras(estructura_id)")
+            .select("campana_id, campanas(id, nombre, foto_url, categoria), caras(estructura_id)")
             .eq("activa", value: true)
             .execute()
             .value
 
-        var data: [UUID: (nombre: String, estructuras: Set<String>, fotoUrl: String?)] = [:]
+        var data: [UUID: (nombre: String, estructuras: Set<String>, fotoUrl: String?, categoria: String?)] = [:]
         for item in items {
             let id = item.campanas.id
-            var entry = data[id] ?? (item.campanas.nombre, Set<String>(), item.campanas.fotoUrl)
+            var entry = data[id] ?? (item.campanas.nombre, Set<String>(), item.campanas.fotoUrl, item.campanas.categoria)
             entry.estructuras.insert(item.caras.estructuraId)
             data[id] = entry
         }
 
         return data.map { id, val in
-            UsoCampana(id: id, nombre: val.nombre, totalEstructuras: val.estructuras.count, fotoUrl: val.fotoUrl)
+            UsoCampana(id: id, nombre: val.nombre, totalEstructuras: val.estructuras.count, fotoUrl: val.fotoUrl, categoria: val.categoria)
         }.sorted { $0.totalEstructuras > $1.totalEstructuras }
     }
 

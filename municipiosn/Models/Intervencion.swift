@@ -12,6 +12,32 @@ enum AccionIntervencion: String, Codable {
     case reporte_mantenimiento
     case mantenimiento_realizado
     case reporte_coroplast
+
+    var etiqueta: String {
+        switch self {
+        case .revision:               return "Revisión"
+        case .cambio_campana:         return "Cambio de campaña"
+        case .reparacion:             return "Reparación"
+        case .instalacion:            return "Instalación"
+        case .cambio_coroplast:       return "Cambio coroplast"
+        case .reparacion_coroplast:   return "Reparación coroplast"
+        case .reporte_dano:           return "Daño reportado"
+        case .reactivacion:           return "Reactivación"
+        case .reporte_mantenimiento:  return "Mantenimiento reportado"
+        case .mantenimiento_realizado: return "Mantenimiento realizado"
+        case .reporte_coroplast:      return "Aviso coroplast"
+        }
+    }
+
+    var etiquetaCorta: String {
+        switch self {
+        case .reporte_mantenimiento:   return "Mant. reportado"
+        case .mantenimiento_realizado: return "Mant. realizado"
+        case .reparacion_coroplast:    return "Rep. coroplast"
+        case .cambio_campana:          return "Cambio campaña"
+        default: return etiqueta
+        }
+    }
 }
 
 enum TipoDano: String, Codable, CaseIterable {

@@ -15,6 +15,7 @@ struct DashboardView: View {
     @State private var navegarCoroplast = false
     @State private var navegarResumenPeriodo = false
     @State private var navegarCampanas = false
+
     @AppStorage("semanaCard_periodo") private var semanaCardEsMes = true
 
     private static let monterrey = TimeZone(identifier: "America/Monterrey")!
@@ -120,7 +121,14 @@ struct DashboardView: View {
                 }
             }
         }
-        .background(Color("Background"))
+        .background(
+            LinearGradient(
+                colors: [Color("Background").opacity(0.6), Color("Background")],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .ignoresSafeArea()
+        )
         .refreshable {
             EstructurasService.shared.invalidarCacheEstructuras()
             await vm.cargar()
@@ -158,6 +166,7 @@ struct DashboardView: View {
         .navigationDestination(isPresented: $navegarCampanas) {
             CampanasListaCompleta(datos: vm.usoCampanas)
         }
+
         }
     }
 
@@ -167,12 +176,6 @@ struct DashboardView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(saludo)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(Color("TextMuted"))
-
-                Text(auth.displayName.isEmpty
-                     ? "Bienvenido"
-                     : auth.displayName.components(separatedBy: " ").first ?? auth.displayName)
                     .font(.largeTitle.bold())
                     .foregroundStyle(Color("Navy"))
 
@@ -274,16 +277,17 @@ struct DashboardView: View {
                 }
             )
         case .campanasChart:
-            CampanasChartCard(datos: vm.usoCampanas, onVerTodas: {
-                HapticService.impacto(.medium)
-                navegarCampanas = true
-            })
+            CampanasChartCard(datos: vm.usoCampanas)
         case .coloniasChart:
             if !vm.usoColonias.isEmpty {
                 ColoniasChartCard(datos: vm.usoColonias)
             }
         case .pagos:
             PagosGastosCard(vm: pagosVm)
+        case .ultimasEstructuras:
+            if !vm.ultimasEstructuras.isEmpty {
+                UltimasEstructurasCard(estructuras: vm.ultimasEstructuras)
+            }
         case .alcancePoblacional:
             if vm.alcanceTotal > 0 {
                 AlcanceTotalCard(
@@ -563,6 +567,68 @@ private extension View {
     }
 }
 
+// MARK: - Últimas estructuras card
+
+private struct UltimasEstructurasCard: View {
+    let estructuras: [EstructuraConParque]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Últimas estructuras")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Spacer()
+                Image(systemName: "clock.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(Color("Navy").opacity(0.4))
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider().padding(.horizontal, 20)
+
+            VStack(spacing: 0) {
+                ForEach(Array(estructuras.enumerated()), id: \.element.id) { index, e in
+                    fila(e)
+                    if index < estructuras.count - 1 {
+                        Divider().padding(.leading, 20)
+                    }
+                }
+            }
+            .padding(.bottom, 8)
+        }
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private func fila(_ e: EstructuraConParque) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Estructura \(e.numero)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("Navy"))
+                    .lineLimit(1)
+                if let colonia = e.parques?.colonias?.nombre {
+                    Text(colonia)
+                        .font(.caption)
+                        .foregroundStyle(Color("TextMuted"))
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+            if let fecha = e.fechaInstalacion {
+                Text(fecha, format: .dateTime.day().month(.abbreviated).year())
+                    .font(.caption2)
+                    .foregroundStyle(Color("TextMuted").opacity(0.7))
+                    .monospacedDigit()
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+    }
+}
+
 // MARK: - Esta semana card
 
 private struct SemanaCard: View {
@@ -775,75 +841,18 @@ private struct CampañasCard: View {
 
     var body: some View {
         Button { onTap() } label: {
-            VStack(spacing: 0) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Campañas activas")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color("TextMuted"))
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text("\(total)")
-                                .font(.system(size: 42, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color("Navy"))
-                                .contentTransition(.numericText())
-                            Text("campañas")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Color("TextMuted"))
-                                .padding(.bottom, 4)
-                        }
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color("TextMuted").opacity(0.4))
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-
-                if !top.isEmpty {
-                    Divider().padding(.horizontal, 20)
-                    VStack(spacing: 0) {
-                        ForEach(top) { campana in
-                            HStack(spacing: 14) {
-                                if let urlStr = campana.fotoUrl, let url = URL(string: urlStr) {
-                                    CachedAsyncImage(url: url) { phase in
-                                        if case .success(let image) = phase {
-                                            image.resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 56, height: 56)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        } else {
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .fill(Color("Navy").opacity(0.08))
-                                                .frame(width: 56, height: 56)
-                                        }
-                                    }
-                                } else {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color("Navy").opacity(0.08))
-                                        .frame(width: 56, height: 56)
-                                        .overlay {
-                                            Image(systemName: "megaphone.fill")
-                                                .foregroundStyle(Color("Navy").opacity(0.25))
-                                        }
-                                }
-                                Text(campana.nombre)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(2)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            if campana.id != top.last?.id {
-                                Divider().padding(.leading, 90)
-                            }
-                        }
-                    }
-                    .padding(.bottom, 8)
-                }
+            VStack(spacing: 8) {
+                Text("Campañas activas")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Text("\(total)")
+                    .font(.system(size: 52, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("Navy"))
+                    .contentTransition(.numericText())
+                    .animation(.default, value: total)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
         }
         .buttonStyle(.glass(.regular))
         .buttonBorderShape(.roundedRectangle(radius: 24))
@@ -986,6 +995,8 @@ private struct CoberturaRingCard: View {
                     .font(.subheadline)
                     .foregroundStyle(Color("TextMuted"))
                     .multilineTextAlignment(.center)
+                    .contentTransition(.numericText())
+                    .animation(.default, value: kpi.visitasMes)
 
             }
         }

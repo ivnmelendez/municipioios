@@ -24,9 +24,19 @@ final class RutasService {
     static let shared = RutasService()
     private var client: SupabaseClient { SupabaseService.shared.client }
 
+    private var semanasCache: [RutaSemana]? = nil
+    private var semanasCacheAt: Date? = nil
+    private let semanasTTL: TimeInterval = 300
+
     private init() {}
 
     func fetchSemanasRecientes() async throws -> [RutaSemana] {
+        if let cache = semanasCache,
+           let at = semanasCacheAt,
+           Date().timeIntervalSince(at) < semanasTTL {
+            return cache
+        }
+
         let todas: [RutaSemana] = try await client
             .from("rutas_semanas")
             .select("id, numero, color, generado_at")
@@ -42,7 +52,10 @@ final class RutasService {
                 resultado.append(semana)
             }
         }
-        return resultado.sorted { $0.numero < $1.numero }
+        let sorted = resultado.sorted { $0.numero < $1.numero }
+        semanasCache = sorted
+        semanasCacheAt = Date()
+        return sorted
     }
 
     func fetchEstructurasEnRuta(rutaSemanaId: UUID, userId: UUID) async throws -> [RutaEstructuraItem] {

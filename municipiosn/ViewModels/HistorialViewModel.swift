@@ -43,7 +43,8 @@ final class HistorialViewModel {
         let calendar = Calendar.current
         let comps = calendar.dateComponents([.year, .month], from: fecha)
         let start = calendar.date(from: comps)!
-        let end = calendar.date(byAdding: .month, value: 1, to: start)!
+        let nextMonth = calendar.date(byAdding: .month, value: 1, to: start)!
+        let end = calendar.date(byAdding: .day, value: -1, to: nextMonth)!
         cargando = true
         do {
             diasMesElegido = try await HistorialService.shared.fetchDias(userId: nil, desde: start, hasta: end)

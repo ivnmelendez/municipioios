@@ -41,7 +41,7 @@ struct RutaNavegacionView: View {
     @State private var mostrarCompletada = false
 
     private var rutaEfectiva: RutaSemana { rutaActual ?? ruta }
-    private var rutaColor: Color { Color(hex: rutaEfectiva.color) }
+    private var rutaColor: Color { Color("Azul") }
     private var proxima: RutaEstructuraItem? {
         if let i = devIndex, i < estructuras.count { return estructuras[i] }
         return estructuras.first(where: { !$0.visitada })
@@ -138,6 +138,8 @@ struct RutaNavegacionView: View {
                     Text("\(visitadas) de \(total) estructuras")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                        .animation(.default, value: visitadas)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -164,16 +166,15 @@ struct RutaNavegacionView: View {
     private var devPill: some View {
         let idx = devIndex ?? (estructuras.firstIndex(where: { !$0.visitada }) ?? 0)
         let total = estructuras.count
-        return HStack(spacing: 14) {
-            Image(systemName: "hammer.fill").font(.subheadline)
+        return HStack(spacing: 16) {
             Button {
                 let prev = max(0, idx - 1)
                 devIndex = prev
                 panearA(estructuras[prev])
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 36, height: 36)
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 48, height: 48)
                     .background(.ultraThinMaterial, in: Circle())
             }
             .disabled(idx <= 0 || total == 0)
@@ -181,6 +182,8 @@ struct RutaNavegacionView: View {
             Text(total > 0 ? "\(idx + 1)/\(total)" : "--")
                 .font(.body.monospacedDigit().weight(.semibold))
                 .frame(minWidth: 52)
+                .contentTransition(.numericText())
+                .animation(.default, value: idx)
 
             Button {
                 let next = min(total - 1, idx + 1)
@@ -188,8 +191,8 @@ struct RutaNavegacionView: View {
                 panearA(estructuras[next])
             } label: {
                 Image(systemName: "chevron.right")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 36, height: 36)
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 48, height: 48)
                     .background(.ultraThinMaterial, in: Circle())
             }
             .disabled(idx >= total - 1 || total == 0)
@@ -214,6 +217,11 @@ struct RutaNavegacionView: View {
 
     private var bottomCard: some View {
         VStack(spacing: 0) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.4))
+                .frame(width: 36, height: 4)
+                .padding(.top, 10)
+                .padding(.bottom, 14)
             if isLoading {
                 ProgressView()
                     .padding(24)
@@ -231,12 +239,6 @@ struct RutaNavegacionView: View {
 
     private func cardContent(item: RutaEstructuraItem) -> some View {
         VStack(spacing: 0) {
-            // Handle
-            Capsule()
-                .fill(Color.secondary.opacity(0.4))
-                .frame(width: 36, height: 4)
-                .padding(.top, 10)
-                .padding(.bottom, 14)
 
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
