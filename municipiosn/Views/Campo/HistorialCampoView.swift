@@ -99,16 +99,17 @@ private struct DiaRondinDetalleView: View {
                         HStack(spacing: 8) {
                             ForEach(filtrosDisponibles, id: \.self) { f in
                                 Button {
-                                    withAnimation(.spring(duration: 0.3, bounce: 0.4)) { filtro = f }
+                                    withAnimation(.spring(duration: 0.3, bounce: 0.35)) { filtro = f }
                                 } label: {
                                     Text(f.rawValue)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(filtro == f ? Color("Background") : Color("Navy"))
-                                        .padding(.horizontal, 14)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(filtro == f ? .white : Color("Navy"))
+                                        .padding(.horizontal, 16)
                                         .padding(.vertical, 8)
-                                        .background(filtro == f ? Color("Azul") : Color("Navy").opacity(0.08), in: Capsule())
+                                        .background(filtro == f ? Color("Azul") : Color("Navy").opacity(0.07), in: Capsule())
+                                        .shadow(color: filtro == f ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
                                         .scaleEffect(filtro == f ? 1.04 : 1.0)
-                                        .animation(.spring(duration: 0.3, bounce: 0.4), value: filtro == f)
+                                        .animation(.spring(duration: 0.3, bounce: 0.35), value: filtro == f)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -314,7 +315,7 @@ struct HistorialCampoView: View {
 
     var body: some View {
         Group {
-            if vm.cargando {
+            if vm.cargando && dias.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if dias.isEmpty {
@@ -324,20 +325,35 @@ struct HistorialCampoView: View {
                     description: Text("No hay estructuras visitadas en este periodo.")
                 )
             } else {
-                List {
-                    Section(tituloSeccion) {
-                        ForEach(dias) { dia in
-                            NavigationLink(destination: DiaRondinDetalleView(dia: dia)) {
-                                DiaRondinRow(dia: dia)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(tituloSeccion)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                            .padding(.horizontal, 20)
+
+                        VStack(spacing: 0) {
+                            ForEach(Array(dias.enumerated()), id: \.element.id) { index, dia in
+                                NavigationLink(destination: DiaRondinDetalleView(dia: dia)) {
+                                    DiaRondinRow(dia: dia)
+                                }
+                                .buttonStyle(RondinRowButtonStyle())
+                                if index < dias.count - 1 {
+                                    Divider().padding(.leading, 20)
+                                }
                             }
                         }
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.horizontal, 20)
                     }
+                    .padding(.top, 20)
+                    .padding(.bottom, 32)
                 }
-                .listStyle(.insetGrouped)
+                .background(Color("Background"))
+                .refreshable { await vm.cargar() }
             }
         }
         .task { await vm.cargar() }
-        .refreshable { await vm.cargar() }
         .onChange(of: periodo) { (_: FiltroFecha, new: FiltroFecha) in
             if case .mesElegido(let d) = new {
                 Task { await vm.cargarMesElegido(fecha: d) }
@@ -414,27 +430,34 @@ private struct DiaRondinRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(diaNombre)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
                 Text(fechaCorta)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 Text("\(dia.estructuras.count)")
-                    .font(.subheadline.weight(.bold))
+                    .font(.body.weight(.bold))
                     .foregroundStyle(Color("Navy"))
                     .monospacedDigit()
                 Text("revisadas")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
     }
 }
 

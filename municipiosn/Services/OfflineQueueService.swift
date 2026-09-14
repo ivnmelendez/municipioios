@@ -52,7 +52,7 @@ final class OfflineQueueService {
     // MARK: - Private
 
     private func iniciarMonitor() {
-        monitor.pathUpdateHandler = { [weak self] path in
+        monitor.pathUpdateHandler = { @Sendable [weak self] path in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 let estabaDesconectado = !self.isConnected

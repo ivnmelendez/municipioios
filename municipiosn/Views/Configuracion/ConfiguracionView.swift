@@ -17,152 +17,96 @@ struct ConfiguracionView: View {
 
     private var initiales: String { auth.initiales }
     private var displayName: String { auth.displayName }
-    private var rol: String { auth.rol }
 
     var body: some View {
         NavigationStack {
-        List {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
 
-                // MARK: Header perfil
-                Section {
-                    HStack(spacing: 16) {
-                        PhotosPicker(selection: $photoItem, matching: .images) {
-                            ZStack(alignment: .bottomTrailing) {
-                                Group {
-                                    if let foto = fotoPerfil {
-                                        foto
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 72, height: 72)
-                                            .clipShape(Circle())
-                                    } else {
-                                        Text(initiales.isEmpty ? "?" : initiales)
-                                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                                            .foregroundStyle(Color("Navy"))
-                                            .frame(width: 72, height: 72)
-                                            .background(Color("Navy").opacity(0.1), in: Circle())
-                                    }
-                                }
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(5)
-                                    .background(Color("Azul"), in: Circle())
-                                    .offset(x: 2, y: 2)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .onChange(of: photoItem) {
-                            Task {
-                                if let data = try? await photoItem?.loadTransferable(type: Data.self),
-                                   let uiImage = UIImage(data: data),
-                                   let compressed = uiImage.jpegData(compressionQuality: 0.7) {
-                                    fotoPerfil = Image(uiImage: uiImage)
-                                    guardarFotoLocal(data: compressed)
-                                    await subirFoto(data: compressed)
-                                }
-                            }
-                        }
-                        .overlay {
-                            if subiendoFoto {
-                                ProgressView()
-                                    .tint(.white)
-                                    .frame(width: 72, height: 72)
-                                    .background(.black.opacity(0.4), in: Circle())
-                            }
-                        }
+                    // MARK: Perfil
+                    perfilCard
+                        .padding(.horizontal, 20)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(displayName.isEmpty ? "Usuario" : displayName)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            Text(rol == "campo" ? "Campo" : "Administrador")
-                                .font(.subheadline)
-                                .foregroundStyle(Color("TextMuted"))
-                            Text("San Nicolás de los Garza, NL")
-                                .font(.caption)
-                                .foregroundStyle(Color("TextMuted").opacity(0.7))
-                        }
-                    }
-                    .padding(.vertical, 6)
-                }
+                    // MARK: Preferencias
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Preferencias")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                            .padding(.horizontal, 20)
 
-                // MARK: Preferencias
-                Section("Preferencias") {
-                    Toggle(isOn: $notificaciones) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
+                        VStack(spacing: 0) {
+                            HStack(spacing: 14) {
+                                Image(systemName: "bell.badge.fill")
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(Color("Navy"))
+                                    .frame(width: 28)
                                 Text("Notificaciones")
                                     .font(.body)
-                                Text("Intervenciones, daños y rondín")
-                                    .font(.caption)
-                                    .foregroundStyle(Color("TextMuted"))
+                                Spacer()
+                                Toggle("", isOn: $notificaciones)
+                                    .tint(Color("Azul"))
+                                    .labelsHidden()
                             }
-                        } icon: {
-                            Image(systemName: "bell.badge.fill")
-                                .foregroundStyle(Color("Navy"))
-                        }
-                    }
-                    .tint(Color("Azul"))
-                    .onChange(of: notificaciones) { _, habilitadas in
-                        if habilitadas {
-                            Task { await pedirPermisoNotificaciones() }
-                        } else {
-                            RealtimeService.shared.cancelarNotificacionSabado()
-                        }
-                    }
-
-                    Button {
-                        mostrarEditorDashboard = true
-                    } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Personalizar inicio")
-                                    .font(.body)
-                                    .foregroundStyle(.primary)
-                                    }
-                        } icon: {
-                            Image(systemName: "slider.horizontal.3")
-                                .foregroundStyle(Color("Navy"))
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                // MARK: Debug
-                #if DEBUG
-                Section("Desarrollo") {
-                    Button {
-                        probarNotificacion()
-                    } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Probar notificación de rondín")
-                                    .font(.body)
-                                    .foregroundStyle(.primary)
-                                Text("Llega en 15 segundos — cierra la app para probar")
-                                    .font(.caption)
-                                    .foregroundStyle(Color("TextMuted"))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .onChange(of: notificaciones) { _, habilitadas in
+                                if habilitadas {
+                                    Task { await pedirPermisoNotificaciones() }
+                                } else {
+                                    RealtimeService.shared.cancelarNotificacionSabado()
+                                }
                             }
-                        } icon: {
-                            Image(systemName: "bell.and.waves.left.and.right.fill")
-                                .foregroundStyle(Color("Navy"))
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-                #endif
 
-                // MARK: Sesión
-                Section {
-                    Button(role: .destructive) {
+                            Divider().padding(.leading, 58)
+
+                            Button { mostrarEditorDashboard = true } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "slider.horizontal.3")
+                                        .font(.system(size: 17))
+                                        .foregroundStyle(Color("Navy"))
+                                        .frame(width: 28)
+                                    Text("Personalizar inicio")
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color("TextMuted").opacity(0.4))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.horizontal, 20)
+                    }
+
+                    // MARK: Sesión
+                    Button {
                         confirmarCerrarSesion = true
                     } label: {
-                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
+                        HStack(spacing: 14) {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.system(size: 17))
+                                .foregroundStyle(.red)
+                                .frame(width: 28)
+                            Text("Cerrar sesión")
+                                .font(.body)
+                                .foregroundStyle(.red)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.horizontal, 20)
                     }
+                    .buttonStyle(.plain)
                 }
-
+                .padding(.top, 20)
+                .padding(.bottom, 40)
             }
+            .background(Color("Background"))
             .navigationTitle("Mi perfil")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -191,6 +135,65 @@ struct ConfiguracionView: View {
         } message: {
             Text("Se cerrará tu sesión en este dispositivo.")
         }
+    }
+
+    private var perfilCard: some View {
+        HStack(spacing: 16) {
+            PhotosPicker(selection: $photoItem, matching: .images) {
+                ZStack(alignment: .bottomTrailing) {
+                    Group {
+                        if let foto = fotoPerfil {
+                            foto
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 72, height: 72)
+                                .clipShape(Circle())
+                        } else {
+                            Text(initiales.isEmpty ? "?" : initiales)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color("Navy"))
+                                .frame(width: 72, height: 72)
+                                .background(Color("Navy").opacity(0.1), in: Circle())
+                        }
+                    }
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(5)
+                        .background(Color("Azul"), in: Circle())
+                        .offset(x: 2, y: 2)
+                }
+            }
+            .buttonStyle(.plain)
+            .onChange(of: photoItem) {
+                Task {
+                    if let data = try? await photoItem?.loadTransferable(type: Data.self),
+                       let uiImage = UIImage(data: data),
+                       let compressed = uiImage.jpegData(compressionQuality: 0.7) {
+                        fotoPerfil = Image(uiImage: uiImage)
+                        guardarFotoLocal(data: compressed)
+                        await subirFoto(data: compressed)
+                    }
+                }
+            }
+            .overlay {
+                if subiendoFoto {
+                    ProgressView()
+                        .tint(.white)
+                        .frame(width: 72, height: 72)
+                        .background(.black.opacity(0.4), in: Circle())
+                }
+            }
+
+            Text(displayName.isEmpty ? "Usuario" : displayName)
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     // MARK: Persistencia foto
@@ -280,17 +283,6 @@ struct ConfiguracionView: View {
         default:
             RealtimeService.shared.programarNotificacionSabado()
         }
-    }
-
-    private func probarNotificacion() {
-        let content = UNMutableNotificationContent()
-        content.title = "Historial de rondín disponible"
-        content.body = "Ya puedes revisar las estructuras visitadas hoy por el equipo de campo."
-        content.sound = .default
-        content.userInfo = ["destino": "rondines"]
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 15, repeats: false)
-        let request = UNNotificationRequest(identifier: "rondin_prueba", content: content, trigger: trigger)
-        Task { try? await UNUserNotificationCenter.current().add(request) }
     }
 
     private func fotoURL() -> URL {

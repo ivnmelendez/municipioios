@@ -171,9 +171,9 @@ struct EstructurasListView: View {
                     orden.append(key)
                     grupos[key] = (e.parques?.colonias?.nombre, [])
                 }
-                grupos[key]!.items.append(e)
+                grupos[key]?.items.append(e)
             }
-            return orden.map { k in (k, grupos[k]!.colonia, grupos[k]!.items) }
+            return orden.compactMap { k in grupos[k].map { (k, $0.colonia, $0.items) } }
         }()
 
         let pageW: CGFloat = 612

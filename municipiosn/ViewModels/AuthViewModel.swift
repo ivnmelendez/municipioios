@@ -14,7 +14,7 @@ final class AuthViewModel {
     var isLoading = false
     var displayName: String = ""
     var initiales: String = ""
-    var rol: String = "admin"
+    var rol: String = "campo"
     var perfilId: UUID?
     var avatarUrl: String?
 
@@ -28,7 +28,9 @@ final class AuthViewModel {
         do {
             _ = try await auth.session
             await loadUserProfile()
-            authState = .authenticated
+            if authState == .checking {
+                authState = .authenticated
+            }
         } catch {
             authState = .unauthenticated
         }
@@ -62,8 +64,14 @@ final class AuthViewModel {
             rol = perfil.rol
             perfilId = perfil.id
             avatarUrl = perfil.avatarUrl
+            UserDefaults.standard.set(perfil.rol, forKey: "cached_rol_\(userId.uuidString)")
         } catch {
-            rol = "admin"
+            let cachedRol = UserDefaults.standard.string(forKey: "cached_rol_\(userId.uuidString)")
+            if let cached = cachedRol {
+                rol = cached
+            } else {
+                authState = .unauthenticated
+            }
         }
     }
 
@@ -103,9 +111,14 @@ final class AuthViewModel {
     }
 
     func signOut() async {
+        if let userId = perfilId {
+            UserDefaults.standard.removeObject(forKey: "cached_rol_\(userId.uuidString)")
+        } else if let user = try? await auth.user() {
+            UserDefaults.standard.removeObject(forKey: "cached_rol_\(user.id.uuidString)")
+        }
         try? await auth.signOut()
         authState = .unauthenticated
-        rol = "admin"
+        rol = "campo"
         perfilId = nil
         avatarUrl = nil
         displayName = ""

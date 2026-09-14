@@ -31,7 +31,6 @@ struct CampoAdminView: View {
                                 { if case .mesElegido = periodo { return true }; return false }()
                                 ? .fill : .none
                             )
-                            .foregroundStyle(Color("Azul"))
                     }
                 }
             }

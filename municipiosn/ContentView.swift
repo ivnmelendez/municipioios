@@ -44,6 +44,12 @@ struct ContentView: View {
         }
         .tint(Color("Navy"))
         .onReceive(NotificationCenter.default.publisher(for: .nuevoCambioRotoplas)) { _ in campoBadge += 1 }
+        .onChange(of: tabSeleccionada) { _, nuevo in
+            if nuevo == "campo" {
+                campoBadge = 0
+                RealtimeService.shared.badgeCount = 0
+            }
+        }
         .onAppear {
             if UserDefaults.standard.bool(forKey: "pendingRondines") {
                 UserDefaults.standard.removeObject(forKey: "pendingRondines")

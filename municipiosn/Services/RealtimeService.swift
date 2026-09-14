@@ -9,10 +9,12 @@ final class RealtimeService {
 
     var nuevaIntervencion: IntervencionCompleta?
     var badgeCount: Int = 0
+    var ubicacionesActualizadas: Date = .distantPast
 
     private var channel: RealtimeChannelV2?
     private var subIntervencion: RealtimeSubscription?
     private var subDano: RealtimeSubscription?
+    private var subUbicacion: RealtimeSubscription?
     private var isSubscribing = false
     private let client = SupabaseService.shared.client
 
@@ -51,6 +53,16 @@ final class RealtimeService {
             }
         }
 
+        subUbicacion = channel.onPostgresChange(
+            UpdateAction.self,
+            schema: "public",
+            table: "ubicaciones_campo"
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.ubicacionesActualizadas = Date()
+            }
+        }
+
         try? await channel.subscribeWithError()
         self.channel = channel
 
@@ -63,6 +75,7 @@ final class RealtimeService {
         }
         subIntervencion = nil
         subDano = nil
+        subUbicacion = nil
         channel = nil
     }
 
@@ -81,7 +94,7 @@ final class RealtimeService {
 
         var comps = DateComponents()
         comps.weekday = 7   // Sábado
-        comps.hour = 18
+        comps.hour = 15
         comps.minute = 0
 
         content.userInfo = ["destino": "rondines"]
@@ -119,12 +132,13 @@ final class RealtimeService {
             ("⚠️ Daño reportado", "Estructura \(num) necesita atención")
         }
 
+        let badge = badgeCount
         Task {
             let content = UNMutableNotificationContent()
             content.title = titulo
             content.body = cuerpo
             content.sound = .default
-            content.badge = NSNumber(value: badgeCount)
+            content.badge = NSNumber(value: badge)
             let request = UNNotificationRequest(
                 identifier: UUID().uuidString,
                 content: content,

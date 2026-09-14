@@ -72,8 +72,7 @@ struct CampanaCelda: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .frame(height: 64)
+                .frame(maxWidth: .infinity, minHeight: 64, maxHeight: 64, alignment: .topLeading)
             }
         }
         .buttonStyle(.plain)

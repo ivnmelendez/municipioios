@@ -54,6 +54,7 @@ struct PagosView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
+            Color("Background").ignoresSafeArea()
             Group {
                 if vm.isLoading && vm.pagos.isEmpty {
                     ProgressView()
@@ -110,6 +111,8 @@ struct PagosView: View {
                             }
                         }
                     }
+                    .scrollContentBackground(.hidden)
+                    .background(Color("Background"))
                     .refreshable { await vm.cargar() }
                     .animation(.easeInOut(duration: 0.2), value: periodo)
                 }
@@ -172,7 +175,8 @@ struct PagosView: View {
         }
         .sheet(isPresented: $mostrarNuevoPago) {
             NuevoPagoSheet(perfilId: auth.perfilId) { fecha, trabajador, monto, concepto in
-                Task { await vm.registrar(fecha: fecha, trabajador: trabajador, monto: monto, concepto: concepto, creadoPor: auth.perfilId ?? UUID()) }
+                guard let perfilId = auth.perfilId else { return }
+                Task { await vm.registrar(fecha: fecha, trabajador: trabajador, monto: monto, concepto: concepto, creadoPor: perfilId) }
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -423,6 +427,7 @@ private struct PagoConfirmadoView: View {
 
     @State private var anillo: Double = 0
     @State private var mostrarDetalle = false
+    @State private var dismissed = false
 
     private var montoFormateado: String {
         let fmt = NumberFormatter()
@@ -501,6 +506,7 @@ private struct PagoConfirmadoView: View {
                 Spacer()
 
                 Button {
+                    dismissed = true
                     onDismiss()
                 } label: {
                     Text("Listo")
@@ -519,7 +525,9 @@ private struct PagoConfirmadoView: View {
         .onAppear {
             withAnimation { anillo = 1 }
             mostrarDetalle = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { onDismiss() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [self] in
+                if !dismissed { onDismiss() }
+            }
         }
     }
 

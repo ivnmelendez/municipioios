@@ -29,10 +29,79 @@ private struct UbicacionPayload: Encodable {
     }
 }
 
+@MainActor
 final class UbicacionCampoService {
     static let shared = UbicacionCampoService()
     private var client: SupabaseClient { SupabaseService.shared.client }
+    private var locationChannel: RealtimeChannelV2?
+    private var locationSubInsert: RealtimeSubscription?
+    private var locationSubUpdate: RealtimeSubscription?
+    private var pollingTask: Task<Void, Never>?
     private init() {}
+
+    func suscribirUbicaciones() -> AsyncStream<[UbicacionActiva]> {
+        AsyncStream { continuation in
+            Task {
+                // Initial fetch
+                if let activas = try? await self.fetchActivas() {
+                    continuation.yield(activas)
+                }
+
+                if let existing = self.locationChannel {
+                    await self.client.realtimeV2.removeChannel(existing)
+                }
+                let channel = self.client.realtimeV2.channel("ubicaciones_campo_live")
+                self.locationChannel = channel
+
+                self.locationSubInsert = channel.onPostgresChange(
+                    InsertAction.self,
+                    schema: "public",
+                    table: "ubicaciones_campo"
+                ) { [weak self] _ in
+                    Task {
+                        if let activas = try? await self?.fetchActivas() {
+                            continuation.yield(activas)
+                        }
+                    }
+                }
+
+                self.locationSubUpdate = channel.onPostgresChange(
+                    UpdateAction.self,
+                    schema: "public",
+                    table: "ubicaciones_campo"
+                ) { [weak self] _ in
+                    Task {
+                        if let activas = try? await self?.fetchActivas() {
+                            continuation.yield(activas)
+                        }
+                    }
+                }
+
+                try? await channel.subscribeWithError()
+
+                // Fallback polling every 30s in case Realtime not enabled on table
+                self.pollingTask = Task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(30))
+                        if Task.isCancelled { break }
+                        if let activas = try? await self.fetchActivas() {
+                            continuation.yield(activas)
+                        }
+                    }
+                }
+
+                continuation.onTermination = { _ in
+                    Task { @MainActor in
+                        self.pollingTask?.cancel()
+                        self.pollingTask = nil
+                        self.locationSubInsert = nil
+                        self.locationSubUpdate = nil
+                        await self.client.realtimeV2.removeChannel(channel)
+                    }
+                }
+            }
+        }
+    }
 
     func actualizar(userId: UUID, coord: CLLocationCoordinate2D) async {
         let fmt = ISO8601DateFormatter()

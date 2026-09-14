@@ -7,7 +7,6 @@ struct DashboardView: View {
     @State private var pagosVm = PagosViewModel()
     @State private var mostrarConfiguracion = false
     @State private var aparecer = false
-    @State private var ultimaActualizacion: Date? = nil
     @State private var fotoPerfil: Image? = nil
     @State private var filtroNavegacion: EstadoEstructura? = nil
     @State private var navegarEstructuras = false
@@ -38,15 +37,6 @@ struct DashboardView: View {
         fmt.dateFormat = "EEEE, d 'de' MMMM"
         let raw = fmt.string(from: Date())
         return raw.prefix(1).uppercased() + raw.dropFirst()
-    }
-
-    private var horaActualizacion: String {
-        guard let fecha = ultimaActualizacion else { return "" }
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "es_MX")
-        fmt.timeZone = Self.monterrey
-        fmt.dateFormat = "h:mm a"
-        return fmt.string(from: fecha)
     }
 
     @AppStorage("perfil_avatar_url_cache") private var avatarUrlCached = ""
@@ -132,7 +122,6 @@ struct DashboardView: View {
         .refreshable {
             EstructurasService.shared.invalidarCacheEstructuras()
             await vm.cargar()
-            ultimaActualizacion = Date()
         }
         .task {
             if let userId = auth.perfilId {
@@ -140,7 +129,6 @@ struct DashboardView: View {
             }
             await vm.cargar()
             await pagosVm.cargar()
-            ultimaActualizacion = Date()
             aparecer = true
         }
         .sheet(isPresented: $mostrarConfiguracion) {
@@ -169,6 +157,8 @@ struct DashboardView: View {
 
         }
     }
+
+
 
     // MARK: - Header
 
@@ -205,16 +195,9 @@ struct DashboardView: View {
                 .onAppear { cargarFotoPerfil() }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willEnterForegroundNotification)) { _ in cargarFotoPerfil() }
-
-                if !horaActualizacion.isEmpty {
-                    Text("↻ \(horaActualizacion)")
-                        .font(.caption2)
-                        .foregroundStyle(Color("TextMuted").opacity(0.6))
-                }
             }
         }
     }
-
 
     // MARK: - Coroplast del mes
 
