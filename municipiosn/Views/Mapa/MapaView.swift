@@ -187,6 +187,7 @@ struct MapaView: View {
     @State private var busqueda = ""
     @State private var mapController = MapController()
     @FocusState private var searchFocused: Bool
+    @Namespace private var glassNamespace
 
     @State private var estructuraSemanaMap: [UUID: RutaSemana] = [:]
     @State private var coloniasConSemana: [String: String] = [:]
@@ -302,39 +303,44 @@ struct MapaView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            VStack(spacing: 8) {
-                if puedeCrearEstructuras {
+            GlassEffectContainer(spacing: 8) {
+                VStack(spacing: 8) {
+                    if puedeCrearEstructuras {
+                        Button {
+                            mostrarNuevaEstructura = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .foregroundStyle(Color("Azul"))
+                        }
+                        .buttonStyle(.glass(.regular))
+                        .controlSize(.large)
+                        .buttonBorderShape(.circle)
+                        .glassEffectID("plus", in: glassNamespace)
+                    }
+
                     Button {
-                        mostrarNuevaEstructura = true
+                        locationManager.requestWhenInUseAuthorization()
+                        mapController.centerOnUser()
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "location.fill")
                             .foregroundStyle(Color("Azul"))
                     }
                     .buttonStyle(.glass(.regular))
                     .controlSize(.large)
                     .buttonBorderShape(.circle)
-                }
+                    .glassEffectID("location", in: glassNamespace)
 
-                Button {
-                    locationManager.requestWhenInUseAuthorization()
-                    mapController.centerOnUser()
-                } label: {
-                    Image(systemName: "location.fill")
-                        .foregroundStyle(Color("Azul"))
+                    Button {
+                        mapController.resetRegion()
+                    } label: {
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundStyle(Color("Azul"))
+                    }
+                    .buttonStyle(.glass(.regular))
+                    .controlSize(.large)
+                    .buttonBorderShape(.circle)
+                    .glassEffectID("reset", in: glassNamespace)
                 }
-                .buttonStyle(.glass(.regular))
-                .controlSize(.large)
-                .buttonBorderShape(.circle)
-
-                Button {
-                    mapController.resetRegion()
-                } label: {
-                    Image(systemName: "mappin.and.ellipse")
-                        .foregroundStyle(Color("Azul"))
-                }
-                .buttonStyle(.glass(.regular))
-                .controlSize(.large)
-                .buttonBorderShape(.circle)
             }
             .padding(.trailing, 16)
             .padding(.bottom, 20)
@@ -378,17 +384,30 @@ struct MapaView: View {
             async let semanaMapLoad = RutasService.shared.fetchEstructuraSemanaMap()
             coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
             municipioPolygons = loadGeoPolygons(named: "san_nicolas")
+
+            // Show cached overlay coloring instantly while network loads
+            if let cached = LocalDataCache.shared.cargar(Set<String>.self, clave: "colonias_con_estructuras") {
+                coloniasConEstructuras = cached
+            }
+
             await estructurasLoad
             estructuraSemanaMap = (try? await semanaMapLoad) ?? [:]
-            coloniasConEstructuras = computarColoniasConEstructuras(
-                polygons: coloniasPolygons,
-                estructuras: vm.estructuras
-            )
-            coloniasConSemana = computarColoniasConSemana(
-                polygons: coloniasPolygons,
-                estructuras: vm.estructuras,
-                semanaMap: estructuraSemanaMap
-            )
+
+            // Compute heavy geo work off MainActor
+            let polygons = coloniasPolygons
+            let estructuras = vm.estructuras
+            let semanaMap = estructuraSemanaMap
+            async let freshColonias = Task.detached(priority: .userInitiated) {
+                computarColoniasConEstructuras(polygons: polygons, estructuras: estructuras)
+            }.value
+            async let freshSemana = Task.detached(priority: .userInitiated) {
+                computarColoniasConSemana(polygons: polygons, estructuras: estructuras, semanaMap: semanaMap)
+            }.value
+            let (colonias, semana) = await (freshColonias, freshSemana)
+            coloniasConEstructuras = colonias
+            coloniasConSemana = semana
+            LocalDataCache.shared.guardar(colonias, clave: "colonias_con_estructuras")
+
             withAnimation(.easeOut(duration: 0.6)) {
                 mapaListo = true
             }
@@ -609,21 +628,20 @@ private struct MKMapViewWrapper: UIViewRepresentable {
         context.coordinator.estructuraSemanaMap = estructuraSemanaMap
         context.coordinator.mostrarRutas = mostrarRutas
 
-        let needsOverlayReload = context.coordinator.loadedPolygonCount != coloniasPolygons.count
-            || context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
-            || context.coordinator.loadedSemanaCount != coloniasConSemana.count
+        let polygonCountChanged = context.coordinator.loadedPolygonCount != coloniasPolygons.count
+        let highlightChanged = context.coordinator.loadedHighlightCount != coloniasConEstructuras.count
+        let semanaChanged = context.coordinator.loadedSemanaCount != coloniasConSemana.count
 
-        if needsOverlayReload {
+        if polygonCountChanged {
+            // Full reload only when the polygon set itself changes
             context.coordinator.loadedPolygonCount = coloniasPolygons.count
             context.coordinator.loadedHighlightCount = coloniasConEstructuras.count
             context.coordinator.loadedSemanaCount = coloniasConSemana.count
             mapView.removeOverlays(mapView.overlays)
 
-            // Exterior dim using even-odd renderer
             if !municipioPolygons.isEmpty {
                 mapView.addOverlay(ExteriorDimOverlay(municipioPolygons), level: .aboveRoads)
             }
-
             for poly in coloniasPolygons {
                 let mkPoly = MKPolygon(coordinates: poly.coordinates, count: poly.coordinates.count)
                 mkPoly.title = poly.cvegeo
@@ -642,6 +660,11 @@ private struct MKMapViewWrapper: UIViewRepresentable {
                     mapView.alpha = 1
                 }
             }
+        } else if highlightChanged || semanaChanged {
+            // Highlighting changed (e.g. cache→fresh) — update renderer colors in place, no flicker
+            context.coordinator.loadedHighlightCount = coloniasConEstructuras.count
+            context.coordinator.loadedSemanaCount = coloniasConSemana.count
+            mapController.updateColoniasVisibility(mostrar: true, tieneEstructuras: coloniasConEstructuras)
         }
 
         context.coordinator.visitadasHoy = visitadasHoy

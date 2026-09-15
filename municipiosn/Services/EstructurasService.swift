@@ -273,25 +273,36 @@ final class EstructurasService {
         mes: (visitas: Int, cambios: Int, danos: Int),
         semana: (visitas: Int, cambios: Int, danos: Int)
     ) {
+        let mty = TimeZone(identifier: "America/Monterrey")!
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "America/Monterrey")!
+        cal.timeZone = mty
         cal.firstWeekday = 2
         let hoy = Date()
-        let inicioMes = cal.dateInterval(of: .month, for: hoy)?.start ?? hoy
-        let inicioSemana = cal.dateInterval(of: .weekOfYear, for: hoy)?.start ?? hoy
+        let inicioMes    = cal.dateInterval(of: .month,      for: hoy)?.start ?? hoy
+        let inicioSemana = cal.dateInterval(of: .weekOfYear, for: hoy)?.start
+            ?? cal.date(byAdding: .day, value: -6, to: hoy)!
+        let manana = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: hoy))!
 
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withFullDate]
-        iso.timeZone = TimeZone(identifier: "America/Monterrey")!
+        iso.timeZone = mty
         let desdeStr = iso.string(from: inicioMes)
-        let hastaStr = iso.string(from: hoy)
-        let semanaStr = iso.string(from: inicioSemana)
+        let hastaStr = iso.string(from: manana)   // exclusive upper bound used with .lt
 
+        // Flexible parser handles both "YYYY-MM-DD" and full ISO8601 timestamps from Supabase
+        let isoFull = ISO8601DateFormatter()
+        isoFull.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        func parseFecha(_ s: String) -> Date? {
+            iso.date(from: s) ?? isoFull.date(from: s)
+        }
+
+        // PostgREST returns the joined rondines row as an ARRAY even for to-one FK
         struct RondinNested: Codable { let fecha: String }
         struct ResumenRow: Codable {
             let estructuraId: UUID
             let accion: String
-            let rondines: RondinNested
+            let rondines: [RondinNested]   // array — PostgREST join result
             enum CodingKeys: String, CodingKey {
                 case estructuraId = "estructura_id"; case accion; case rondines
             }
@@ -301,7 +312,7 @@ final class EstructurasService {
             .from("rondines_estructuras")
             .select("estructura_id, accion, rondines!inner(fecha)")
             .gte("rondines.fecha", value: desdeStr)
-            .lte("rondines.fecha", value: hastaStr)
+            .lt("rondines.fecha",  value: hastaStr)   // .lt with tomorrow covers all of today
             .execute()
             .value
 
@@ -310,7 +321,12 @@ final class EstructurasService {
         let cambiosMes   = rows.filter { accionesCoroplast.contains($0.accion) }.count
         let danosMes     = rows.filter { $0.accion == "reporte_dano" }.count
 
-        let rowsSemana   = rows.filter { $0.rondines.fecha >= semanaStr }
+        // Compare parsed Date values — safe regardless of Supabase timestamp format
+        let rowsSemana = rows.filter {
+            guard let fechaStr = $0.rondines.first?.fecha,
+                  let fecha = parseFecha(fechaStr) else { return false }
+            return fecha >= inicioSemana
+        }
         let visitasSemana = Set(rowsSemana.map { $0.estructuraId }).count
         let cambiosSemana = rowsSemana.filter { accionesCoroplast.contains($0.accion) }.count
         let danosSemana   = rowsSemana.filter { $0.accion == "reporte_dano" }.count

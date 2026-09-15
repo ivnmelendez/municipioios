@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import Supabase
 
 @MainActor
 @Observable
@@ -52,10 +53,13 @@ final class OfflineQueueService {
     }
 
     private func esErrorPermanente(_ error: Error) -> Bool {
-        let desc = error.localizedDescription
-        for code in ["401", "403", "404", "409", "422"] {
-            if desc.contains(code) { return true }
+        // HTTPError from Supabase SDK — check actual HTTP status code
+        if let httpError = error as? HTTPError {
+            let status = httpError.response.statusCode
+            return status == 401 || status == 403 || status == 404
+                || status == 409 || status == 422 || status == 410
         }
+        // URLError permanent failures
         if let urlError = error as? URLError {
             return urlError.code == .userAuthenticationRequired
                 || urlError.code == .noPermissionsToReadFile

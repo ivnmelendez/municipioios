@@ -2,7 +2,7 @@ import MapKit
 
 private var _geoCache: [String: [GeoPolygon]] = [:]
 
-struct GeoPolygon: Identifiable {
+struct GeoPolygon: Identifiable, @unchecked Sendable {
     let id = UUID()
     let coordinates: [CLLocationCoordinate2D]
     let cvegeo: String

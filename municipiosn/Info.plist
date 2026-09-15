@@ -13,6 +13,12 @@
 	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Estructuras</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Estructuras usa la cámara para capturar fotos de las estructuras en campo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Estructuras usa tu ubicación para mostrar estructuras cercanas y navegar rutas en campo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Estructuras necesita acceso a tu galería para adjuntar fotos a los reportes.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Estructuras necesita acceso para guardar imágenes en tu galería.</string>
 	<key>LSApplicationQueriesSchemes</key>

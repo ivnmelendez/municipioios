@@ -115,6 +115,7 @@ struct CampanasListaCompleta: View {
     @FocusState private var searchFocused: Bool
     @State private var appeared = false
     @State private var listKey = UUID()
+    @State private var animationTask: Task<Void, Never>?
 
     private var categorias: [String] {
         Array(Set(datos.compactMap(\.categoria))).sorted()
@@ -129,9 +130,14 @@ struct CampanasListaCompleta: View {
     }
 
     private func triggerAnimation() {
-        appeared = false
-        listKey = UUID()
-        Task { @MainActor in appeared = true }
+        animationTask?.cancel()
+        animationTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+            appeared = false
+            listKey = UUID()
+            appeared = true
+        }
     }
 
     var body: some View {
