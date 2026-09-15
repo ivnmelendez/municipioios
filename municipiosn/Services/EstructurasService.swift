@@ -291,34 +291,25 @@ final class EstructurasService {
         let desdeStr = isoFormatter.string(from: desde)
         let hastaStr = isoFormatter.string(from: hasta)
 
-        struct VisitaRow: Codable {
+        struct ResumenRow: Codable {
             let estructuraId: UUID
-            enum CodingKeys: String, CodingKey { case estructuraId = "estructura_id" }
-        }
-        struct AccionRow: Codable {
             let accion: String
+            enum CodingKeys: String, CodingKey {
+                case estructuraId = "estructura_id"; case accion
+            }
         }
 
-        async let visitasRaw: [VisitaRow] = client
+        let rows: [ResumenRow] = try await client
             .from("rondines_estructuras")
-            .select("estructura_id, rondines!inner(fecha)")
+            .select("estructura_id, accion, rondines!inner(fecha)")
             .gte("rondines.fecha", value: desdeStr)
             .lte("rondines.fecha", value: hastaStr)
             .execute()
             .value
 
-        async let accionesRaw: [AccionRow] = client
-            .from("rondines_estructuras")
-            .select("accion, rondines!inner(fecha)")
-            .gte("rondines.fecha", value: desdeStr)
-            .lte("rondines.fecha", value: hastaStr)
-            .execute()
-            .value
-
-        let (visitas, acciones) = try await (visitasRaw, accionesRaw)
-        let visitasUnicas = Set(visitas.map { $0.estructuraId }).count
-        let cambios = acciones.filter { ["cambio_coroplast", "reparacion_coroplast", "reactivacion"].contains($0.accion) }.count
-        let danos = acciones.filter { $0.accion == "reporte_dano" }.count
+        let visitasUnicas = Set(rows.map { $0.estructuraId }).count
+        let cambios = rows.filter { ["cambio_coroplast", "reparacion_coroplast", "reactivacion"].contains($0.accion) }.count
+        let danos = rows.filter { $0.accion == "reporte_dano" }.count
         return (visitasUnicas, cambios, danos)
     }
 

@@ -374,14 +374,16 @@ struct MapaView: View {
                 mapaListo = true
                 return
             }
-            await vm.cargar()
+            async let estructurasLoad: Void = vm.cargar()
+            async let semanaMapLoad = RutasService.shared.fetchEstructuraSemanaMap()
             coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
             municipioPolygons = loadGeoPolygons(named: "san_nicolas")
+            try? await estructurasLoad
+            estructuraSemanaMap = (try? await semanaMapLoad) ?? [:]
             coloniasConEstructuras = computarColoniasConEstructuras(
                 polygons: coloniasPolygons,
                 estructuras: vm.estructuras
             )
-            estructuraSemanaMap = (try? await RutasService.shared.fetchEstructuraSemanaMap()) ?? [:]
             coloniasConSemana = computarColoniasConSemana(
                 polygons: coloniasPolygons,
                 estructuras: vm.estructuras,

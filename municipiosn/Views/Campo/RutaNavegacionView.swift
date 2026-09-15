@@ -414,7 +414,7 @@ struct RutaNavegacionView: View {
         do {
             try await RutasService.shared.marcarRevision(
                 estructuraId: item.estructura.id,
-                rutaSemanaId: ruta.id,
+                rutaSemanaId: rutaEfectiva.id,
                 userId: uid
             )
         } catch {

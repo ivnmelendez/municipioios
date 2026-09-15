@@ -176,7 +176,7 @@ struct PagosView: View {
         .sheet(isPresented: $mostrarNuevoPago) {
             NuevoPagoSheet(perfilId: auth.perfilId) { fecha, trabajador, monto, concepto in
                 guard let perfilId = auth.perfilId else { return }
-                Task { await vm.registrar(fecha: fecha, trabajador: trabajador, monto: monto, concepto: concepto, creadoPor: perfilId) }
+                await vm.registrar(fecha: fecha, trabajador: trabajador, monto: monto, concepto: concepto, creadoPor: perfilId)
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -231,7 +231,7 @@ private struct PagoRow: View {
 
 private struct NuevoPagoSheet: View {
     let perfilId: UUID?
-    let onGuardar: (String, String, Double, String?) -> Void
+    let onGuardar: (String, String, Double, String?) async -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var fecha = Date()
@@ -343,10 +343,12 @@ private struct NuevoPagoSheet: View {
                         guard let monto = montoValido else { return }
                         let fmt = DateFormatter()
                         fmt.dateFormat = "yyyy-MM-dd"
-                        onGuardar(fmt.string(from: fecha), trabajadorFinal, monto,
-                                  concepto.isEmpty ? nil : concepto)
-                        HapticService.exito()
-                        withAnimation { exito = true }
+                        Task {
+                            await onGuardar(fmt.string(from: fecha), trabajadorFinal, monto,
+                                            concepto.isEmpty ? nil : concepto)
+                            HapticService.exito()
+                            withAnimation { exito = true }
+                        }
                     } label: {
                         HStack {
                             Image(systemName: "banknote.fill")

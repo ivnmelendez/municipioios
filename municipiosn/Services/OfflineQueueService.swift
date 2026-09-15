@@ -37,12 +37,15 @@ final class OfflineQueueService {
         for var accion in pendientes {
             do {
                 try await ejecutar(accion)
-            } catch {
+            } catch let urlError as URLError {
+                // Network error — retry up to 5 times
                 accion.intentos += 1
-                if accion.intentos < 5 {
-                    restantes.append(accion)
-                }
-                // Más de 5 intentos: ya caducó, se descarta
+                if accion.intentos < 5 { restantes.append(accion) }
+                _ = urlError
+            } catch {
+                // Permanent error (403/404/conflict) — retry once, then discard
+                accion.intentos += 1
+                if accion.intentos < 2 { restantes.append(accion) }
             }
         }
         pendientes = restantes
