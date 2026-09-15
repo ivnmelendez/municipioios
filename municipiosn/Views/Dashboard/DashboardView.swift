@@ -383,14 +383,10 @@ private struct AlcanceTotalCard: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
 
-            Divider().padding(.horizontal, 20)
-
             // Columnas
             HStack(spacing: 0) {
                 statCol("Mujeres", valor: fem, color: Color(hex: "#db2777"))
-                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 52)
                 statCol("Hombres", valor: mas, color: Color("Azul"))
-                Rectangle().fill(Color.primary.opacity(0.08)).frame(width: 1, height: 52)
                 statCol("+18 años", valor: mayores18, color: Color(hex: "#16a34a"))
             }
             .padding(.vertical, 18)
@@ -564,7 +560,7 @@ private struct UltimasEstructurasCard: View {
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            Divider().padding(.horizontal, 20)
+
 
             VStack(spacing: 0) {
                 ForEach(Array(estructuras.enumerated()), id: \.element.id) { index, e in
@@ -632,7 +628,7 @@ private struct SemanaCard: View {
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            Divider().padding(.horizontal, 20)
+
 
             HStack(spacing: 0) {
                 columna(
@@ -641,9 +637,6 @@ private struct SemanaCard: View {
                     icono: "checkmark.circle.fill",
                     color: Color(hex: "#16a34a")
                 )
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(width: 1, height: 72)
                 columna(
                     valor: cambios,
                     label: "Coroplast",
@@ -744,7 +737,7 @@ private struct InventarioCard: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
 
-            Divider().padding(.horizontal, 20)
+
 
             // Stats tappables
             HStack(spacing: 0) {
@@ -754,18 +747,12 @@ private struct InventarioCard: View {
                     color: Color(hex: "#16a34a"),
                     accion: onActivas
                 )
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(width: 1, height: 44)
                 inventarioBoton(
                     valor: kpi.dañadas,
                     label: "Dañadas",
                     color: Color(hex: "#dc2626"),
                     accion: onDañadas
                 )
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(width: 1, height: 44)
                 inventarioBoton(
                     valor: kpi.campanasActivas,
                     label: "Campañas",
@@ -862,13 +849,11 @@ private struct ResumenMunicipalCard: View {
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            Divider().padding(.horizontal, 20)
+
 
             HStack(spacing: 0) {
                 statCelda("\(kpi.totalEstructuras)", "Estructuras", "square.stack.fill", Color("Navy"))
-                divisor()
                 statCelda("\(coloniasConEstructuras)", "Colonias", "map.fill", Color("Navy"))
-                divisor()
                 statCelda("\(pctOperativas)%", "Operativas", "checkmark.circle.fill", Color(hex: "#16a34a"))
             }
             .padding(.vertical, 20)
@@ -895,11 +880,6 @@ private struct ResumenMunicipalCard: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func divisor() -> some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.07))
-            .frame(width: 1, height: 56)
-    }
 }
 
 // MARK: - Cobertura Ring Card
@@ -1018,7 +998,7 @@ private struct AlertaEstructurasCard: View {
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            Divider().padding(.horizontal, 20)
+
 
             HStack(spacing: 0) {
                 columna(
@@ -1028,9 +1008,6 @@ private struct AlertaEstructurasCard: View {
                     color: Color(hex: "#dc2626"),
                     accion: onDañadas
                 )
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(width: 1, height: 72)
                 columna(
                     valor: mantenimiento,
                     label: "Mantenimiento",
@@ -1085,7 +1062,7 @@ private struct AvisoCoroplastCard: View {
             .padding(.top, 20)
             .padding(.bottom, 16)
 
-            Divider().padding(.horizontal, 20)
+
 
             HStack(spacing: 0) {
                 columna(
@@ -1095,9 +1072,6 @@ private struct AvisoCoroplastCard: View {
                     color: Color(hex: "#ea580c"),
                     accion: onSinCoroplast
                 )
-                Rectangle()
-                    .fill(Color.primary.opacity(0.08))
-                    .frame(width: 1, height: 72)
                 columna(
                     valor: coroplastRoto,
                     label: "Dañado",
