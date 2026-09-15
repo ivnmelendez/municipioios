@@ -70,7 +70,7 @@ struct RutaNavegacionView: View {
                 estructura: item.estructura,
                 userId: userId,
                 campanas: campanas,
-                rutaSemanaId: ruta.id,
+                rutaSemanaId: rutaEfectiva.id,
                 yaVisitada: item.visitada,
                 onMarcarRevision: { Task { await marcar(item: item) } }
             )

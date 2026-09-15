@@ -113,6 +113,8 @@ struct CampanasListaCompleta: View {
     @State private var categoriaSeleccionada: String? = nil
     @State private var fotoFullscreen: (url: URL, titulo: String)? = nil
     @FocusState private var searchFocused: Bool
+    @State private var appeared = false
+    @State private var listKey = UUID()
 
     private var categorias: [String] {
         Array(Set(datos.compactMap(\.categoria))).sorted()
@@ -124,6 +126,12 @@ struct CampanasListaCompleta: View {
             let coincideCategoria = categoriaSeleccionada == nil || item.categoria == categoriaSeleccionada
             return coincideBusqueda && coincideCategoria
         }
+    }
+
+    private func triggerAnimation() {
+        appeared = false
+        listKey = UUID()
+        Task { @MainActor in appeared = true }
     }
 
     var body: some View {
@@ -174,15 +182,40 @@ struct CampanasListaCompleta: View {
                     .scrollClipDisabled()
                 }
 
+                if !datos.isEmpty {
+                    HStack {
+                        let isFiltered = categoriaSeleccionada != nil || !busqueda.isEmpty
+                        Text(isFiltered
+                             ? "\(filtrados.count) resultado\(filtrados.count == 1 ? "" : "s")"
+                             : "\(datos.count) campaña\(datos.count == 1 ? "" : "s")")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color("TextMuted"))
+                            .contentTransition(.numericText())
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                }
+
                 LazyVStack(spacing: 0) {
                     ForEach(Array(filtrados.enumerated()), id: \.element.id) { index, item in
                         CampanaListaRow(item: item, posicion: index + 1) { url in
                             fotoFullscreen = (url, item.nombre)
                         }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 12)
+                        .animation(
+                            .spring(duration: 0.4, bounce: 0.08).delay(Double(min(index, 14)) * 0.035),
+                            value: appeared
+                        )
                         Divider().padding(.leading, 76)
                     }
                 }
                 .padding(.horizontal, 20)
+                .id(listKey)
+                .onAppear { appeared = true }
+                .onChange(of: categoriaSeleccionada) { _, _ in triggerAnimation() }
+                .onChange(of: busqueda) { _, _ in triggerAnimation() }
             }
             .padding(.top, 4)
             .padding(.bottom, 32)

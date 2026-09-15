@@ -243,11 +243,11 @@ final class EstructurasService {
             .execute()
             .value
         async let coroplastCount = fetchCoroplastMes()
-        async let semana = fetchResumenSemana()
+        async let resumen = fetchResumenMesYSemana()
 
         let (e, c) = try await (estructuras, campanas)
         let cm = (try? await coroplastCount) ?? 0
-        let (visitas, cambios, danos) = (try? await semana) ?? (0, 0, 0)
+        let r = try? await resumen
 
         var kpi = KPIData()
         kpi.totalEstructuras = e.count
@@ -260,11 +260,65 @@ final class EstructurasService {
         kpi.coroplastRoto = e.filter { $0.coroplastEstado == "coroplast_roto" }.count
         kpi.campanasActivas = c.count
         kpi.coroplastMes = cm
-        kpi.visitasSemana = visitas
-        kpi.cambiosSemana = cambios
-        kpi.danosSemana = danos
+        kpi.visitasSemana = r?.semana.visitas ?? 0
+        kpi.cambiosSemana = r?.semana.cambios ?? 0
+        kpi.danosSemana   = r?.semana.danos   ?? 0
+        kpi.visitasMes    = r?.mes.visitas     ?? 0
+        kpi.danosMes      = r?.mes.danos       ?? 0
         kpi.isLoaded = true
         return kpi
+    }
+
+    func fetchResumenMesYSemana() async throws -> (
+        mes: (visitas: Int, cambios: Int, danos: Int),
+        semana: (visitas: Int, cambios: Int, danos: Int)
+    ) {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Monterrey")!
+        cal.firstWeekday = 2
+        let hoy = Date()
+        let inicioMes = cal.dateInterval(of: .month, for: hoy)?.start ?? hoy
+        let inicioSemana = cal.dateInterval(of: .weekOfYear, for: hoy)?.start ?? hoy
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withFullDate]
+        iso.timeZone = TimeZone(identifier: "America/Monterrey")!
+        let desdeStr = iso.string(from: inicioMes)
+        let hastaStr = iso.string(from: hoy)
+        let semanaStr = iso.string(from: inicioSemana)
+
+        struct RondinNested: Codable { let fecha: String }
+        struct ResumenRow: Codable {
+            let estructuraId: UUID
+            let accion: String
+            let rondines: RondinNested
+            enum CodingKeys: String, CodingKey {
+                case estructuraId = "estructura_id"; case accion; case rondines
+            }
+        }
+
+        let rows: [ResumenRow] = try await client
+            .from("rondines_estructuras")
+            .select("estructura_id, accion, rondines!inner(fecha)")
+            .gte("rondines.fecha", value: desdeStr)
+            .lte("rondines.fecha", value: hastaStr)
+            .execute()
+            .value
+
+        let accionesCoroplast = ["cambio_coroplast", "reparacion_coroplast", "reactivacion"]
+        let visitasMes   = Set(rows.map { $0.estructuraId }).count
+        let cambiosMes   = rows.filter { accionesCoroplast.contains($0.accion) }.count
+        let danosMes     = rows.filter { $0.accion == "reporte_dano" }.count
+
+        let rowsSemana   = rows.filter { $0.rondines.fecha >= semanaStr }
+        let visitasSemana = Set(rowsSemana.map { $0.estructuraId }).count
+        let cambiosSemana = rowsSemana.filter { accionesCoroplast.contains($0.accion) }.count
+        let danosSemana   = rowsSemana.filter { $0.accion == "reporte_dano" }.count
+
+        return (
+            mes: (visitasMes, cambiosMes, danosMes),
+            semana: (visitasSemana, cambiosSemana, danosSemana)
+        )
     }
 
     func fetchResumenMes() async throws -> (visitas: Int, cambios: Int, danos: Int) {

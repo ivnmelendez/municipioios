@@ -37,19 +37,30 @@ final class OfflineQueueService {
         for var accion in pendientes {
             do {
                 try await ejecutar(accion)
-            } catch let urlError as URLError {
-                // Network error — retry up to 5 times
-                accion.intentos += 1
-                if accion.intentos < 5 { restantes.append(accion) }
-                _ = urlError
             } catch {
-                // Permanent error (403/404/conflict) — retry once, then discard
-                accion.intentos += 1
-                if accion.intentos < 2 { restantes.append(accion) }
+                if esErrorPermanente(error) {
+                    // 401/403/404/409 — drop immediately, no retry
+                } else {
+                    // Network or transient error — retry up to 5 times
+                    accion.intentos += 1
+                    if accion.intentos < 5 { restantes.append(accion) }
+                }
             }
         }
         pendientes = restantes
         guardarDisco()
+    }
+
+    private func esErrorPermanente(_ error: Error) -> Bool {
+        let desc = error.localizedDescription
+        for code in ["401", "403", "404", "409", "422"] {
+            if desc.contains(code) { return true }
+        }
+        if let urlError = error as? URLError {
+            return urlError.code == .userAuthenticationRequired
+                || urlError.code == .noPermissionsToReadFile
+        }
+        return false
     }
 
     // MARK: - Private

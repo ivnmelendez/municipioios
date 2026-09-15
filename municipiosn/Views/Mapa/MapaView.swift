@@ -378,7 +378,7 @@ struct MapaView: View {
             async let semanaMapLoad = RutasService.shared.fetchEstructuraSemanaMap()
             coloniasPolygons = loadGeoPolygons(named: "colonias_san_nicolas")
             municipioPolygons = loadGeoPolygons(named: "san_nicolas")
-            try? await estructurasLoad
+            await estructurasLoad
             estructuraSemanaMap = (try? await semanaMapLoad) ?? [:]
             coloniasConEstructuras = computarColoniasConEstructuras(
                 polygons: coloniasPolygons,
@@ -1065,7 +1065,8 @@ private struct BusquedaResultados: View {
                         }
                     }
                 }
-                .padding(.vertical, 10)
+                .padding(.top, 10)
+                .padding(.bottom, 110)
                 .padding(.horizontal, 4)
             }
             .frame(maxHeight: .infinity)
@@ -1074,7 +1075,9 @@ private struct BusquedaResultados: View {
                 LinearGradient(
                     stops: [
                         .init(color: .clear, location: 0),
-                        .init(color: .black, location: 0.07)
+                        .init(color: .black, location: 0.06),
+                        .init(color: .black, location: 0.68),
+                        .init(color: .clear, location: 0.82)
                     ],
                     startPoint: .top,
                     endPoint: .bottom

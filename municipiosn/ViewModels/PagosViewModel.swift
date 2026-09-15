@@ -37,7 +37,7 @@ final class PagosViewModel {
         }
     }
 
-    func registrar(fecha: String, trabajador: String, monto: Double, concepto: String?, creadoPor: UUID) async {
+    func registrar(fecha: String, trabajador: String, monto: Double, concepto: String?, creadoPor: UUID) async -> Bool {
         do {
             try await PagosService.shared.registrar(
                 fecha: fecha,
@@ -47,8 +47,10 @@ final class PagosViewModel {
                 creadoPor: creadoPor
             )
             await cargar()
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
