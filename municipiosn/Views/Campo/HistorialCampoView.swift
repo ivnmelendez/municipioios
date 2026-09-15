@@ -99,7 +99,7 @@ private struct DiaRondinDetalleView: View {
                         HStack(spacing: 8) {
                             ForEach(filtrosDisponibles, id: \.self) { f in
                                 Button {
-                                    withAnimation(.spring(duration: 0.3, bounce: 0.35)) { filtro = f }
+                                    withAnimation(.easeInOut(duration: 0.2)) { filtro = f }
                                 } label: {
                                     Text(f.rawValue)
                                         .font(.subheadline.weight(.semibold))
@@ -109,7 +109,7 @@ private struct DiaRondinDetalleView: View {
                                         .background(filtro == f ? Color("Azul") : Color("Navy").opacity(0.07), in: Capsule())
                                         .shadow(color: filtro == f ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
                                         .scaleEffect(filtro == f ? 1.04 : 1.0)
-                                        .animation(.spring(duration: 0.3, bounce: 0.35), value: filtro == f)
+                                        .animation(.spring(duration: 0.3, bounce: 0.15), value: filtro == f)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -513,7 +513,7 @@ struct ResumenPeriodoView: View {
                             HStack(spacing: 8) {
                                 ForEach(filtrosDisponibles, id: \.self) { f in
                                     Button {
-                                        withAnimation(.spring(duration: 0.3, bounce: 0.4)) { filtro = f }
+                                        withAnimation(.easeInOut(duration: 0.2)) { filtro = f }
                                     } label: {
                                         Text(f.rawValue)
                                             .font(.subheadline.weight(.medium))
@@ -522,7 +522,7 @@ struct ResumenPeriodoView: View {
                                             .padding(.vertical, 8)
                                             .background(filtro == f ? Color("Azul") : Color("Navy").opacity(0.08), in: Capsule())
                                             .scaleEffect(filtro == f ? 1.04 : 1.0)
-                                            .animation(.spring(duration: 0.3, bounce: 0.4), value: filtro == f)
+                                            .animation(.spring(duration: 0.3, bounce: 0.15), value: filtro == f)
                                     }
                                     .buttonStyle(.plain)
                                 }

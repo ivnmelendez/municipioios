@@ -69,6 +69,7 @@ final class DashboardViewModel {
             async let coloniasTask = EstructurasService.shared.fetchUsoColonias()
             async let coloniasDetalleTask = EstructurasService.shared.fetchColoniasConCampanas()
             async let resumenMesTask = EstructurasService.shared.fetchResumenMes()
+            async let totalColoniasTask = EstructurasService.shared.fetchTotalColonias()
 
             var nuevoKpi = try await kpiTask
             let (visitasMes, _, danosMes) = (try? await resumenMesTask) ?? (0, 0, 0)
@@ -80,7 +81,7 @@ final class DashboardViewModel {
             usoColonias = (try? await coloniasTask) ?? []
             coloniasDetalle = (try? await coloniasDetalleTask) ?? []
 
-            let totalColonias = (try? await EstructurasService.shared.fetchTotalColonias()) ?? 0
+            let totalColonias = (try? await totalColoniasTask) ?? 0
             coloniasConEstructuras = usoColonias.count
             totalColoniasGeo = totalColonias
             coloniasSinEstructuras = max(0, totalColonias - usoColonias.count)

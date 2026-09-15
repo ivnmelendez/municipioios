@@ -46,15 +46,9 @@ struct DashboardView: View {
             .appendingPathComponent("perfil.jpg")
         let remoteUrlStr = auth.avatarUrl ?? ""
 
-        if !forzar && remoteUrlStr == avatarUrlCached,
-           let data = try? Data(contentsOf: localUrl),
-           let uiImage = UIImage(data: data) {
-            fotoPerfil = Image(uiImage: uiImage)
-            return
-        }
-
         if !remoteUrlStr.isEmpty,
-           let url = URL(string: remoteUrlStr + "?v=\(Int(Date().timeIntervalSince1970))") {
+           let url = URL(string: remoteUrlStr + "?v=\(Int(Date().timeIntervalSince1970))"),
+           forzar || remoteUrlStr != avatarUrlCached {
             Task {
                 var request = URLRequest(url: url)
                 request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
@@ -68,9 +62,10 @@ struct DashboardView: View {
             return
         }
 
-        if let data = try? Data(contentsOf: localUrl),
-           let uiImage = UIImage(data: data) {
-            fotoPerfil = Image(uiImage: uiImage)
+        Task.detached(priority: .userInitiated) {
+            let data = try? Data(contentsOf: localUrl)
+            let image = data.flatMap(UIImage.init(data:)).map(Image.init(uiImage:))
+            await MainActor.run { [image] in fotoPerfil = image }
         }
     }
 

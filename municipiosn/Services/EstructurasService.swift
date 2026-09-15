@@ -193,6 +193,7 @@ private struct CaraCampanaItem: Codable {
     }
 }
 
+@MainActor
 final class EstructurasService {
     static let shared = EstructurasService()
     private var client: SupabaseClient { SupabaseService.shared.client }

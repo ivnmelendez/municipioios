@@ -52,6 +52,8 @@ final class AuthViewModel {
         await fetchPerfil(userId: user.id)
     }
 
+    private static let rolesValidos: Set<String> = ["campo", "campo_admin", "oficina", "admin"]
+
     private func fetchPerfil(userId: UUID) async {
         do {
             let perfil: Perfil = try await SupabaseService.shared.client
@@ -67,9 +69,10 @@ final class AuthViewModel {
             UserDefaults.standard.set(perfil.rol, forKey: "cached_rol_\(userId.uuidString)")
         } catch {
             let cachedRol = UserDefaults.standard.string(forKey: "cached_rol_\(userId.uuidString)")
-            if let cached = cachedRol {
+            if let cached = cachedRol, Self.rolesValidos.contains(cached) {
                 rol = cached
             } else {
+                UserDefaults.standard.removeObject(forKey: "cached_rol_\(userId.uuidString)")
                 authState = .unauthenticated
             }
         }
