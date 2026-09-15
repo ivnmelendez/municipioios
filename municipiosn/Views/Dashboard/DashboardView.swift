@@ -17,15 +17,14 @@ struct DashboardView: View {
 
     @AppStorage("semanaCard_periodo") private var semanaCardEsMes = true
 
-    private static let monterrey = TimeZone(identifier: "America/Monterrey")!
 
     private var saludo: String {
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = Self.monterrey
+        cal.timeZone = TimeZone.current
         let hora = cal.component(.hour, from: Date())
         switch hora {
         case 6..<12: return "Buenos días"
-        case 12..<20: return "Buenas tardes"
+        case 12..<19: return "Buenas tardes"
         default:      return "Buenas noches"
         }
     }
@@ -33,7 +32,7 @@ struct DashboardView: View {
     private var fechaFormateada: String {
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "es_MX")
-        fmt.timeZone = Self.monterrey
+        fmt.timeZone = TimeZone.current
         fmt.dateFormat = "EEEE, d 'de' MMMM"
         let raw = fmt.string(from: Date())
         return raw.prefix(1).uppercased() + raw.dropFirst()

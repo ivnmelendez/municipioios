@@ -93,6 +93,7 @@ final class RealtimeService {
         content.sound = .default
 
         var comps = DateComponents()
+        comps.timeZone = TimeZone(identifier: "America/Monterrey")
         comps.weekday = 7   // Sábado
         comps.hour = 15
         comps.minute = 0

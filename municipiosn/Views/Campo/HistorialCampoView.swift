@@ -58,6 +58,8 @@ private struct DiaRondinDetalleView: View {
     @State private var busqueda = ""
     @FocusState private var searchFocused: Bool
     @State private var showFloatingSearch = false
+    @State private var appeared = false
+    @State private var listKey = UUID()
 
     private var intervencionesMap: [UUID: [IntervencionCompleta]] {
         Dictionary(grouping: intervenciones, by: \.estructuraId)
@@ -109,7 +111,7 @@ private struct DiaRondinDetalleView: View {
                                         .background(filtro == f ? Color("Azul") : Color("Navy").opacity(0.07), in: Capsule())
                                         .shadow(color: filtro == f ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
                                         .scaleEffect(filtro == f ? 1.04 : 1.0)
-                                        .animation(.spring(duration: 0.3, bounce: 0.15), value: filtro == f)
+                                        .animation(.spring(duration: 0.3, bounce: 0.35), value: filtro == f)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -142,7 +144,7 @@ private struct DiaRondinDetalleView: View {
                         .padding(.top, 20)
                     } else {
                         LazyVStack(spacing: 0) {
-                            ForEach(estructurasFiltradas) { e in
+                            ForEach(Array(estructurasFiltradas.enumerated()), id: \.element.id) { index, e in
                                 NavigationLink(destination: EstructuraDetalleLoader(id: e.id)) {
                                     EstructuraRondinRow(
                                         estructura: e,
@@ -150,9 +152,19 @@ private struct DiaRondinDetalleView: View {
                                     )
                                 }
                                 .buttonStyle(RondinRowButtonStyle())
+                                .opacity(appeared ? 1 : 0)
+                                .offset(y: appeared ? 0 : 12)
+                                .animation(
+                                    .spring(duration: 0.4, bounce: 0.08).delay(Double(min(index, 14)) * 0.035),
+                                    value: appeared
+                                )
                                 Divider().padding(.leading, 20)
                             }
                         }
+                        .id(listKey)
+                        .onAppear { appeared = true }
+                        .onChange(of: filtro) { _, _ in triggerAnimation() }
+                        .onChange(of: busqueda) { _, _ in triggerAnimation() }
                         .padding(.horizontal, 20)
                     }
                 }
@@ -182,6 +194,12 @@ private struct DiaRondinDetalleView: View {
             )) ?? []
             cargando = false
         }
+    }
+
+    private func triggerAnimation() {
+        appeared = false
+        listKey = UUID()
+        Task { @MainActor in appeared = true }
     }
 }
 
@@ -473,6 +491,8 @@ struct ResumenPeriodoView: View {
     @State private var busqueda = ""
     @FocusState private var searchFocused: Bool
     @State private var showFloatingSearch = false
+    @State private var appeared = false
+    @State private var listKey = UUID()
 
     private var intervencionesMap: [UUID: [IntervencionCompleta]] {
         Dictionary(grouping: intervenciones, by: \.estructuraId)
@@ -522,7 +542,7 @@ struct ResumenPeriodoView: View {
                                             .padding(.vertical, 8)
                                             .background(filtro == f ? Color("Azul") : Color("Navy").opacity(0.08), in: Capsule())
                                             .scaleEffect(filtro == f ? 1.04 : 1.0)
-                                            .animation(.spring(duration: 0.3, bounce: 0.15), value: filtro == f)
+                                            .animation(.spring(duration: 0.3, bounce: 0.35), value: filtro == f)
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -551,7 +571,7 @@ struct ResumenPeriodoView: View {
                             .padding(.top, 20)
                     } else {
                         LazyVStack(spacing: 0) {
-                            ForEach(estructurasFiltradas) { e in
+                            ForEach(Array(estructurasFiltradas.enumerated()), id: \.element.id) { index, e in
                                 NavigationLink(destination: EstructuraDetalleLoader(id: e.id)) {
                                     EstructuraRondinRow(
                                         estructura: e,
@@ -559,9 +579,19 @@ struct ResumenPeriodoView: View {
                                     )
                                 }
                                 .buttonStyle(RondinRowButtonStyle())
+                                .opacity(appeared ? 1 : 0)
+                                .offset(y: appeared ? 0 : 12)
+                                .animation(
+                                    .spring(duration: 0.4, bounce: 0.08).delay(Double(min(index, 14)) * 0.035),
+                                    value: appeared
+                                )
                                 Divider().padding(.leading, 20)
                             }
                         }
+                        .id(listKey)
+                        .onAppear { appeared = true }
+                        .onChange(of: filtro) { _, _ in triggerAnimation() }
+                        .onChange(of: busqueda) { _, _ in triggerAnimation() }
                         .padding(.horizontal, 20)
                     }
                 }
@@ -597,6 +627,12 @@ struct ResumenPeriodoView: View {
             estructuras = vistas.values.sorted { $0.numero.localizedStandardCompare($1.numero) == .orderedAscending }
             cargando = false
         }
+    }
+
+    private func triggerAnimation() {
+        appeared = false
+        listKey = UUID()
+        Task { @MainActor in appeared = true }
     }
 
     private var periodoDesde: Date {
