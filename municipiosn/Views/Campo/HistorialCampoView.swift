@@ -405,7 +405,7 @@ struct HistorialCampoView: View {
 
     private func agruparPorSemana(dias: [DiaVisita]) -> [SemanaResumen] {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "America/Monterrey")!
+        calendar.timeZone = TimeZone.current
         calendar.firstWeekday = 2
         var porSemana: [Int: Int] = [:]
         var semanaFecha: [Int: Date] = [:]
@@ -536,11 +536,12 @@ struct ResumenPeriodoView: View {
                                         withAnimation(.easeInOut(duration: 0.2)) { filtro = f }
                                     } label: {
                                         Text(f.rawValue)
-                                            .font(.subheadline.weight(.medium))
-                                            .foregroundStyle(filtro == f ? Color("Background") : Color("Navy"))
-                                            .padding(.horizontal, 14)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(filtro == f ? .white : Color("Navy"))
+                                            .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
                                             .background(filtro == f ? Color("Azul") : Color("Navy").opacity(0.08), in: Capsule())
+                                            .shadow(color: filtro == f ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
                                             .scaleEffect(filtro == f ? 1.04 : 1.0)
                                             .animation(.spring(duration: 0.3, bounce: 0.35), value: filtro == f)
                                     }
@@ -637,7 +638,7 @@ struct ResumenPeriodoView: View {
 
     private var periodoDesde: Date {
         var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "America/Monterrey")!
+        cal.timeZone = TimeZone.current
         cal.firstWeekday = 2
         let now = Date()
         if esMes {

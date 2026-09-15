@@ -141,6 +141,7 @@ final class NuevaEstructuraViewModel {
                 fotoUrl: fotoUrl
             )
             let caras = try await EstructurasService.shared.crearCaras(estructuraId: creada.id)
+            EstructurasService.shared.invalidarCacheEstructuras()
             estructuraCreada = creada
             carasCreadas = caras
             return true

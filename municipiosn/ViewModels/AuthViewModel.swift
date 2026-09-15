@@ -21,7 +21,7 @@ final class AuthViewModel {
     private let auth = SupabaseService.shared.client.auth
 
     init() {
-        Task { await checkSession() }
+        Task { [weak self] in await self?.checkSession() }
     }
 
     func checkSession() async {

@@ -977,7 +977,7 @@ private struct EventoDetalleView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background {
-            Color(.systemGray6).ignoresSafeArea()
+            Color("Background").ignoresSafeArea()
             if let url = fotoUrl {
                 CachedAsyncImage(url: url) { phase in
                     if case .success(let image) = phase {

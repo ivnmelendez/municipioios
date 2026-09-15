@@ -157,11 +157,11 @@ struct CampanasListaCompleta: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             FiltroChip(label: "Todas", seleccionado: categoriaSeleccionada == nil) {
-                                withAnimation(.spring(duration: 0.3, bounce: 0.1)) { categoriaSeleccionada = nil }
+                                withAnimation(.easeInOut(duration: 0.2)) { categoriaSeleccionada = nil }
                             }
                             ForEach(categorias, id: \.self) { cat in
                                 FiltroChip(label: cat.capitalized, seleccionado: categoriaSeleccionada == cat) {
-                                    withAnimation(.spring(duration: 0.3, bounce: 0.1)) {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
                                         categoriaSeleccionada = categoriaSeleccionada == cat ? nil : cat
                                     }
                                 }

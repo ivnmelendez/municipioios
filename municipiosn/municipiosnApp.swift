@@ -62,6 +62,10 @@ struct municipiosnApp: App {
                         .task { BackgroundRefreshService.shared.programar() }
                         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                             BackgroundRefreshService.shared.programar()
+                            Task { await RealtimeService.shared.desuscribir() }
+                        }
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                            Task { await RealtimeService.shared.subscribir() }
                         }
                         .task {
                             _ = try? await UNUserNotificationCenter.current().requestAuthorization(

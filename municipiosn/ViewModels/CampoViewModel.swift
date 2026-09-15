@@ -42,19 +42,26 @@ final class CampoViewModel {
                 rutasInfo = semanas.map { RutaInfo(ruta: $0, visitadas: 0, total: 0) }
                 return
             }
-            var infos: [RutaInfo] = []
-            for semana in semanas {
-                let items = try await RutasService.shared.fetchEstructurasEnRuta(
-                    rutaSemanaId: semana.id, userId: uid
-                )
-                infos.append(RutaInfo(
-                    ruta: semana,
-                    visitadas: items.filter(\.visitada).count,
-                    total: items.count
-                ))
+            rutasInfo = try await withThrowingTaskGroup(of: RutaInfo.self) { group in
+                for semana in semanas {
+                    group.addTask {
+                        let items = try await RutasService.shared.fetchEstructurasEnRuta(
+                            rutaSemanaId: semana.id, userId: uid
+                        )
+                        return RutaInfo(
+                            ruta: semana,
+                            visitadas: items.filter(\.visitada).count,
+                            total: items.count
+                        )
+                    }
+                }
+                var results: [RutaInfo] = []
+                for try await info in group { results.append(info) }
+                return results.sorted { $0.ruta.numero < $1.ruta.numero }
             }
-            rutasInfo = infos
-        } catch {}
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func cargar() async {

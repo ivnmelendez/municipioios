@@ -23,7 +23,7 @@ struct CampoEstructuraDetalleView: View {
     var body: some View {
         ZStack {
             // Blur background FUERA del NavigationStack — iOS 26 lo tapa si va adentro
-            Color(.systemGray6).ignoresSafeArea()
+            Color("Background").ignoresSafeArea()
 
             NavigationStack {
                 Group {

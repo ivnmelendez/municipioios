@@ -57,6 +57,7 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .abrirRondines)) { _ in
+            UserDefaults.standard.removeObject(forKey: "pendingRondines")
             tabSeleccionada = "campo"
         }
         .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { _ in tabSeleccionada = "mapa" }

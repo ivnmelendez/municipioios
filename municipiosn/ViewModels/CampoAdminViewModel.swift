@@ -14,7 +14,7 @@ final class CampoAdminViewModel {
             visitas = v
             cambios = c
             danos = d
-            cargado = true
         }
+        cargado = true
     }
 }

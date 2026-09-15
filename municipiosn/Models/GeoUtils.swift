@@ -1,5 +1,7 @@
 import MapKit
 
+private var _geoCache: [String: [GeoPolygon]] = [:]
+
 struct GeoPolygon: Identifiable {
     let id = UUID()
     let coordinates: [CLLocationCoordinate2D]
@@ -30,11 +32,12 @@ struct GeoPolygon: Identifiable {
 }
 
 func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
+    if let cached = _geoCache[filename] { return cached }
     guard let url = Bundle.main.url(forResource: filename, withExtension: "geojson"),
           let data = try? Data(contentsOf: url),
           let features = try? MKGeoJSONDecoder().decode(data) else { return [] }
 
-    return features.compactMap { $0 as? MKGeoJSONFeature }.flatMap { feature in
+    let result = features.compactMap { $0 as? MKGeoJSONFeature }.flatMap { feature in
         let props = (try? JSONSerialization.jsonObject(with: feature.properties ?? Data())) as? [String: Any]
         let cvegeo = props?["CVEGEO"] as? String
             ?? props?["name"] as? String
@@ -60,6 +63,8 @@ func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
             )
         }
     }
+    _geoCache[filename] = result
+    return result
 }
 
 func pointInPolygon(_ point: CLLocationCoordinate2D, _ polygon: [CLLocationCoordinate2D]) -> Bool {

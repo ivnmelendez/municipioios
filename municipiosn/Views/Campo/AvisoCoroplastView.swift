@@ -122,7 +122,7 @@ struct AvisoCoroplastView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(seleccionado ? color : Color.clear, lineWidth: 2)
             )
-            .animation(.spring(duration: 0.2), value: seleccionado)
+            .animation(.spring(duration: 0.3, bounce: 0.35), value: seleccionado)
         }
         .buttonStyle(.plain)
     }
