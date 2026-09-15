@@ -71,7 +71,7 @@ private struct MapaUbicacionPicker: UIViewRepresentable {
             let id = "pin"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView
                 ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-            view.markerTintColor = UIColor(named: "Navy")
+            view.markerTintColor = UIColor(named: "Azul")
             view.animatesWhenAdded = true
             return view
         }
@@ -433,7 +433,7 @@ private struct ParquePickerSheet: View {
                     HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color("Navy").opacity(0.1))
+                                .fill(Color("TextMuted").opacity(0.12))
                                 .frame(width: 50, height: 50)
                             Image(systemName: "mappin.circle.fill")
                                 .font(.title2)
@@ -618,7 +618,7 @@ private struct CaraAsignarRow: View {
                     } else {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color("Navy").opacity(0.08))
+                                .fill(Color("TextMuted").opacity(0.12))
                                 .frame(width: 52, height: 52)
                             Image(systemName: "plus.circle.dashed")
                                 .font(.title2)

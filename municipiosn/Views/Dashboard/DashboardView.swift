@@ -14,6 +14,7 @@ struct DashboardView: View {
     @State private var navegarCoroplast = false
     @State private var navegarResumenPeriodo = false
     @State private var navegarCampanas = false
+    @State private var navegarCobertura = false
 
     @AppStorage("semanaCard_periodo") private var semanaCardEsMes = true
 
@@ -148,6 +149,12 @@ struct DashboardView: View {
         .navigationDestination(isPresented: $navegarCampanas) {
             CampanasListaCompleta(datos: vm.usoCampanas)
         }
+        .navigationDestination(isPresented: $navegarCobertura) {
+            CoberturaHistorialView()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .abrirHistorialCobertura)) { _ in
+            navegarCobertura = true
+        }
 
         }
     }
@@ -236,7 +243,10 @@ struct DashboardView: View {
                 }
             )
         case .cobertura:
-            CoberturaRingCard(kpi: vm.kpi)
+            CoberturaRingCard(kpi: vm.kpi, onHistorial: {
+                HapticService.impacto(.light)
+                navegarCobertura = true
+            })
         case .semana:
             SemanaCard(kpi: vm.kpi, onTap: {
                 HapticService.impacto(.medium)
@@ -431,7 +441,7 @@ private struct AlcanceColoniasCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color("Navy").opacity(0.5))
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color("Navy").opacity(0.07), in: Capsule())
+                        .background(Color("TextMuted").opacity(0.12), in: Capsule())
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -478,7 +488,7 @@ private struct AlcanceColoniasCard: View {
                 }
                 GeometryReader { geo in
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color("Navy").opacity(0.08))
+                        .fill(Color("TextMuted").opacity(0.12))
                         .overlay(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(
@@ -620,9 +630,7 @@ private struct SemanaCard: View {
                     .foregroundStyle(Color("TextMuted"))
                     .contentTransition(.identity)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color("TextMuted").opacity(0.5))
+
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -886,6 +894,7 @@ private struct ResumenMunicipalCard: View {
 
 private struct CoberturaRingCard: View {
     let kpi: KPIData
+    let onHistorial: () -> Void
     @State private var progreso: Double = 0
     @State private var pulsando = false
 
@@ -907,74 +916,70 @@ private struct CoberturaRingCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            // Ring + center
-            ZStack {
-                // Track
-                Circle()
-                    .stroke(Color("Navy").opacity(0.1), lineWidth: 18)
-                    .frame(width: 160, height: 160)
+        Button { onHistorial() } label: {
+            VStack(spacing: 20) {
+                // Ring + center
+                ZStack {
+                    Circle()
+                        .stroke(Color("TextMuted").opacity(0.12), lineWidth: 18)
+                        .frame(width: 160, height: 160)
 
-                // Fill
-                Circle()
-                    .trim(from: 0, to: progreso)
-                    .stroke(
-                        pct >= 1.0
-                            ? LinearGradient(colors: [Color(hex: "#16a34a"), Color(hex: "#16a34a").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color("Azul"), Color("Azul").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                        style: StrokeStyle(lineWidth: 18, lineCap: .round)
-                    )
-                    .frame(width: 160, height: 160)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.spring(duration: 1.4, bounce: 0.1), value: progreso)
+                    Circle()
+                        .trim(from: 0, to: progreso)
+                        .stroke(
+                            pct >= 1.0
+                                ? LinearGradient(colors: [Color(hex: "#16a34a"), Color(hex: "#16a34a").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                : LinearGradient(colors: [Color("Azul"), Color("Azul").opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            style: StrokeStyle(lineWidth: 18, lineCap: .round)
+                        )
+                        .frame(width: 160, height: 160)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.spring(duration: 1.4, bounce: 0.1), value: progreso)
 
-                // Center content
-                VStack(spacing: 4) {
-                    Text("\(pctInt)%")
-                        .font(.system(size: 38, weight: .bold, design: .rounded))
-                        .foregroundStyle(pct >= 1.0 ? Color(hex: "#16a34a") : Color("Navy"))
-                        .contentTransition(.numericText())
-                        .scaleEffect(pulsando ? 1.06 : 1.0)
-                    Text("cobertura")
-                        .font(.caption.weight(.semibold))
+                    VStack(spacing: 4) {
+                        Text("\(pctInt)%")
+                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                            .foregroundStyle(pct >= 1.0 ? Color(hex: "#16a34a") : Color("Navy"))
+                            .contentTransition(.numericText())
+                            .scaleEffect(pulsando ? 1.06 : 1.0)
+                        Text("cobertura")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color("TextMuted"))
+                    }
+                }
+
+                VStack(spacing: 10) {
+                    Text(mensaje)
+                        .font(.headline)
+                        .foregroundStyle(Color("Navy"))
+                        .multilineTextAlignment(.center)
+
+                    Text("\(kpi.visitasMes) de \(kpi.totalEstructuras) estructuras revisadas este mes")
+                        .font(.subheadline)
                         .foregroundStyle(Color("TextMuted"))
+                        .multilineTextAlignment(.center)
+                        .contentTransition(.numericText())
+                        .animation(.default, value: kpi.visitasMes)
                 }
             }
-
-            // Label + stats
-            VStack(spacing: 10) {
-                Text(mensaje)
-                    .font(.headline)
-                    .foregroundStyle(Color("Navy"))
-                    .multilineTextAlignment(.center)
-
-                Text("\(kpi.visitasMes) de \(kpi.totalEstructuras) estructuras revisadas este mes")
-                    .font(.subheadline)
-                    .foregroundStyle(Color("TextMuted"))
-                    .multilineTextAlignment(.center)
-                    .contentTransition(.numericText())
-                    .animation(.default, value: kpi.visitasMes)
-
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
-        .padding(.horizontal, 20)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .onAppear {
-            progreso = pct
-            if pct >= 1.0 {
-                withAnimation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true).delay(1.5)) {
-                    pulsando = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    pulsando = false
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+            .padding(.horizontal, 20)
+            .onAppear {
+                progreso = pct
+                if pct >= 1.0 {
+                    withAnimation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true).delay(1.5)) {
+                        pulsando = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { pulsando = false }
                 }
             }
+            .onChange(of: kpi.visitasMes) { _, _ in
+                withAnimation(.spring(duration: 1.2)) { progreso = pct }
+            }
         }
-        .onChange(of: kpi.visitasMes) { _, _ in
-            withAnimation(.spring(duration: 1.2)) { progreso = pct }
-        }
+        .buttonStyle(.glass(.regular))
+        .buttonBorderShape(.roundedRectangle(radius: 28))
     }
 }
 

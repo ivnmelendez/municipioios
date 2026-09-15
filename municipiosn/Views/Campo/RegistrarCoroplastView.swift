@@ -568,7 +568,7 @@ private struct CaraCampanaRow: View {
                     } else {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color("Navy").opacity(0.08))
+                                .fill(Color("TextMuted").opacity(0.12))
                                 .frame(width: 52, height: 52)
                             Image(systemName: "plus.circle.dashed")
                                 .font(.title2)

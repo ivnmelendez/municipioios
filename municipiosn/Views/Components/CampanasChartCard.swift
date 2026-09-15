@@ -20,7 +20,7 @@ struct CampanasChartCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color("Navy").opacity(0.5))
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color("Navy").opacity(0.07), in: Capsule())
+                        .background(Color("TextMuted").opacity(0.12), in: Capsule())
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -79,7 +79,7 @@ struct CampanasChartCard: View {
 
                 GeometryReader { geo in
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color("Navy").opacity(0.08))
+                        .fill(Color("TextMuted").opacity(0.12))
                         .overlay(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(
@@ -307,7 +307,7 @@ private struct FiltroChip: View {
                 .foregroundStyle(seleccionado ? .white : Color("Navy"))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(seleccionado ? Color("Azul") : Color("Navy").opacity(0.07), in: Capsule())
+                .background(seleccionado ? Color("Azul") : Color("TextMuted").opacity(0.12), in: Capsule())
                 .shadow(color: seleccionado ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
                 .scaleEffect(seleccionado ? 1.04 : 1.0)
                 .animation(.spring(duration: 0.3, bounce: 0.35), value: seleccionado)

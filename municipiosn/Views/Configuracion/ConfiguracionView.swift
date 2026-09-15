@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import UIKit
 import Supabase
+import UserNotifications
 
 struct ConfiguracionView: View {
     var vm: DashboardViewModel
@@ -58,6 +59,37 @@ struct ConfiguracionView: View {
                             }
 
                             Divider().padding(.leading, 58)
+
+                            #if DEBUG
+                            Button {
+                                guard notificaciones else { return }
+                                Task {
+                                    let content = UNMutableNotificationContent()
+                                    content.title = "Historial de rondín disponible"
+                                    content.body = "Ya puedes revisar las estructuras visitadas hoy por el equipo de campo."
+                                    content.sound = .default
+                                    content.userInfo = ["destino": "rondines"]
+                                    let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+                                    let request = UNNotificationRequest(identifier: "test_rondin", content: content, trigger: trigger)
+                                    try? await UNUserNotificationCenter.current().add(request)
+                                }
+                            } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "bell.badge")
+                                        .font(.system(size: 17))
+                                        .foregroundStyle(.orange)
+                                        .frame(width: 28)
+                                    Text("Probar notificación (5s)")
+                                        .font(.body)
+                                        .foregroundStyle(.orange)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                            }
+
+                            Divider().padding(.leading, 58)
+                            #endif
 
                             Button { mostrarEditorDashboard = true } label: {
                                 HStack(spacing: 14) {
@@ -153,7 +185,7 @@ struct ConfiguracionView: View {
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color("Navy"))
                                 .frame(width: 72, height: 72)
-                                .background(Color("Navy").opacity(0.1), in: Circle())
+                                .background(Color("TextMuted").opacity(0.12), in: Circle())
                         }
                     }
                     Image(systemName: "camera.fill")

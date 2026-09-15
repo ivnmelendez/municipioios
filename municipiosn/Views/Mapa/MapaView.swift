@@ -19,7 +19,7 @@ private let municipioRegion = MKCoordinateRegion(
     span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
 )
 
-private func coloniaParaCoordenada(_ coord: CLLocationCoordinate2D, polygons: [GeoPolygon]) -> String? {
+private nonisolated func coloniaParaCoordenada(_ coord: CLLocationCoordinate2D, polygons: [GeoPolygon]) -> String? {
     for polygon in polygons where !polygon.cvegeo.isEmpty {
         if pointInPolygon(coord, polygon.coordinates) { return polygon.cvegeo }
     }
@@ -38,7 +38,7 @@ private func coloniaParaCoordenada(_ coord: CLLocationCoordinate2D, polygons: [G
     return nearest
 }
 
-private func computarColoniasConEstructuras(
+private nonisolated func computarColoniasConEstructuras(
     polygons: [GeoPolygon],
     estructuras: [EstructuraConParque]
 ) -> Set<String> {
@@ -53,7 +53,7 @@ private func computarColoniasConEstructuras(
     return result
 }
 
-private func computarColoniasConSemana(
+private nonisolated func computarColoniasConSemana(
     polygons: [GeoPolygon],
     estructuras: [EstructuraConParque],
     semanaMap: [UUID: RutaSemana]
@@ -90,7 +90,12 @@ private final class ExteriorDimRenderer: MKOverlayRenderer {
             pts.dropFirst().forEach { context.addLine(to: $0) }
             context.closePath()
         }
-        context.setFillColor(UIColor.black.withAlphaComponent(0.10).cgColor)
+        let dimColor = UIColor { tc in
+            tc.userInterfaceStyle == .dark
+                ? UIColor.black.withAlphaComponent(0.35)
+                : UIColor.black.withAlphaComponent(0.25)
+        }
+        context.setFillColor(dimColor.cgColor)
         context.fillPath(using: .evenOdd)
     }
 }
@@ -132,8 +137,8 @@ private final class MapController {
                   polygon.title != "__municipio__" else { continue }
             if mostrar {
                 let tiene = tieneEstructuras.contains(polygon.title ?? "")
-                renderer.fillColor = UIColor(named: "Navy")?.withAlphaComponent(tiene ? 0.20 : 0.05)
-                renderer.strokeColor = UIColor(named: "Navy")?.withAlphaComponent(tiene ? 0.55 : 0.25)
+                renderer.fillColor = UIColor(named: "Azul")?.withAlphaComponent(tiene ? 0.20 : 0.05)
+                renderer.strokeColor = UIColor(named: "Azul")?.withAlphaComponent(tiene ? 0.55 : 0.25)
                 renderer.lineWidth = 1
             } else {
                 renderer.fillColor = .clear

@@ -17,6 +17,10 @@ final class NotificacionDelegate: NSObject, UNUserNotificationCenterDelegate {
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .abrirRondines, object: nil)
             }
+        } else if destino == "historial_cobertura" {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .abrirHistorialCobertura, object: nil)
+            }
         }
         completionHandler()
     }
@@ -68,9 +72,8 @@ struct municipiosnApp: App {
                             Task { await RealtimeService.shared.subscribir() }
                         }
                         .task {
-                            _ = try? await UNUserNotificationCenter.current().requestAuthorization(
-                                options: [.alert, .sound, .badge]
-                            )
+                            _ = try? await UNUserNotificationCenter.current()
+                                .requestAuthorization(options: [.alert, .sound, .badge])
                         }
                 case .unauthenticated:
                     LoginView(vm: authVM)

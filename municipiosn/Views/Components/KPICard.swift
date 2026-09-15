@@ -98,7 +98,7 @@ struct CoberturaColoniasCard: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(Color("Navy").opacity(0.08))
+                            .fill(Color("TextMuted").opacity(0.12))
                             .frame(width: geo.size.width, height: 6)
                         RoundedRectangle(cornerRadius: 3)
                             .fill(
@@ -142,7 +142,7 @@ struct KPICardPrincipal: View {
         ZStack(alignment: .bottomTrailing) {
             Image(systemName: icono)
                 .font(.system(size: 96, weight: .light))
-                .foregroundStyle(Color("Navy").opacity(0.07))
+                .foregroundStyle(Color("TextMuted").opacity(0.12))
                 .offset(x: 20, y: 20)
 
             VStack(alignment: .leading, spacing: 4) {

@@ -67,7 +67,7 @@ func loadGeoPolygons(named filename: String) -> [GeoPolygon] {
     return result
 }
 
-func pointInPolygon(_ point: CLLocationCoordinate2D, _ polygon: [CLLocationCoordinate2D]) -> Bool {
+nonisolated func pointInPolygon(_ point: CLLocationCoordinate2D, _ polygon: [CLLocationCoordinate2D]) -> Bool {
     var inside = false
     let n = polygon.count
     var j = n - 1

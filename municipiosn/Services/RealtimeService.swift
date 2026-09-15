@@ -95,7 +95,7 @@ final class RealtimeService {
         var comps = DateComponents()
         comps.timeZone = TimeZone(identifier: "America/Monterrey")
         comps.weekday = 7   // Sábado
-        comps.hour = 15
+        comps.hour = 17
         comps.minute = 0
 
         content.userInfo = ["destino": "rondines"]
@@ -156,4 +156,5 @@ extension Notification.Name {
     static let mostrarSeccionVisitas = Notification.Name("mostrarSeccionVisitas")
     static let abrirMapaEnEstructura = Notification.Name("abrirMapaEnEstructura")
     static let avatarActualizado = Notification.Name("avatarActualizado")
+    static let abrirHistorialCobertura = Notification.Name("abrirHistorialCobertura")
 }

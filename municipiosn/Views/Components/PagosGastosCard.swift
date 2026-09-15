@@ -28,13 +28,11 @@ struct PagosGastosCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color("Navy").opacity(0.5))
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color("Navy").opacity(0.07), in: Capsule())
+                        .background(Color("TextMuted").opacity(0.12), in: Capsule())
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 .padding(.bottom, 16)
-
-                Divider().padding(.horizontal, 20)
 
                 VStack(spacing: 6) {
                     HStack(alignment: .center, spacing: 8) {
@@ -64,8 +62,6 @@ struct PagosGastosCard: View {
                 .padding(.bottom, ultimoPago != nil ? 16 : 20)
 
                 if let pago = ultimoPago {
-                    Divider().padding(.horizontal, 20)
-
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Último pago")

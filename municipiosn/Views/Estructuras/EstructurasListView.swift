@@ -362,7 +362,7 @@ private struct FiltroChips: View {
                 .foregroundStyle(isActive ? .white : Color("Navy"))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isActive ? Color("Azul") : Color("Navy").opacity(0.07), in: Capsule())
+                .background(isActive ? Color("Azul") : Color("TextMuted").opacity(0.12), in: Capsule())
                 .shadow(color: isActive ? Color("Azul").opacity(0.35) : .clear, radius: 8, x: 0, y: 4)
                 .scaleEffect(isActive ? 1.04 : 1.0)
                 .animation(.spring(duration: 0.3, bounce: 0.35), value: isActive)

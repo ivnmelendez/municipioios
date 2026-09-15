@@ -8,7 +8,6 @@ struct AvisoCoroplastView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var tipoSeleccionado: String? = nil
-    @State private var fotoUI: UIImage?
     @State private var notas: String = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -20,8 +19,6 @@ struct AvisoCoroplastView: View {
                 VStack(spacing: 20) {
                     estructuraHeader
                     tipoSelector
-                    FotoCapturaView(imagen: $fotoUI)
-                        .padding(.horizontal, 20)
                     notasField
                     botonEnviar
                         .padding(.horizontal, 20)
@@ -191,24 +188,18 @@ struct AvisoCoroplastView: View {
 
     private func enviar() {
         guard let userId, let tipo = tipoSeleccionado else { return }
-        let fotoData = fotoUI?.jpegData(compressionQuality: 0.85)
         let notasVal = notas.isEmpty ? nil : notas
 
         Task {
             isLoading = true
             defer { isLoading = false }
             do {
-                var fotoUrl: String? = nil
-                if let data = fotoData {
-                    let path = "\(userId.uuidString)/\(UUID().uuidString)_coroplast.jpg"
-                    fotoUrl = try await CoroplastService.shared.uploadFoto(data: data, path: path)
-                }
                 try await CoroplastService.shared.reportarCoroplast(
                     estructuraId: estructura.id,
                     userId: userId,
                     rutaSemanaId: rutaSemanaId,
                     tipo: tipo,
-                    fotoUrl: fotoUrl,
+                    fotoUrl: nil,
                     notas: notasVal
                 )
                 withAnimation { exito = true }

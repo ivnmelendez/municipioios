@@ -649,6 +649,126 @@ final class EstructurasService {
         }
     }
 
+    func fetchHistorialCobertura(año: Int, mesInicio: Int = 1) async throws -> [CoberturaMensual] {
+        let mty = TimeZone(identifier: "America/Monterrey")!
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = mty
+
+        let ahora = Date()
+        let añoActual = cal.component(.year, from: ahora)
+        let mesActual = cal.component(.month, from: ahora)
+
+        var c = DateComponents(); c.year = año; c.month = mesInicio; c.day = 1
+        let inicioRango = cal.date(from: c)!
+        c.year = año + 1; c.month = 1
+        let finAño = cal.date(from: c)!
+        let hasta = (año == añoActual) ? ahora : finAño
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withFullDate]
+        iso.timeZone = mty
+        let isoFull = ISO8601DateFormatter()
+        isoFull.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        struct RondinRow: Codable {
+            let estructuraId: UUID
+            let rondines: RondinFecha          // dict, no array — PostgREST to-one FK
+            struct RondinFecha: Codable { let fecha: String }
+            enum CodingKeys: String, CodingKey {
+                case estructuraId = "estructura_id"; case rondines
+            }
+        }
+        let rondines: [RondinRow] = try await client
+            .from("rondines_estructuras")
+            .select("estructura_id, rondines!inner(fecha)")
+            .gte("rondines.fecha", value: iso.string(from: inicioRango))
+            .lt("rondines.fecha",  value: iso.string(from: hasta))
+            .execute()
+            .value
+
+        // Cuenta estructuras por mes usando created_at como string para evitar
+        // problemas de decodificación con el formato PostgreSQL timestamptz
+        struct EstrRow: Codable {
+            let id: UUID
+            let createdAt: String
+            enum CodingKeys: String, CodingKey {
+                case id; case createdAt = "created_at"
+            }
+        }
+        let estructuras: [EstrRow] = try await client
+            .from("estructuras").select("id, created_at").execute().value
+
+        func parseYMD(_ s: String) -> Date? {
+            guard s.count >= 10 else { return nil }
+            let parts = s.prefix(10).split(separator: "-")
+            guard parts.count == 3,
+                  let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) else { return nil }
+            var c = DateComponents()
+            c.year = y; c.month = m; c.day = d; c.timeZone = mty
+            return cal.date(from: c)
+        }
+
+        func parseFecha(_ s: String) -> Date? {
+            iso.date(from: s) ?? isoFull.date(from: s)
+        }
+
+        let maxMes = (año == añoActual) ? mesActual : 12
+
+        return (mesInicio...maxMes).map { mes in
+            var mc = DateComponents(); mc.year = año; mc.month = mes; mc.day = 1
+            let inicioMes       = cal.date(from: mc)!
+            let inicioSiguiente = cal.date(byAdding: .month, value: 1, to: inicioMes)!
+            let finMes          = cal.date(byAdding: .day, value: -1, to: inicioSiguiente)!
+
+            let total = estructuras.filter { e in
+                guard let fecha = parseYMD(e.createdAt) else { return true }
+                return fecha <= finMes
+            }.count
+
+            let visitadas = Set(rondines.compactMap { row -> UUID? in
+                guard let fecha = parseFecha(row.rondines.fecha),
+                      fecha >= inicioMes,
+                      fecha < inicioSiguiente else { return nil }
+                return row.estructuraId
+            }).count
+
+            return CoberturaMensual(año: año, mes: mes, visitadas: visitadas, total: total)
+        }
+    }
+
+    func fetchEstructurasFaltantesEnMes(año: Int, mes: Int) async throws -> [EstructuraConParque] {
+        let mtz = TimeZone(identifier: "America/Monterrey")!
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = mtz
+
+        var mc = DateComponents(); mc.year = año; mc.month = mes; mc.day = 1
+        let inicioMes       = cal.date(from: mc)!
+        let inicioSiguiente = cal.date(byAdding: .month, value: 1, to: inicioMes)!
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withFullDate]; iso.timeZone = mtz
+
+        struct RondinRow: Codable {
+            let estructuraId: UUID
+            let rondines: RondinFecha
+            struct RondinFecha: Codable { let fecha: String }
+            enum CodingKeys: String, CodingKey {
+                case estructuraId = "estructura_id"; case rondines
+            }
+        }
+        let rows: [RondinRow] = try await client
+            .from("rondines_estructuras")
+            .select("estructura_id, rondines!inner(fecha)")
+            .gte("rondines.fecha", value: iso.string(from: inicioMes))
+            .lt("rondines.fecha",  value: iso.string(from: inicioSiguiente))
+            .execute()
+            .value
+
+        let visitadas = Set(rows.map { $0.estructuraId })
+        let todas = try await fetchEstructuras()
+        return todas.filter { !visitadas.contains($0.id) }
+    }
+
     func fetchCampanasActivas() async throws -> [CampanaBasica] {
         if let ts = campanasCachedAt, !campanasCached.isEmpty,
            Date().timeIntervalSince(ts) < campanasTTL {

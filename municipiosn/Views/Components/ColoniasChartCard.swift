@@ -19,7 +19,7 @@ struct ColoniasChartCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color("Navy").opacity(0.5))
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color("Navy").opacity(0.07), in: Capsule())
+                        .background(Color("TextMuted").opacity(0.12), in: Capsule())
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -76,7 +76,7 @@ struct ColoniasChartCard: View {
 
                 GeometryReader { geo in
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color("Navy").opacity(0.08))
+                        .fill(Color("TextMuted").opacity(0.12))
                         .overlay(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(

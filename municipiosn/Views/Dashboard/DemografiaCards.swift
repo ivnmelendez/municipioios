@@ -263,7 +263,7 @@ struct SegmentosColoniaCard: View {
                         .fill(Color(hex: "#f59e0b"))
                         .frame(width: geo.size.width * CGFloat(col.pob0a14) / CGFloat(total), height: 8)
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color("Navy").opacity(0.7))
+                        .fill(Color("Azul"))
                         .frame(width: geo.size.width * CGFloat(max(col.pob15a64 - col.p60ymas, 0)) / CGFloat(total), height: 8)
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color(hex: "#16a34a"))
