@@ -356,7 +356,7 @@ private struct FiltroChips: View {
 
     @ViewBuilder
     private func chipButton(_ label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button { withAnimation(.easeInOut(duration: 0.2)) { action() } } label: {
             Text(label)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isActive ? .white : Color("Navy"))
