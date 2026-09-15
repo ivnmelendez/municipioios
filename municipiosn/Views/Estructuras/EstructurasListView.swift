@@ -95,7 +95,7 @@ struct EstructurasListView: View {
 
                     if !vm.estructuras.isEmpty {
                         HStack {
-                            let isFiltered = vm.filtroEstado != nil || !vm.busqueda.isEmpty
+                            let isFiltered = vm.filtroEstado != nil || vm.filtroCoroplast != nil || !vm.busqueda.isEmpty
                             Text(isFiltered
                                  ? "\(vm.filtradas.count) resultado\(vm.filtradas.count == 1 ? "" : "s")"
                                  : "\(vm.estructuras.count) estructuras")
