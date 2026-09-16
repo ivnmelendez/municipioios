@@ -786,4 +786,14 @@ final class EstructurasService {
         return result
     }
 
+    func fetchEstructurasConAvisoCoroplast() async throws -> [EstructuraConParque] {
+        let todas = try await fetchEstructuras()
+        return todas
+            .filter { $0.coroplastEstado != nil }
+            .sorted {
+                let p0 = $0.parques?.nombre ?? ""
+                let p1 = $1.parques?.nombre ?? ""
+                return p0 == p1 ? $0.numero < $1.numero : p0 < p1
+            }
+    }
 }

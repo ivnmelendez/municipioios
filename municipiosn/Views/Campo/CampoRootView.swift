@@ -3,11 +3,14 @@ import SwiftUI
 struct CampoRootView: View {
     let authVM: AuthViewModel
     @State private var vm = CampoViewModel()
-    @State private var tabSeleccionada = "mapa"
+    @State private var tabSeleccionada = "inicio"
 
 
     var body: some View {
         TabView(selection: $tabSeleccionada) {
+            Tab("Inicio", systemImage: "house.fill", value: "inicio") {
+                CampoInicioView()
+            }
             Tab("Ruta", systemImage: "figure.walk", value: "ruta") {
                 RutaSeleccionView(vm: vm, userId: authVM.perfilId)
             }
@@ -28,9 +31,6 @@ struct CampoRootView: View {
                     }
                 }
             }
-            Tab("Configuración", systemImage: "gearshape.fill", value: "config") {
-                configTab
-            }
         }
         .tint(Color("Azul"))
         .onReceive(NotificationCenter.default.publisher(for: .abrirMapaEnEstructura)) { _ in
@@ -38,52 +38,4 @@ struct CampoRootView: View {
         }
     }
 
-    private var configTab: some View {
-        NavigationStack {
-            List {
-                Section {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill(Color("Azul"))
-                                .frame(width: 56, height: 56)
-                            Text(authVM.initiales)
-                                .font(.title2.bold())
-                                .foregroundStyle(.white)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(authVM.displayName)
-                                .font(.headline)
-                            Text("Campo")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 6)
-                }
-
-                let pendientes = OfflineQueueService.shared.pendientes.count
-                if pendientes > 0 {
-                    Section("Sin sincronizar") {
-                        Label {
-                            Text("\(pendientes) \(pendientes == 1 ? "acción pendiente" : "acciones pendientes")")
-                        } icon: {
-                            Image(systemName: "wifi.slash")
-                                .foregroundStyle(.orange)
-                        }
-                    }
-                }
-
-                Section {
-                    Button(role: .destructive) {
-                        Task { await authVM.signOut() }
-                    } label: {
-                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
-                }
-            }
-            .navigationTitle("Configuración")
-            .navigationBarTitleDisplayMode(.large)
-        }
-    }
 }

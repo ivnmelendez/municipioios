@@ -5,7 +5,7 @@ import Supabase
 import UserNotifications
 
 struct ConfiguracionView: View {
-    var vm: DashboardViewModel
+    var vm: DashboardViewModel?
     @AppStorage("notificacionesHabilitadas") private var notificaciones = true
     @State private var photoItem: PhotosPickerItem?
     @State private var fotoPerfil: Image?
@@ -91,6 +91,7 @@ struct ConfiguracionView: View {
                             Divider().padding(.leading, 58)
                             #endif
 
+                            if vm != nil {
                             Button { mostrarEditorDashboard = true } label: {
                                 HStack(spacing: 14) {
                                     Image(systemName: "slider.horizontal.3")
@@ -109,6 +110,7 @@ struct ConfiguracionView: View {
                                 .padding(.vertical, 14)
                             }
                             .buttonStyle(.plain)
+                            } // if vm != nil
                         }
                         .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .padding(.horizontal, 20)
@@ -149,9 +151,11 @@ struct ConfiguracionView: View {
                 }
             }
             .sheet(isPresented: $mostrarEditorDashboard) {
-                EditorDashboardSheet(vm: vm)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                if let vm {
+                    EditorDashboardSheet(vm: vm)
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.visible)
+                }
             }
             .onAppear { cargarFoto() }
         }
