@@ -1307,7 +1307,7 @@ struct EstructuraDetalleSheet: View {
                 Divider().padding(.top, 8)
                 if let ok = onOk {
                     Button { ok() } label: {
-                        Label(yaVisitada ? "Revisada hoy" : "Está bien",
+                        Label(yaVisitada ? "Ya revisada" : "Revisar",
                               systemImage: yaVisitada ? "checkmark.circle" : "checkmark.circle.fill")
                             .font(.headline.weight(.bold))
                             .frame(maxWidth: .infinity)

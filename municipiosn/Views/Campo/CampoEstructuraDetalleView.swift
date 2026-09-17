@@ -239,7 +239,7 @@ struct CampoEstructuraDetalleView: View {
             if proximidad?.cercano == true {
                 let estaRevisada = yaVisitada || revisadaEnCiclo
                 accionPrimaria(
-                    titulo: estaRevisada ? "Ya revisada" : "Está bien",
+                    titulo: estaRevisada ? "Ya revisada" : "Revisar",
                     icono: estaRevisada ? "checkmark.circle" : "checkmark.circle.fill",
                     color: .green,
                     disabled: estaRevisada,
