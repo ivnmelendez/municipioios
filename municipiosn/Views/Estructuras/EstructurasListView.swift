@@ -550,8 +550,12 @@ struct EstructuraDetalleView: View {
     @State private var campanaSeleccionada: CampanaBasica? = nil
     @State private var eventoSeleccionado: IntervencionCompleta? = nil
     @State private var filtroHistorial: AccionIntervencion? = nil
+    @State private var mostrarUltimo = true
 
     private var historialFiltrado: [IntervencionCompleta] {
+        if mostrarUltimo {
+            return historial.prefix(1).map { $0 }
+        }
         guard let filtro = filtroHistorial else { return historial }
         return historial.filter { $0.accion == filtro }
     }
@@ -777,21 +781,25 @@ struct EstructuraDetalleView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .overlay(alignment: .trailing) {
                             Menu {
-                                Button("Todos") { filtroHistorial = nil }
+                                Button("Último") {
+                                    withAnimation { mostrarUltimo = true; filtroHistorial = nil }
+                                }
                                 Divider()
                                 ForEach(accionesEnHistorial, id: \.self) { accion in
-                                    Button(accion.etiqueta) { filtroHistorial = accion }
+                                    Button(accion.etiqueta) {
+                                        withAnimation { mostrarUltimo = false; filtroHistorial = accion }
+                                    }
                                 }
                             } label: {
                                 HStack(spacing: 3) {
-                                    Text(filtroHistorial?.etiquetaCorta ?? "Todos")
+                                    Text(mostrarUltimo ? "Último" : (filtroHistorial?.etiquetaCorta ?? "Último"))
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.caption2)
                                 }
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                             }
-                            .id(filtroHistorial?.rawValue ?? "todos")
+                            .id(mostrarUltimo ? "ultimo" : (filtroHistorial?.rawValue ?? "ultimo"))
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
