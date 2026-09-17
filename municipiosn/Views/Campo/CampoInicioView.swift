@@ -84,7 +84,6 @@ struct CampoInicioView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 28)
                         .padding(.bottom, 28)
-                        .intro(aparecer, delay: 0.0)
 
                     if cargandoAvisos {
                         ProgressView()
@@ -150,6 +149,7 @@ struct CampoInicioView: View {
                     .font(.subheadline)
                     .foregroundStyle(Color("TextMuted"))
             }
+            .intro(aparecer, delay: 0.0)
 
             Spacer()
 
@@ -168,6 +168,8 @@ struct CampoInicioView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.interactive(), in: Circle())
+            .opacity(aparecer ? 1 : 0)
+            .animation(.spring(duration: 0.5, bounce: 0.1).delay(0.05), value: aparecer)
             .onReceive(NotificationCenter.default.publisher(
                 for: UIApplication.willEnterForegroundNotification)) { _ in cargarFotoPerfil() }
         }
