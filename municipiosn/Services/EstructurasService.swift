@@ -796,4 +796,27 @@ final class EstructurasService {
                 return p0 == p1 ? $0.numero < $1.numero : p0 < p1
             }
     }
+
+    func fetchNotasCoroplast(estructuraIds: [UUID]) async throws -> [UUID: String] {
+        guard !estructuraIds.isEmpty else { return [:] }
+        struct Row: Decodable {
+            let estructura_id: UUID
+            let notas: String?
+        }
+        let rows: [Row] = try await client
+            .from("rondines_estructuras")
+            .select("estructura_id, notas")
+            .eq("accion", value: "reporte_coroplast")
+            .in("estructura_id", values: estructuraIds.map(\.uuidString))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        var result: [UUID: String] = [:]
+        for row in rows {
+            if let nota = row.notas, !nota.isEmpty, result[row.estructura_id] == nil {
+                result[row.estructura_id] = nota
+            }
+        }
+        return result
+    }
 }

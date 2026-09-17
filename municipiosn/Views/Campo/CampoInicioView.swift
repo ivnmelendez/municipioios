@@ -17,6 +17,7 @@ struct CampoInicioView: View {
     @State private var aparecer = false
     @State private var mostrarConfiguracion = false
     @State private var avisos: [EstructuraConParque] = []
+    @State private var notasCoroplast: [UUID: String] = [:]
     @State private var cargandoAvisos = false
     @State private var estructuraSeleccionada: EstructuraConParque?
 
@@ -72,7 +73,10 @@ struct CampoInicioView: View {
 
     private func cargarAvisos() async {
         cargandoAvisos = true
-        avisos = (try? await EstructurasService.shared.fetchEstructurasConAvisoCoroplast()) ?? []
+        let resultado = (try? await EstructurasService.shared.fetchEstructurasConAvisoCoroplast()) ?? []
+        async let notasTask = EstructurasService.shared.fetchNotasCoroplast(estructuraIds: resultado.map(\.id))
+        avisos = resultado
+        notasCoroplast = (try? await notasTask) ?? [:]
         cargandoAvisos = false
     }
 
@@ -91,7 +95,7 @@ struct CampoInicioView: View {
                             .padding(.vertical, 40)
                             .intro(aparecer, delay: 0.08)
                     } else if !avisos.isEmpty {
-                        AvisosReportesCard(avisos: avisos) { e in
+                        AvisosReportesCard(avisos: avisos, notas: notasCoroplast) { e in
                             estructuraSeleccionada = e
                         }
                         .padding(.horizontal, 20)
@@ -180,6 +184,7 @@ struct CampoInicioView: View {
 
 private struct AvisosReportesCard: View {
     let avisos: [EstructuraConParque]
+    let notas: [UUID: String]
     let onSelect: (EstructuraConParque) -> Void
 
     var body: some View {
@@ -224,6 +229,13 @@ private struct AvisosReportesCard: View {
                         .font(.caption)
                         .foregroundStyle(Color("TextMuted"))
                         .lineLimit(1)
+                }
+                if let nota = notas[e.id] {
+                    Text(nota)
+                        .font(.caption)
+                        .foregroundStyle(Color("TextMuted").opacity(0.8))
+                        .lineLimit(2)
+                        .padding(.top, 1)
                 }
             }
             Spacer()
