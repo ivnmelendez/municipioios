@@ -953,7 +953,7 @@ private struct CoberturaRingCard: View {
                         .animation(.spring(duration: 1.4, bounce: 0.1), value: progreso)
 
                     VStack(spacing: 4) {
-                        Text("\(pctInt)%")
+                        Text(pctInt == 0 && pct > 0 ? "<1%" : "\(pctInt)%")
                             .font(.system(size: 38, weight: .bold, design: .rounded))
                             .foregroundStyle(pct >= 1.0 ? Color(hex: "#16a34a") : Color("Navy"))
                             .contentTransition(.numericText())
