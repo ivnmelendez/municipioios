@@ -58,9 +58,11 @@ struct municipiosnApp: App {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color("Background"))
+                        .transition(.opacity)
                 case .authenticated:
                     ContentView(authVM: authVM)
                         .environment(authVM)
+                        .transition(.opacity)
                         .task { await RealtimeService.shared.subscribir() }
                         .task { await OfflineQueueService.shared.procesarQueue() }
                         .task { BackgroundRefreshService.shared.programar() }
@@ -78,6 +80,7 @@ struct municipiosnApp: App {
                         }
                 case .unauthenticated:
                     LoginView(vm: authVM)
+                        .transition(.opacity)
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: authVM.authState)
