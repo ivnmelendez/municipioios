@@ -123,8 +123,9 @@ struct CampoInicioView: View {
             }
         }
         .task {
-            aparecer = true
+            cargarFotoPerfil()
             if avisos.isEmpty { await cargarAvisos() }
+            aparecer = true
         }
         .refreshable { await cargarAvisos() }
         .sheet(isPresented: $mostrarConfiguracion) {
@@ -167,7 +168,6 @@ struct CampoInicioView: View {
             }
             .buttonStyle(.plain)
             .glassEffect(.regular.interactive(), in: Circle())
-            .onAppear { cargarFotoPerfil() }
             .onReceive(NotificationCenter.default.publisher(
                 for: UIApplication.willEnterForegroundNotification)) { _ in cargarFotoPerfil() }
         }
