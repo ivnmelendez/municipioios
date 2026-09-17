@@ -8,23 +8,32 @@ struct RutaSeleccionView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if vm.isLoadingRutas {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    ScrollView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Rutas de campo")
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(Color("Navy"))
+                        .padding(.horizontal, 20)
+                        .padding(.top, 28)
+                        .padding(.bottom, 24)
+
+                    if vm.isLoadingRutas {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                    } else {
                         VStack(spacing: 14) {
                             ForEach(vm.rutasInfo) { info in
                                 rutaCard(info: info)
                             }
                         }
-                        .padding(16)
+                        .padding(.horizontal, 16)
                     }
                 }
+                .padding(.bottom, 48)
             }
-            .navigationTitle("Rutas de campo")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .background(Color("Background"))
         }
         .fullScreenCover(item: $rutaNavegando) { ruta in

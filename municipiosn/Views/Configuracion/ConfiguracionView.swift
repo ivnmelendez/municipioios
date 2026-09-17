@@ -29,6 +29,7 @@ struct ConfiguracionView: View {
                         .padding(.horizontal, 20)
 
                     // MARK: Preferencias
+                    if ["admin", "oficina"].contains(auth.rol) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Preferencias")
                             .font(.subheadline.weight(.semibold))
@@ -115,6 +116,7 @@ struct ConfiguracionView: View {
                         .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .padding(.horizontal, 20)
                     }
+                    } // Preferencias — admin/oficina only
 
                     // MARK: Sesión
                     Button {

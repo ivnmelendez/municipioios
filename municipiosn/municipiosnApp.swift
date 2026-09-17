@@ -72,6 +72,7 @@ struct municipiosnApp: App {
                             Task { await RealtimeService.shared.subscribir() }
                         }
                         .task {
+                            guard ["admin", "oficina"].contains(authVM.rol) else { return }
                             _ = try? await UNUserNotificationCenter.current()
                                 .requestAuthorization(options: [.alert, .sound, .badge])
                         }
