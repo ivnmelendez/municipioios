@@ -24,7 +24,7 @@ final class ProximidadValidator: NSObject, CLLocationManagerDelegate {
 
     var cercano: Bool {
         guard let distancia else { return false }
-        return distancia <= 100
+        return distancia <= 200
     }
 
     var cargando: Bool { autorizado && distancia == nil }
