@@ -419,7 +419,8 @@ final class CoroplastService {
                     foto_despues_url: nil,
                     notas: nil
                 ),
-                onConflict: "rondin_id,estructura_id"
+                onConflict: "rondin_id,estructura_id",
+                ignoreDuplicates: true
             )
             .execute()
     }
