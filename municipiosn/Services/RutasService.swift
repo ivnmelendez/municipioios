@@ -76,8 +76,6 @@ final class RutasService {
         formatter.formatOptions = [.withFullDate]
         let hoy = formatter.string(from: Date())
 
-        let authUserId = try await client.auth.session.user.id
-
         let visitas: [VisitaHoy] = try await client
             .from("rondines_estructuras")
             .select("estructura_id, rondines!inner(fecha)")
