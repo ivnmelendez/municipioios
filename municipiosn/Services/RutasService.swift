@@ -80,8 +80,7 @@ final class RutasService {
 
         let visitas: [VisitaHoy] = try await client
             .from("rondines_estructuras")
-            .select("estructura_id, rondines!inner(created_by, fecha)")
-            .eq("rondines.created_by", value: authUserId.uuidString)
+            .select("estructura_id, rondines!inner(fecha)")
             .eq("rondines.fecha", value: hoy)
             .in("estructura_id", values: estructuraIds)
             .execute()
