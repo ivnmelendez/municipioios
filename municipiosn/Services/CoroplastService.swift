@@ -395,7 +395,6 @@ final class CoroplastService {
             .from("rondines_estructuras")
             .select("rondin_id")
             .eq("estructura_id", value: estructuraId.uuidString)
-            .eq("accion", value: "revision")
             .in("rondin_id", values: rondinIds)
             .limit(1)
             .execute()
