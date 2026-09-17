@@ -257,20 +257,19 @@ final class CoroplastService {
     func fetchVisitadasHoy(userId: UUID) async throws -> Set<UUID> {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
-        let hoy = formatter.string(from: Date())
-
-        let authUserId = try await client.auth.session.user.id
+        let cutoff = Calendar.current.date(byAdding: .day, value: -28, to: Date()) ?? Date()
+        let cutoffStr = formatter.string(from: cutoff)
 
         struct RondinRow: Codable { let id: UUID }
         let rondines: [RondinRow] = try await client
             .from("rondines")
             .select("id")
-            .eq("created_by", value: authUserId.uuidString)
-            .eq("fecha", value: hoy)
+            .gte("fecha", value: cutoffStr)
             .execute()
             .value
 
-        guard let rondinId = rondines.first?.id else { return [] }
+        guard !rondines.isEmpty else { return [] }
+        let rondinIds = rondines.map { $0.id.uuidString }
 
         struct Row: Codable {
             let estructuraId: UUID
@@ -279,7 +278,7 @@ final class CoroplastService {
         let rows: [Row] = try await client
             .from("rondines_estructuras")
             .select("estructura_id")
-            .eq("rondin_id", value: rondinId.uuidString)
+            .in("rondin_id", values: rondinIds)
             .execute()
             .value
 

@@ -355,7 +355,7 @@ struct MapaView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text("\(vm.visitadasHoy.count) revisadas hoy")
+                    Text("\(vm.visitadasHoy.count) revisadas este ciclo")
                         .font(.subheadline.weight(.medium))
                 }
                 .padding(.horizontal, 14)
