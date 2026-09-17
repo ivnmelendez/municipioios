@@ -18,7 +18,7 @@ struct CampoInicioView: View {
     @State private var mostrarConfiguracion = false
     @State private var avisos: [EstructuraConParque] = []
     @State private var cargandoAvisos = false
-    @State private var navegarAvisos = false
+    @State private var estructuraSeleccionada: EstructuraConParque?
 
     @AppStorage("perfil_avatar_url_cache") private var avatarUrlCached = ""
 
@@ -92,9 +92,8 @@ struct CampoInicioView: View {
                             .padding(.vertical, 40)
                             .intro(aparecer, delay: 0.08)
                     } else if !avisos.isEmpty {
-                        AvisosReportesCard(avisos: avisos) {
-                            HapticService.impacto(.medium)
-                            navegarAvisos = true
+                        AvisosReportesCard(avisos: avisos) { e in
+                            estructuraSeleccionada = e
                         }
                         .padding(.horizontal, 20)
                         .intro(aparecer, delay: 0.08)
@@ -112,13 +111,20 @@ struct CampoInicioView: View {
             )
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(isPresented: $navegarAvisos) {
-                CampoAvisosListView(avisos: avisos)
+            .navigationDestination(item: $estructuraSeleccionada) { e in
+                CampoEstructuraDetalleView(
+                    estructura: e,
+                    userId: auth.perfilId,
+                    campanas: [],
+                    rutaSemanaId: nil,
+                    yaVisitada: false,
+                    requiereFoto: false
+                )
             }
         }
         .task {
             aparecer = true
-            await cargarAvisos()
+            if avisos.isEmpty { await cargarAvisos() }
         }
         .refreshable { await cargarAvisos() }
         .sheet(isPresented: $mostrarConfiguracion) {
@@ -172,69 +178,36 @@ struct CampoInicioView: View {
 
 private struct AvisosReportesCard: View {
     let avisos: [EstructuraConParque]
-    let onTap: () -> Void
-
-    private var sinCoroplast: Int { avisos.filter { $0.coroplastEstado == "sin_coroplast" }.count }
-    private var coroplastRoto: Int { avisos.filter { $0.coroplastEstado == "coroplast_roto" }.count }
-    private var preview: [EstructuraConParque] { Array(avisos.prefix(5)) }
+    let onSelect: (EstructuraConParque) -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("Reportes a atender")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color("TextMuted"))
-                    Spacer()
-                    HStack(spacing: 6) {
-                        if sinCoroplast > 0 {
-                            Label("\(sinCoroplast)", systemImage: "square.slash.fill")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color(hex: "#ea580c"))
-                        }
-                        if coroplastRoto > 0 {
-                            Label("\(coroplastRoto)", systemImage: "exclamationmark.square.fill")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color(hex: "#d97706"))
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-
-                // Rows
-                VStack(spacing: 0) {
-                    ForEach(Array(preview.enumerated()), id: \.element.id) { index, e in
-                        fila(e)
-                        if index < preview.count - 1 {
-                            Divider().padding(.leading, 20)
-                        }
-                    }
-                }
-
-                // Footer si hay más de 5
-                if avisos.count > 5 {
-                    Divider().padding(.leading, 20)
-                    HStack {
-                        Text("Ver los \(avisos.count) reportes")
-                            .font(.subheadline)
-                            .foregroundStyle(Color("Azul"))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color("Azul").opacity(0.6))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                }
-
-                Spacer(minLength: 8)
+        VStack(spacing: 0) {
+            HStack {
+                Text("Reportes a atender")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("TextMuted"))
+                Spacer()
+                Text("\(avisos.count)")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Color("Navy"))
             }
-            .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            VStack(spacing: 0) {
+                ForEach(Array(avisos.enumerated()), id: \.element.id) { index, e in
+                    Button { onSelect(e) } label: { fila(e) }
+                        .buttonStyle(.plain)
+                    if index < avisos.count - 1 {
+                        Divider().padding(.leading, 20)
+                    }
+                }
+            }
+
+            Spacer(minLength: 8)
         }
-        .buttonStyle(.plain)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private func fila(_ e: EstructuraConParque) -> some View {
@@ -252,15 +225,9 @@ private struct AvisosReportesCard: View {
                 }
             }
             Spacer()
-            if e.coroplastEstado == "sin_coroplast" {
-                Image(systemName: "square.slash.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(Color(hex: "#ea580c"))
-            } else {
-                Image(systemName: "exclamationmark.square.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(Color(hex: "#d97706"))
-            }
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color("TextMuted").opacity(0.5))
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
