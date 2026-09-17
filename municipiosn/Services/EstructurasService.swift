@@ -286,44 +286,51 @@ final class EstructurasService {
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withFullDate]
         iso.timeZone = mty
-        let desdeStr = iso.string(from: inicioMes)
-        let hastaStr = iso.string(from: manana)   // exclusive upper bound used with .lt
-
-        // Flexible parser handles both "YYYY-MM-DD" and full ISO8601 timestamps from Supabase
-        let isoFull = ISO8601DateFormatter()
-        isoFull.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
         func parseFecha(_ s: String) -> Date? {
-            iso.date(from: s) ?? isoFull.date(from: s)
+            iso.date(from: s)
         }
 
-        // PostgREST returns the joined rondines row as an ARRAY even for to-one FK
-        struct RondinNested: Codable { let fecha: String }
+        // Step 1: get all rondin IDs+fechas for this month
+        struct RondinRow: Codable { let id: UUID; let fecha: String }
+        let rondinesMes: [RondinRow] = try await client
+            .from("rondines")
+            .select("id, fecha")
+            .gte("fecha", value: iso.string(from: inicioMes))
+            .lt("fecha",  value: iso.string(from: manana))
+            .execute()
+            .value
+
+        guard !rondinesMes.isEmpty else {
+            return (mes: (0, 0, 0), semana: (0, 0, 0))
+        }
+
+        let rondinIds = rondinesMes.map { $0.id.uuidString }
+        let rondinFechas = Dictionary(uniqueKeysWithValues: rondinesMes.map { ($0.id, $0.fecha) })
+
+        // Step 2: get all actions for those rondines
         struct ResumenRow: Codable {
             let estructuraId: UUID
             let accion: String
-            let rondines: [RondinNested]   // array — PostgREST join result
+            let rondinId: UUID
             enum CodingKeys: String, CodingKey {
-                case estructuraId = "estructura_id"; case accion; case rondines
+                case estructuraId = "estructura_id"; case accion; case rondinId = "rondin_id"
             }
         }
-
         let rows: [ResumenRow] = try await client
             .from("rondines_estructuras")
-            .select("estructura_id, accion, rondines!inner(fecha)")
-            .gte("rondines.fecha", value: desdeStr)
-            .lt("rondines.fecha",  value: hastaStr)   // .lt with tomorrow covers all of today
+            .select("estructura_id, accion, rondin_id")
+            .in("rondin_id", values: rondinIds)
             .execute()
             .value
 
         let accionesCoroplast = ["cambio_coroplast", "reparacion_coroplast", "reactivacion"]
-        let visitasMes   = Set(rows.map { $0.estructuraId }).count
-        let cambiosMes   = rows.filter { accionesCoroplast.contains($0.accion) }.count
-        let danosMes     = rows.filter { $0.accion == "reporte_dano" }.count
+        let visitasMes  = Set(rows.map { $0.estructuraId }).count
+        let cambiosMes  = rows.filter { accionesCoroplast.contains($0.accion) }.count
+        let danosMes    = rows.filter { $0.accion == "reporte_dano" }.count
 
-        // Compare parsed Date values — safe regardless of Supabase timestamp format
         let rowsSemana = rows.filter {
-            guard let fechaStr = $0.rondines.first?.fecha,
+            guard let fechaStr = rondinFechas[$0.rondinId],
                   let fecha = parseFecha(fechaStr) else { return false }
             return fecha >= inicioSemana
         }
@@ -355,11 +362,21 @@ final class EstructurasService {
     }
 
     private func fetchResumenEntre(desde: Date, hasta: Date) async throws -> (visitas: Int, cambios: Int, danos: Int) {
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withFullDate]
-        isoFormatter.timeZone = TimeZone(identifier: "America/Monterrey")!
-        let desdeStr = isoFormatter.string(from: desde)
-        let hastaStr = isoFormatter.string(from: hasta)
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withFullDate]
+        iso.timeZone = TimeZone(identifier: "America/Monterrey")!
+
+        struct RondinRow: Codable { let id: UUID }
+        let rondines: [RondinRow] = try await client
+            .from("rondines")
+            .select("id")
+            .gte("fecha", value: iso.string(from: desde))
+            .lte("fecha", value: iso.string(from: hasta))
+            .execute()
+            .value
+
+        guard !rondines.isEmpty else { return (0, 0, 0) }
+        let rondinIds = rondines.map { $0.id.uuidString }
 
         struct ResumenRow: Codable {
             let estructuraId: UUID
@@ -368,12 +385,10 @@ final class EstructurasService {
                 case estructuraId = "estructura_id"; case accion
             }
         }
-
         let rows: [ResumenRow] = try await client
             .from("rondines_estructuras")
-            .select("estructura_id, accion, rondines!inner(fecha)")
-            .gte("rondines.fecha", value: desdeStr)
-            .lte("rondines.fecha", value: hastaStr)
+            .select("estructura_id, accion")
+            .in("rondin_id", values: rondinIds)
             .execute()
             .value
 
@@ -391,13 +406,24 @@ final class EstructurasService {
         let fmt = ISO8601DateFormatter()
         fmt.formatOptions = [.withFullDate]
 
+        struct RondinRow: Codable { let id: UUID }
+        let rondines: [RondinRow] = try await client
+            .from("rondines")
+            .select("id")
+            .gte("fecha", value: fmt.string(from: inicioMes))
+            .lte("fecha", value: fmt.string(from: hoy))
+            .execute()
+            .value
+
+        guard !rondines.isEmpty else { return 0 }
+        let rondinIds = rondines.map { $0.id.uuidString }
+
         struct Row: Codable { let id: UUID }
         let rows: [Row] = try await client
             .from("rondines_estructuras")
-            .select("id, rondines!inner(fecha)")
+            .select("id")
             .eq("accion", value: "cambio_coroplast")
-            .gte("rondines.fecha", value: fmt.string(from: inicioMes))
-            .lte("rondines.fecha", value: fmt.string(from: hoy))
+            .in("rondin_id", values: rondinIds)
             .execute()
             .value
         return rows.count
