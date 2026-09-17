@@ -257,8 +257,8 @@ final class CoroplastService {
     func fetchVisitadasHoy(userId: UUID) async throws -> Set<UUID> {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
-        let cutoff = Calendar.current.date(byAdding: .day, value: -28, to: Date()) ?? Date()
-        let cutoffStr = formatter.string(from: cutoff)
+        let inicioMes = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+        let cutoffStr = formatter.string(from: inicioMes)
 
         struct RondinRow: Codable { let id: UUID }
         let rondines: [RondinRow] = try await client
@@ -369,11 +369,11 @@ final class CoroplastService {
             .execute()
     }
 
-    func fetchRevisadaEnCiclo(estructuraId: UUID, dias: Int = 28) async throws -> Bool {
+    func fetchRevisadaEnCiclo(estructuraId: UUID) async throws -> Bool {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
-        let cutoff = Calendar.current.date(byAdding: .day, value: -dias, to: Date()) ?? Date()
-        let cutoffStr = formatter.string(from: cutoff)
+        let inicioMes = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+        let cutoffStr = formatter.string(from: inicioMes)
 
         struct RondinRow: Codable { let id: UUID }
         let rondines: [RondinRow] = try await client
