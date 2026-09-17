@@ -27,7 +27,7 @@ private struct EstructuraDetalleLoader: View {
 
 // MARK: - Filtro rondin
 
-private enum FiltroRondin: String, CaseIterable {
+enum FiltroRondin: String, CaseIterable {
     case todas           = "Todas"
     case cambioCoroplast = "Cambio coroplast"
     case dano            = "Daño"
@@ -483,6 +483,7 @@ private struct DiaRondinRow: View {
 
 struct ResumenPeriodoView: View {
     let esMes: Bool
+    var filtroInicial: FiltroRondin = .todas
 
     @State private var estructuras: [EstructuraVisitada] = []
     @State private var intervenciones: [IntervencionCompleta] = []
@@ -627,6 +628,7 @@ struct ResumenPeriodoView: View {
             }
             estructuras = vistas.values.sorted { $0.numero.localizedStandardCompare($1.numero) == .orderedAscending }
             cargando = false
+            if filtroInicial != .todas { filtro = filtroInicial }
         }
     }
 

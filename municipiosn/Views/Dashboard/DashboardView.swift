@@ -12,7 +12,8 @@ struct DashboardView: View {
     @State private var navegarEstructuras = false
     @State private var filtroCoroplast: String? = nil
     @State private var navegarCoroplast = false
-    @State private var navegarResumenPeriodo = false
+    @State private var navegarResumenVisitas = false
+    @State private var navegarResumenCambios = false
     @State private var navegarCampanas = false
     @State private var navegarCobertura = false
 
@@ -143,8 +144,11 @@ struct DashboardView: View {
         .navigationDestination(isPresented: $navegarCoroplast) {
             EstructurasListView(filtroCoroplast: filtroCoroplast)
         }
-        .navigationDestination(isPresented: $navegarResumenPeriodo) {
-            ResumenPeriodoView(esMes: !semanaCardEsMes)
+        .navigationDestination(isPresented: $navegarResumenVisitas) {
+            ResumenPeriodoView(esMes: !semanaCardEsMes, filtroInicial: .todas)
+        }
+        .navigationDestination(isPresented: $navegarResumenCambios) {
+            ResumenPeriodoView(esMes: !semanaCardEsMes, filtroInicial: .cambioCoroplast)
         }
         .navigationDestination(isPresented: $navegarCampanas) {
             CampanasListaCompleta(datos: vm.usoCampanas)
@@ -248,10 +252,17 @@ struct DashboardView: View {
                 navegarCobertura = true
             })
         case .semana:
-            SemanaCard(kpi: vm.kpi, onTap: {
-                HapticService.impacto(.medium)
-                navegarResumenPeriodo = true
-            })
+            SemanaCard(
+                kpi: vm.kpi,
+                onTapVisitas: {
+                    HapticService.impacto(.medium)
+                    navegarResumenVisitas = true
+                },
+                onTapCambios: {
+                    HapticService.impacto(.medium)
+                    navegarResumenCambios = true
+                }
+            )
         case .resumenMunicipal:
             ResumenMunicipalCard(kpi: vm.kpi, coloniasConEstructuras: vm.coloniasConEstructuras)
         case .campanasCard:
@@ -616,7 +627,8 @@ private struct UltimasEstructurasCard: View {
 
 private struct SemanaCard: View {
     let kpi: KPIData
-    var onTap: () -> Void = {}
+    var onTapVisitas: () -> Void = {}
+    var onTapCambios: () -> Void = {}
     @AppStorage("semanaCard_periodo") private var esMes = true
 
     private var visitas: Int  { esMes ? kpi.visitasSemana : kpi.visitasMes }
@@ -639,25 +651,29 @@ private struct SemanaCard: View {
 
 
             HStack(spacing: 0) {
-                columna(
-                    valor: visitas,
-                    label: "Revisadas",
-                    icono: "checkmark.circle.fill",
-                    color: Color(hex: "#16a34a")
-                )
-                columna(
-                    valor: cambios,
-                    label: "Coroplast",
-                    icono: "arrow.2.squarepath",
-                    color: Color("Navy")
-                )
+                Button { onTapVisitas() } label: {
+                    columna(
+                        valor: visitas,
+                        label: "Revisadas",
+                        icono: "checkmark.circle.fill",
+                        color: Color(hex: "#16a34a")
+                    )
+                }
+                .buttonStyle(.plain)
+                Button { onTapCambios() } label: {
+                    columna(
+                        valor: cambios,
+                        label: "Coroplast",
+                        icono: "arrow.2.squarepath",
+                        color: Color("Navy")
+                    )
+                }
+                .buttonStyle(.plain)
             }
             .padding(.vertical, 20)
         }
         .animation(.easeInOut(duration: 0.25), value: esMes)
         .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .onTapGesture { onTap() }
         .onLongPressGesture(minimumDuration: 0.5) {
             esMes.toggle()
             HapticService.seleccion()
