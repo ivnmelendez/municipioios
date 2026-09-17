@@ -408,16 +408,19 @@ final class CoroplastService {
         let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client
             .from("rondines_estructuras")
-            .insert(RondinEstructuraInsert(
-                rondin_id: rondinId.uuidString,
-                estructura_id: estructuraId.uuidString,
-                accion: "revision",
-                tipo_dano: nil,
-                tipo_mantenimiento: nil,
-                foto_antes_url: nil,
-                foto_despues_url: nil,
-                notas: nil
-            ))
+            .upsert(
+                RondinEstructuraInsert(
+                    rondin_id: rondinId.uuidString,
+                    estructura_id: estructuraId.uuidString,
+                    accion: "revision",
+                    tipo_dano: nil,
+                    tipo_mantenimiento: nil,
+                    foto_antes_url: nil,
+                    foto_despues_url: nil,
+                    notas: nil
+                ),
+                onConflict: "rondin_id,estructura_id"
+            )
             .execute()
     }
 
