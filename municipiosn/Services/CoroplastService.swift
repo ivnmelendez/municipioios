@@ -370,6 +370,40 @@ final class CoroplastService {
             .execute()
     }
 
+    func fetchRevisadaEnCiclo(estructuraId: UUID, dias: Int = 28) async throws -> Bool {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        let cutoff = Calendar.current.date(byAdding: .day, value: -dias, to: Date()) ?? Date()
+        let cutoffStr = formatter.string(from: cutoff)
+
+        struct RondinRow: Codable { let id: UUID }
+        let rondines: [RondinRow] = try await client
+            .from("rondines")
+            .select("id")
+            .gte("fecha", value: cutoffStr)
+            .execute()
+            .value
+
+        guard !rondines.isEmpty else { return false }
+        let rondinIds = rondines.map { $0.id.uuidString }
+
+        struct RevRow: Codable {
+            let rondinId: UUID
+            enum CodingKeys: String, CodingKey { case rondinId = "rondin_id" }
+        }
+        let rows: [RevRow] = try await client
+            .from("rondines_estructuras")
+            .select("rondin_id")
+            .eq("estructura_id", value: estructuraId.uuidString)
+            .eq("accion", value: "revision")
+            .in("rondin_id", values: rondinIds)
+            .limit(1)
+            .execute()
+            .value
+
+        return !rows.isEmpty
+    }
+
     func registrarRevision(estructuraId: UUID, rutaSemanaId: UUID? = nil, userId: UUID) async throws {
         let rondinId = try await crearRondin(userId: userId, rutaSemanaId: rutaSemanaId)
         try await client

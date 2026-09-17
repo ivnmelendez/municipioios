@@ -83,6 +83,7 @@ struct MantenimientoRealizadoView: View {
             }
             .interactiveDismissDisabled(fotoUI != nil || !notas.isEmpty)
         }
+        .proximidadGuard(lat: estructura.lat, lng: estructura.lng)
     }
 
     // MARK: - Header

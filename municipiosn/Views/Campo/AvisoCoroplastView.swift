@@ -42,6 +42,7 @@ struct AvisoCoroplastView: View {
                 if exito { exitoOverlay }
             }
         }
+        .proximidadGuard(lat: estructura.lat, lng: estructura.lng)
     }
 
     // MARK: - Header

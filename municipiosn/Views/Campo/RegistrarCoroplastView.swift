@@ -102,6 +102,7 @@ struct RegistrarCoroplastView: View {
             }
             .interactiveDismissDisabled(paso != .accion)
         }
+        .proximidadGuard(lat: estructura.lat, lng: estructura.lng)
     }
 
     // MARK: - Header

@@ -66,6 +66,7 @@ struct ReportarDanoView: View {
             }
             .interactiveDismissDisabled(fotoUI != nil || paso == .confirmar)
         }
+        .proximidadGuard(lat: estructura.lat, lng: estructura.lng)
     }
 
     // MARK: - Header

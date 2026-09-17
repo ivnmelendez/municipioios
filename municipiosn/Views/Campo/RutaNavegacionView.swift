@@ -72,7 +72,7 @@ struct RutaNavegacionView: View {
                 campanas: campanas,
                 rutaSemanaId: rutaEfectiva.id,
                 yaVisitada: item.visitada,
-                onMarcarRevision: { Task { await marcar(item: item) } }
+                onMarcarRevision: { marcar(item: item) }
             )
         }
     }
@@ -406,24 +406,10 @@ struct RutaNavegacionView: View {
         await cargar()
     }
 
-    private func marcar(item: RutaEstructuraItem) async {
-        guard let uid = userId else { return }
+    private func marcar(item: RutaEstructuraItem) {
         if let idx = estructuras.firstIndex(where: { $0.id == item.id }) {
             estructuras[idx].visitada = true
         }
-        do {
-            try await RutasService.shared.marcarRevision(
-                estructuraId: item.estructura.id,
-                rutaSemanaId: rutaEfectiva.id,
-                userId: uid
-            )
-        } catch {
-            if let idx = estructuras.firstIndex(where: { $0.id == item.id }) {
-                estructuras[idx].visitada = false
-                return
-            }
-        }
-        HapticService.impacto(.medium)
         panearAProxima()
         if proxima == nil { mostrarCompletada = true }
     }
